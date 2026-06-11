@@ -1,0 +1,17 @@
+{
+  "name": "gong-medical-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "국립중앙의료원 공공데이터 기반 응급실·병의원·약국 찾기 웹앱 (HTML + JS, Vercel Serverless)",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^4.5.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

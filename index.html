@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>응급의료·병원·약국 찾기 | 공공의료 정보</title>
+  <meta name="description" content="국립중앙의료원 공공데이터 기반 응급실 실시간 가용병상, 병·의원, 약국 찾기 서비스" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="wrap">
+      <h1>🏥 공공의료 정보 찾기</h1>
+      <p class="sub">국립중앙의료원 공공데이터 · 응급실 실시간 가용병상 · 병의원 · 약국</p>
+    </div>
+  </header>
+
+  <nav class="tabs wrap" role="tablist">
+    <button class="tab active" data-tab="emergency" role="tab">🚑 응급실</button>
+    <button class="tab" data-tab="hospital" role="tab">🏥 병·의원</button>
+    <button class="tab" data-tab="pharmacy" role="tab">💊 약국</button>
+  </nav>
+
+  <main class="wrap">
+    <section class="controls">
+      <div class="field">
+        <label for="sido">시/도</label>
+        <select id="sido"></select>
+      </div>
+      <div class="field">
+        <label for="sigungu">시/군/구</label>
+        <select id="sigungu"></select>
+      </div>
+      <div class="field" id="keyword-field">
+        <label for="keyword">기관명 <span class="opt">(선택)</span></label>
+        <input type="text" id="keyword" placeholder="예: 삼성서울병원" />
+      </div>
+      <button id="searchBtn" class="search-btn">조회</button>
+    </section>
+
+    <p id="hint" class="hint"></p>
+    <div id="status" class="status"></div>
+    <div id="results" class="results"></div>
+  </main>
+
+  <footer class="app-footer wrap">
+    <p>출처: 국립중앙의료원 — 공공데이터포털(data.go.kr) OpenAPI</p>
+    <p class="disclaimer">실시간 정보는 의료기관 입력 시점 기준이며 실제와 다를 수 있습니다. 응급상황 시 <strong>119</strong>에 신고하세요.</p>
+  </footer>
+
+  <script src="/js/regions.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
