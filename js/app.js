@@ -62,6 +62,18 @@ const TABS = {
       },
     ],
   },
+  // 서울 열린데이터광장 — 서울시 공공서비스예약 (카테고리별 모드, input="seoul")
+  seoul: {
+    service: "seoul",
+    modes: [
+      { id: "all", label: "전체", input: "seoul", cat: "all" },
+      { id: "culture", label: "🎭 문화행사", input: "seoul", cat: "culture" },
+      { id: "education", label: "📚 교육", input: "seoul", cat: "education" },
+      { id: "medical", label: "🩺 진료", input: "seoul", cat: "medical" },
+      { id: "sport", label: "⚽ 체육시설", input: "seoul", cat: "sport" },
+      { id: "institution", label: "🏛️ 시설대관", input: "seoul", cat: "institution" },
+    ],
+  },
 };
 
 let currentTab = "emergency";
@@ -82,6 +94,11 @@ function fillSigungu() {
   sigunguSel.innerHTML = '<option value="">전체</option>' +
     list.map((g) => `<option value="${g}">${g}</option>`).join("");
 }
+function initSeoulArea() {
+  const gus = REGIONS["서울특별시"] || [];
+  $("seoulArea").innerHTML = '<option value="">전체</option>' +
+    gus.map((g) => `<option value="${g}">${g}</option>`).join("");
+}
 
 function setTab(tab) {
   currentTab = tab;
@@ -101,18 +118,24 @@ function renderModeBar() {
       setMode(modes.find((m) => m.id === b.dataset.mode))));
 }
 
+function toggleGroup(cls, show) {
+  document.querySelectorAll("." + cls).forEach((el) => el.style.display = show ? "" : "none");
+}
+
 function setMode(mode) {
   currentMode = mode;
   document.querySelectorAll(".mode").forEach((b) =>
     b.classList.toggle("active", b.dataset.mode === mode.id));
 
-  const isGeo = mode.input === "geo";
-  document.querySelectorAll(".region-only").forEach((el) =>
-    el.style.display = isGeo ? "none" : "");
-  $("geoBtn").style.display = isGeo ? "" : "none";
-  if (!isGeo) $("keyword-field").style.display = mode.keyword ? "" : "none";
+  const t = mode.input; // region | geo | seoul
+  toggleGroup("region-only", t === "region");
+  toggleGroup("geo-only", t === "geo");
+  toggleGroup("seoul-only", t === "seoul");
+  if (t === "region") $("keyword-field").style.display = mode.keyword ? "" : "none";
 
-  $("hint").textContent = mode.hint || (isGeo ? "📍 브라우저 위치 권한이 필요합니다. 가까운 순으로 정렬됩니다." : "");
+  $("hint").textContent = mode.hint || (
+    t === "geo" ? "📍 브라우저 위치 권한이 필요합니다. 가까운 순으로 정렬됩니다." :
+    t === "seoul" ? "🎫 서울시 공공서비스예약 — 자치구·접수상태로 좁혀보세요. (상위 1000건 내 검색)" : "");
   $("results").innerHTML = "";
   $("status").textContent = "";
 }
@@ -165,6 +188,29 @@ function setStatus(msg, type = "") {
   el.className = "status " + type;
 }
 
+// ---------- 서울 공공서비스예약 ----------
+async function searchSeoul() {
+  const cat = currentMode.cat;
+  setStatus("조회 중…", "loading");
+  $("results").innerHTML = "";
+  try {
+    const r = await fetch(`/api/seoul?cat=${cat}&start=1&end=1000`);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    if (data.code && data.code !== "INFO-000") throw new Error(`API [${data.code}] ${data.message}`);
+    let rows = data.rows || [];
+    const area = $("seoulArea").value, stat = $("seoulStat").value, kw = $("seoulKw").value.trim();
+    if (area) rows = rows.filter((x) => x.AREANM === area);
+    if (stat) rows = rows.filter((x) => (x.SVCSTATNM || "") === stat);
+    if (kw) rows = rows.filter((x) => dec(x.SVCNM || "").includes(kw));
+    if (!rows.length) return setStatus("조회 결과가 없습니다. (필터를 완화해 보세요)", "warn");
+    setStatus(`전체 ${data.total}건 · 조건 일치 ${rows.length}건 표시`, "ok");
+    $("results").innerHTML = rows.slice(0, 100).map(renderSeoul).join("");
+  } catch (e) {
+    setStatus(`오류: ${e.message}`, "error");
+  }
+}
+
 // ---------- 공통 유틸 ----------
 const DAY = ["일", "월", "화", "수", "목", "금", "토"];
 function todayHours(it) {
@@ -178,6 +224,10 @@ const fmt = (t) => (t && t.length === 4 ? `${t.slice(0, 2)}:${t.slice(2)}` : t |
 const num = (v) => (v === undefined || v === "" || v === null ? NaN : Number(v));
 const disp = (v) => (Number.isNaN(v) ? "-" : v);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// 서울 API 응답은 HTML 엔티티(&#39; &middot; 등)로 인코딩되어 있어 디코딩 후 다시 esc 한다.
+const _decEl = document.createElement("textarea");
+const dec = (s) => { _decEl.innerHTML = String(s ?? ""); return _decEl.value; };
+const fmtDT = (s) => (s ? String(s).slice(0, 16) : "");
 const telLink = (t) => (t ? `<a class="btn tel" href="tel:${esc(t).replace(/[^0-9]/g, "")}">📞 ${esc(t)}</a>` : "");
 function mapLink(name, lat, lon) {
   if (!lat || !lon) return "";
@@ -232,6 +282,28 @@ function renderTrauma(it) {
     </article>`;
 }
 
+function renderSeoul(it) {
+  const stat = it.SVCSTATNM || "";
+  const statCls = stat === "접수중" ? "ok" : "full";
+  const url = dec(it.SVCURL || "");
+  const rcpt = (it.RCPTBGNDT || it.RCPTENDDT) ? `${fmtDT(it.RCPTBGNDT)} ~ ${fmtDT(it.RCPTENDDT)}` : "";
+  const meta2 = [dec(it.MINCLASSNM || ""), it.PAYATNM, dec(it.USETGTINFO || "")].filter(Boolean).map(esc).join(" · ");
+  return `
+    <article class="card">
+      <div class="card-top">
+        <h3>${esc(dec(it.SVCNM))}</h3>
+        ${stat ? `<span class="bed ${statCls}">${esc(stat)}</span>` : ""}
+      </div>
+      <p class="addr">📍 ${esc(dec(it.PLACENM))}${it.AREANM ? ` · ${esc(it.AREANM)}` : ""}</p>
+      ${rcpt ? `<p class="meta">🗓️ 접수 ${esc(rcpt)}</p>` : ""}
+      ${meta2 ? `<p class="meta">${meta2}</p>` : ""}
+      <div class="card-actions">
+        ${url ? `<a class="btn map" href="${esc(url)}" target="_blank" rel="noopener">🎫 예약 바로가기</a>` : ""}
+        ${mapLink(dec(it.PLACENM), it.Y, it.X)}
+      </div>
+    </article>`;
+}
+
 function renderEmergency(it) {
   const beds = num(it.hvec), op = num(it.hvoc), ward = num(it.hvgc);
   const ambulance = it.hvamyn === "Y";
@@ -261,7 +333,10 @@ document.querySelectorAll(".tab").forEach((b) =>
   b.addEventListener("click", () => setTab(b.dataset.tab)));
 $("searchBtn").addEventListener("click", searchRegion);
 $("geoBtn").addEventListener("click", searchGeo);
+$("seoulBtn").addEventListener("click", searchSeoul);
 $("keyword").addEventListener("keydown", (e) => { if (e.key === "Enter") searchRegion(); });
+$("seoulKw").addEventListener("keydown", (e) => { if (e.key === "Enter") searchSeoul(); });
 
 initRegions();
+initSeoulArea();
 setTab("emergency");

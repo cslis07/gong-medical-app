@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { extname, join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import proxyHandler from "./api/proxy.js";
+import seoulHandler from "./api/seoul.js";
 
 const MIME = { ".html":"text/html", ".css":"text/css", ".js":"text/javascript", ".json":"application/json" };
 const root = dirname(fileURLToPath(import.meta.url));
@@ -20,12 +21,12 @@ try {
 
 createServer(async (req, res) => {
   const u = new URL(req.url, "http://localhost");
+  const apiRes = { status: (c) => ({ json: (o) => { res.writeHead(c, {"content-type":"application/json"}); res.end(JSON.stringify(o)); } }) };
   if (u.pathname === "/api/proxy") {
-    const query = Object.fromEntries(u.searchParams);
-    return proxyHandler(
-      { query },
-      { status: (c) => ({ json: (o) => { res.writeHead(c, {"content-type":"application/json"}); res.end(JSON.stringify(o)); } }) }
-    );
+    return proxyHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
+  }
+  if (u.pathname === "/api/seoul") {
+    return seoulHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
   }
   let p = u.pathname === "/" ? "/index.html" : u.pathname;
   try {

@@ -19,6 +19,7 @@
     <button class="tab active" data-tab="emergency" role="tab">🚑 응급실</button>
     <button class="tab" data-tab="hospital" role="tab">🏥 병·의원</button>
     <button class="tab" data-tab="pharmacy" role="tab">💊 약국</button>
+    <button class="tab" data-tab="seoul" role="tab">🎫 서울 예약</button>
   </nav>
 
   <main class="wrap">
@@ -39,6 +40,24 @@
       </div>
       <button id="searchBtn" class="search-btn region-only">조회</button>
       <button id="geoBtn" class="search-btn geo-only" style="display:none">📍 내 위치로 검색</button>
+
+      <!-- 서울 공공서비스예약 전용 컨트롤 -->
+      <div class="field seoul-only" style="display:none">
+        <label for="seoulArea">자치구</label>
+        <select id="seoulArea"></select>
+      </div>
+      <div class="field seoul-only" style="display:none">
+        <label for="seoulStat">접수상태</label>
+        <select id="seoulStat">
+          <option value="">전체</option>
+          <option value="접수중">접수중만</option>
+        </select>
+      </div>
+      <div class="field seoul-only" style="display:none">
+        <label for="seoulKw">서비스명 <span class="opt">(선택)</span></label>
+        <input type="text" id="seoulKw" placeholder="예: 테니스장" />
+      </div>
+      <button id="seoulBtn" class="search-btn seoul-only" style="display:none">조회</button>
     </section>
 
     <p id="hint" class="hint"></p>

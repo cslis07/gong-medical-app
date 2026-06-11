@@ -4,25 +4,33 @@
 순수 HTML + JavaScript 프론트엔드와 Vercel 서버리스 함수(API 프록시)로 구성됩니다.
 
 ## 기능
-- 🚑 **응급실**: 시/도·시/군/구별 응급실 실시간 가용병상(일반·수술실·입원실), 구급차·CT·MRI 가용 여부, 응급실 전화
-- 🏥 **병·의원**: 시/도·시/군/구·기관명으로 병의원 검색, 오늘 진료시간, 전화, 카카오맵 길찾기
-- 💊 **약국**: 시/도·시/군/구·기관명으로 약국 검색, 오늘 운영시간, 전화, 지도
+- 🚑 **응급실**: 실시간 가용병상(일반·수술실·입원실)·구급차·CT·MRI / 📍내 주변(위치기반) / 🚨외상센터
+- 🏥 **병·의원**: 시/도·시/군/구·기관명 검색, 오늘 진료시간 / 🌙달빛어린이병원(야간 소아진료)
+- 💊 **약국**: 시/도·시/군/구·기관명 검색, 오늘 운영시간 / 📍내 주변(위치기반)
+- 🎫 **서울 예약**: 서울시 공공서비스예약(문화행사·교육·진료·체육시설·시설대관·종합), 자치구·접수상태·키워드 필터, 예약 바로가기
 
 ## 구조
 ```
 index.html          # UI
 css/style.css       # 스타일
 js/regions.js       # 17개 시도 → 시군구
-js/app.js           # 탭/조회/렌더링
-api/proxy.js        # Vercel 서버리스 — data.go.kr 호출 + XML→JSON 변환 (키 서버 보관)
+js/app.js           # 탭/모드/조회/렌더링
+api/proxy.js        # Vercel 서버리스 — data.go.kr 호출 + XML→JSON 변환 (DATA_API_KEY)
+api/seoul.js        # Vercel 서버리스 — 서울 OpenAPI(JSON) 프록시 (SEOUL_API_KEY)
 ```
 
-## 사용 공공데이터 (제공: 국립중앙의료원, B552657)
+## 사용 공공데이터
+**국립중앙의료원 (data.go.kr, B552657)** — `DATA_API_KEY`
 | 서비스 | 오퍼레이션 |
 |---|---|
-| 전국 응급의료정보조회 `ErmctInfoInqireService` | `getEmrrmRltmUsefulSckbdInfoInqire` (실시간 가용병상) |
-| 전국 병·의원 찾기 `HsptlAsembySearchService` | `getHsptlMdcncListInfoInqire` |
-| 전국 약국 정보 조회 `ErmctInsttInfoInqireService` | `getParmacyListInfoInqire` |
+| 응급의료 `ErmctInfoInqireService` | `getEmrrmRltmUsefulSckbdInfoInqire`(실시간 병상), `getEgytLcinfoInqire`(위치), `getStrmListInfoInqire`(외상센터) |
+| 병·의원 `HsptlAsembySearchService` | `getHsptlMdcncListInfoInqire`, `getBabyListInfoInqire`(달빛어린이병원) |
+| 약국 `ErmctInsttInfoInqireService` | `getParmacyListInfoInqire`, `getParmacyLcinfoInqire`(위치) |
+
+**서울 열린데이터광장 (openapi.seoul.go.kr)** — `SEOUL_API_KEY` (계정당 1키)
+| 카테고리 | SERVICE |
+|---|---|
+| 종합 / 문화행사 / 교육 / 진료 / 체육시설 / 시설대관 | `tvYeyakCOllect` / `ListPublicReservationCulture` / `...Education` / `...Medical` / `...Sport` / `...Institution` |
 
 ## 로컬 실행
 ```bash
