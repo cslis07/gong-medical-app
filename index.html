@@ -38,6 +38,10 @@
         <label for="keyword">기관명 <span class="opt">(선택)</span></label>
         <input type="text" id="keyword" placeholder="예: 삼성서울병원" />
       </div>
+      <div class="field severe-only" style="display:none">
+        <label for="severeType">중증질환 <span class="opt">(선택)</span></label>
+        <select id="severeType"></select>
+      </div>
       <button id="searchBtn" class="search-btn region-only">조회</button>
       <button id="geoBtn" class="search-btn geo-only" style="display:none">📍 내 위치로 검색</button>
 
@@ -69,6 +73,15 @@
     <p>출처: 국립중앙의료원 — 공공데이터포털(data.go.kr) OpenAPI</p>
     <p class="disclaimer">실시간 정보는 의료기관 입력 시점 기준이며 실제와 다를 수 있습니다. 응급상황 시 <strong>119</strong>에 신고하세요.</p>
   </footer>
+
+  <!-- 서울 예약 상세 모달 -->
+  <div id="modal" class="modal" style="display:none">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <button class="modal-close" id="modalClose" aria-label="닫기">✕</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
 
   <script src="/js/regions.js"></script>
   <script src="/js/app.js"></script>

@@ -25,6 +25,16 @@ const TABS = {
         params: (s, g) => ({ Q0: s, Q1: g, ORD: "NAME" }),
         render: renderTrauma,
       },
+      {
+        id: "severe", label: "🆘 중증질환 수용", input: "region",
+        op: "getSrsillDissAceptncPosblInfoInqire", sigunguRequired: true, keyword: false,
+        params: (s, g) => {
+          const t = $("severeType").value;
+          return { STAGE1: s, STAGE2: g, ...(t ? { SM_TYPE: t } : {}) };
+        },
+        render: renderSevere,
+        hint: "🆘 시/군/구까지 선택하세요. 특정 중증질환 수용 병원만 보려면 질환을 선택하세요.",
+      },
     ],
   },
   hospital: {
@@ -100,6 +110,28 @@ function initSeoulArea() {
     gus.map((g) => `<option value="${g}">${g}</option>`).join("");
 }
 
+// 중증질환 코드(mkioskty1~28) → 질환명
+const SEVERE_TYPES = {
+  1: "[재관류중재술] 심근경색", 2: "[재관류중재술] 뇌경색",
+  3: "[뇌출혈수술] 거미막하출혈", 4: "[뇌출혈수술] 거미막하출혈 외",
+  5: "[대동맥응급] 흉부", 6: "[대동맥응급] 복부",
+  7: "[담낭담관질환] 담낭질환", 8: "[담낭담관질환] 담도포함질환",
+  9: "[복부응급수술] 비외상", 10: "[장중첩/폐색] 영유아",
+  11: "[응급내시경] 성인 위장관", 12: "[응급내시경] 영유아 위장관",
+  13: "[응급내시경] 성인 기관지", 14: "[응급내시경] 영유아 기관지",
+  15: "[저체중출생아] 집중치료", 16: "[산부인과응급] 분만",
+  17: "[산부인과응급] 산과수술", 18: "[산부인과응급] 부인과수술",
+  19: "[중증화상] 전문치료", 20: "[사지접합] 수족지접합",
+  21: "[사지접합] 수족지접합 외", 22: "[응급투석] HD",
+  23: "[응급투석] CRRT", 24: "[정신과적응급] 폐쇄병동입원",
+  25: "[안과적수술] 응급", 26: "[영상의학혈관중재] 성인",
+  27: "[영상의학혈관중재] 영유아", 28: "응급실(Emergency gate keeper)",
+};
+function initSevere() {
+  $("severeType").innerHTML = '<option value="">전체</option>' +
+    Object.entries(SEVERE_TYPES).map(([n, l]) => `<option value="${n}">${l}</option>`).join("");
+}
+
 function setTab(tab) {
   currentTab = tab;
   document.querySelectorAll(".tab").forEach((b) =>
@@ -131,6 +163,7 @@ function setMode(mode) {
   toggleGroup("region-only", t === "region");
   toggleGroup("geo-only", t === "geo");
   toggleGroup("seoul-only", t === "seoul");
+  toggleGroup("severe-only", mode.id === "severe");
   if (t === "region") $("keyword-field").style.display = mode.keyword ? "" : "none";
 
   $("hint").textContent = mode.hint || (
@@ -282,6 +315,27 @@ function renderTrauma(it) {
     </article>`;
 }
 
+const isYes = (v) => { const s = String(v ?? "").trim(); return s === "Y" || s === "가능"; };
+function renderSevere(it) {
+  const name = esc(it.dutyName || it.hpid || "-");
+  const chips = [];
+  for (let n = 1; n <= 28; n++) {
+    const v = it["MKioskTy" + n] ?? it["mkioskty" + n];
+    if (isYes(v)) chips.push(SEVERE_TYPES[n]);
+  }
+  const body = chips.length
+    ? `<div class="chips">${chips.map((c) => `<span class="chip">${esc(c)}</span>`).join("")}</div>`
+    : `<p class="meta">현재 수용 가능 항목 없음 또는 정보 미제공</p>`;
+  return `
+    <article class="card">
+      <div class="card-top">
+        <h3>${name}</h3>
+        <span class="bed ${chips.length ? "ok" : "full"}">수용 ${chips.length}</span>
+      </div>
+      ${body}
+    </article>`;
+}
+
 function renderSeoul(it) {
   const stat = it.SVCSTATNM || "";
   const statCls = stat === "접수중" ? "ok" : "full";
@@ -298,10 +352,63 @@ function renderSeoul(it) {
       ${rcpt ? `<p class="meta">🗓️ 접수 ${esc(rcpt)}</p>` : ""}
       ${meta2 ? `<p class="meta">${meta2}</p>` : ""}
       <div class="card-actions">
-        ${url ? `<a class="btn map" href="${esc(url)}" target="_blank" rel="noopener">🎫 예약 바로가기</a>` : ""}
+        <button class="btn detail" data-svcid="${esc(it.SVCID)}" data-url="${esc(url)}">📋 상세</button>
+        ${url ? `<a class="btn map" href="${esc(url)}" target="_blank" rel="noopener">🎫 예약</a>` : ""}
         ${mapLink(dec(it.PLACENM), it.Y, it.X)}
       </div>
     </article>`;
+}
+
+// ---------- 서울 예약 상세 모달 ----------
+function openModal(html) {
+  $("modalBody").innerHTML = html;
+  $("modal").style.display = "";
+  document.body.style.overflow = "hidden";
+}
+function closeModal() {
+  $("modal").style.display = "none";
+  document.body.style.overflow = "";
+  $("modalBody").innerHTML = "";
+}
+async function openDetail(svcid, url) {
+  if (!svcid) return;
+  openModal('<p class="modal-loading">불러오는 중…</p>');
+  try {
+    const r = await fetch(`/api/seoul?detail=${encodeURIComponent(svcid)}`);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    const row = (data.rows || [])[0];
+    if (!row) throw new Error("상세 정보를 찾을 수 없습니다.");
+    row._url = url || "";
+    $("modalBody").innerHTML = renderDetail(row);
+  } catch (e) {
+    $("modalBody").innerHTML = `<p class="status error">오류: ${esc(e.message)}</p>`;
+  }
+}
+function dRow(label, val) {
+  return val ? `<div class="d-row"><span>${label}</span><b>${esc(val)}</b></div>` : "";
+}
+function renderDetail(row) {
+  const img = row.IMG_PATH ? `<img class="d-img" src="${esc(row.IMG_PATH)}" alt="" loading="lazy">` : "";
+  const rcpt = (row.RCPTBGNDT || row.RCPTENDDT) ? `${fmtDT(row.RCPTBGNDT)} ~ ${fmtDT(row.RCPTENDDT)}` : "";
+  const usetime = (row.V_MIN || row.V_MAX) ? `${row.V_MIN || ""} ~ ${row.V_MAX || ""}` : "";
+  const place = [dec(row.PLACENM), dec(row.SUBPLACENM)].filter(Boolean).join(" · ");
+  return `
+    <h2 class="d-title">${esc(dec(row.SVCNM))}</h2>
+    ${img}
+    <div class="d-info">
+      ${dRow("장소", place)}
+      ${dRow("주소", dec(row.ADRES))}
+      ${dRow("주관", dec(row.ORGNM))}
+      ${dRow("전화", row.TELNO)}
+      ${dRow("자치구", row.AREANM)}
+      ${dRow("접수기간", rcpt)}
+      ${dRow("이용시간", usetime)}
+      ${dRow("모집인원", row.RCRPERCAP)}
+    </div>
+    ${row._url ? `<a class="btn map d-cta" href="${esc(row._url)}" target="_blank" rel="noopener">🎫 예약 페이지로 이동</a>` : ""}
+    ${row.NOTICE ? `<details class="d-html" open><summary>안내사항</summary><div class="d-html-body">${row.NOTICE}</div></details>` : ""}
+    ${row.DTLCONT ? `<details class="d-html"><summary>상세내용</summary><div class="d-html-body">${row.DTLCONT}</div></details>` : ""}`;
 }
 
 function renderEmergency(it) {
@@ -337,6 +444,18 @@ $("seoulBtn").addEventListener("click", searchSeoul);
 $("keyword").addEventListener("keydown", (e) => { if (e.key === "Enter") searchRegion(); });
 $("seoulKw").addEventListener("keydown", (e) => { if (e.key === "Enter") searchSeoul(); });
 
+// 상세 버튼(동적 생성) — 이벤트 위임
+$("results").addEventListener("click", (e) => {
+  const b = e.target.closest(".detail");
+  if (b) openDetail(b.dataset.svcid, b.dataset.url);
+});
+$("modalClose").addEventListener("click", closeModal);
+$("modalBackdrop").addEventListener("click", closeModal);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("modal").style.display !== "none") closeModal();
+});
+
 initRegions();
 initSeoulArea();
+initSevere();
 setTab("emergency");

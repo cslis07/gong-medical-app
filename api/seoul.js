@@ -21,20 +21,29 @@ export default async function handler(req, res) {
       });
     }
 
-    const cat = String(req.query.cat || "all");
-    const svc = SEOUL_SERVICES[cat];
-    if (!svc) {
-      return res.status(400).json({ error: `알 수 없는 cat: ${cat} (${Object.keys(SEOUL_SERVICES).join("|")})` });
+    // (A) 상세조회: ?detail=<SVCID> → ListPublicReservationDetail
+    const detailId = req.query.detail;
+    let svc, url;
+    if (detailId) {
+      if (!/^[A-Za-z0-9]+$/.test(String(detailId))) {
+        return res.status(400).json({ error: `유효하지 않은 SVCID: ${detailId}` });
+      }
+      svc = "ListPublicReservationDetail";
+      url = `http://openapi.seoul.go.kr:8088/${KEY}/json/${svc}/1/5/${detailId}`;
+    } else {
+      // (B) 목록조회: ?cat=<카테고리>&start&end
+      const cat = String(req.query.cat || "all");
+      svc = SEOUL_SERVICES[cat];
+      if (!svc) {
+        return res.status(400).json({ error: `알 수 없는 cat: ${cat} (${Object.keys(SEOUL_SERVICES).join("|")})` });
+      }
+      let start = parseInt(req.query.start, 10);
+      let end = parseInt(req.query.end, 10);
+      if (!Number.isInteger(start) || start < 1) start = 1;
+      if (!Number.isInteger(end) || end < start) end = start + 299;
+      if (end - start > 999) end = start + 999; // 서울 API 1회 최대 1000건
+      url = `http://openapi.seoul.go.kr:8088/${KEY}/json/${svc}/${start}/${end}/`;
     }
-
-    // 페이지 범위 (서울 API 는 1회 최대 1000건)
-    let start = parseInt(req.query.start, 10);
-    let end = parseInt(req.query.end, 10);
-    if (!Number.isInteger(start) || start < 1) start = 1;
-    if (!Number.isInteger(end) || end < start) end = start + 299;
-    if (end - start > 999) end = start + 999;
-
-    const url = `http://openapi.seoul.go.kr:8088/${KEY}/json/${svc}/${start}/${end}/`;
     const upstream = await fetch(url, { signal: AbortSignal.timeout(12000) });
     const text = await upstream.text();
 

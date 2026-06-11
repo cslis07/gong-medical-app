@@ -81,6 +81,34 @@ select, input[type=text] {
 .btn.tel { background: #e8f0fe; color: var(--primary-dark); }
 .btn.map { background: #fef3e2; color: var(--warn); }
 
+/* 중증질환 수용 칩 */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { background: #e6f4ea; color: var(--ok); font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 999px; }
+
+/* 서울 예약 상세 모달 */
+.modal { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(20,28,45,.55); }
+.modal-box {
+  position: relative; background: #fff; width: min(560px, 92vw); max-height: 88vh; overflow-y: auto;
+  border-radius: 16px; padding: 22px; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+.modal-close {
+  position: absolute; top: 12px; right: 12px; border: 0; background: #f0f2f7; width: 32px; height: 32px;
+  border-radius: 50%; font-size: 15px; cursor: pointer; color: var(--muted);
+}
+.modal-loading { color: var(--muted); padding: 20px 0; text-align: center; }
+.d-title { font-size: 19px; margin: 0 30px 12px 0; }
+.d-img { width: 100%; border-radius: 10px; margin-bottom: 14px; }
+.d-info { display: grid; gap: 6px; margin-bottom: 14px; }
+.d-row { display: grid; grid-template-columns: 76px 1fr; gap: 10px; font-size: 14px; }
+.d-row span { color: var(--muted); font-weight: 600; }
+.d-cta { display: block; text-align: center; margin-bottom: 14px; }
+.d-html { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 6px; }
+.d-html summary { cursor: pointer; font-weight: 700; font-size: 14px; color: var(--primary-dark); }
+.d-html-body { margin-top: 10px; font-size: 13.5px; overflow-x: auto; }
+.d-html-body img { max-width: 100%; height: auto; }
+.d-html-body table { max-width: 100%; }
+
 .app-footer { padding: 22px 16px 40px; color: var(--muted); font-size: 12.5px; }
 .app-footer .disclaimer { margin-top: 6px; }
 
