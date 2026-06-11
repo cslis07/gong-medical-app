@@ -84,6 +84,20 @@ const TABS = {
       { id: "institution", label: "🏛️ 시설대관", input: "seoul", cat: "institution" },
     ],
   },
+  // 서울 지하철 (실시간 + 역정보/편의시설)
+  subway: {
+    service: "subway",
+    modes: [
+      { id: "arrival", label: "🔴 실시간 도착", input: "subway", sub: "q", kind: "arrival", render: renderArrival,
+        hint: "🔴 역명을 입력하면 해당 역의 실시간 도착 열차를 보여줍니다. (실시간 권한 키 필요)" },
+      { id: "position", label: "🚄 실시간 위치", input: "subway", sub: "line", kind: "position", render: renderPosition,
+        hint: "🚄 호선을 선택하면 운행 중 열차의 현재 위치를 보여줍니다." },
+      { id: "stationInfo", label: "🚉 역 정보", input: "subway", sub: "q", kind: "stationInfo", render: renderStationInfo,
+        hint: "🚉 역명을 입력하면 호선·역코드 정보를 보여줍니다." },
+      { id: "facility", label: "♿ 편의시설", input: "subway", sub: "q", kind: "facility", render: renderFacilitySub,
+        hint: "♿ 역명을 입력하면 엘리베이터·에스컬레이터 위치와 사용여부를 보여줍니다." },
+    ],
+  },
 };
 
 let currentTab = "emergency";
@@ -132,6 +146,39 @@ function initSevere() {
     Object.entries(SEVERE_TYPES).map(([n, l]) => `<option value="${n}">${l}</option>`).join("");
 }
 
+// 지하철 호선 (실시간 위치용)
+const SUBWAY_LINES = ["1호선","2호선","3호선","4호선","5호선","6호선","7호선","8호선","9호선","경의중앙선","수인분당선","신분당선","공항철도","경춘선","우이신설선","서해선","김포골드라인"];
+function initSubLine() {
+  $("subLine").innerHTML = SUBWAY_LINES.map((l) => `<option value="${l}">${l}</option>`).join("");
+}
+
+async function searchSubway() {
+  const m = currentMode;
+  const qs = new URLSearchParams({ kind: m.kind });
+  if (m.sub === "line") {
+    qs.set("line", $("subLine").value);
+  } else {
+    const q = $("subQ").value.trim();
+    if (!q) return setStatus("역명을 입력하세요.", "warn");
+    qs.set("q", q);
+  }
+  setStatus("조회 중…", "loading");
+  $("results").innerHTML = "";
+  try {
+    const r = await fetch(`/api/subway?${qs.toString()}`);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    if (data.code && !["INFO-000", ""].includes(data.code))
+      throw new Error(`API [${data.code}] ${data.message || ""}`);
+    const rows = data.rows || [];
+    if (!rows.length) return setStatus("조회 결과가 없습니다.", "warn");
+    setStatus(`${rows.length}건 표시`, "ok");
+    $("results").innerHTML = rows.map(m.render).join("");
+  } catch (e) {
+    setStatus(`오류: ${e.message}`, "error");
+  }
+}
+
 function setTab(tab) {
   currentTab = tab;
   document.querySelectorAll(".tab").forEach((b) =>
@@ -159,12 +206,18 @@ function setMode(mode) {
   document.querySelectorAll(".mode").forEach((b) =>
     b.classList.toggle("active", b.dataset.mode === mode.id));
 
-  const t = mode.input; // region | geo | seoul
+  const t = mode.input; // region | geo | seoul | subway
   toggleGroup("region-only", t === "region");
   toggleGroup("geo-only", t === "geo");
   toggleGroup("seoul-only", t === "seoul");
+  toggleGroup("subway-only", t === "subway");
   toggleGroup("severe-only", mode.id === "severe");
   if (t === "region") $("keyword-field").style.display = mode.keyword ? "" : "none";
+  if (t === "subway") {
+    const isLine = mode.sub === "line";
+    toggleGroup("sub-line", isLine);
+    toggleGroup("sub-q", !isLine);
+  }
 
   $("hint").textContent = mode.hint || (
     t === "geo" ? "📍 브라우저 위치 권한이 필요합니다. 가까운 순으로 정렬됩니다." :
@@ -315,6 +368,49 @@ function renderTrauma(it) {
     </article>`;
 }
 
+// ---------- 지하철 렌더러 ----------
+function renderArrival(it) {
+  const dir = esc(it.trainLineNm || "");
+  const line = esc(it.subwayNm || "");
+  const msg = esc(it.arvlMsg2 || "");
+  const pos = esc(it.arvlMsg3 || "");
+  const updn = esc(it.updnLine || "");
+  return `
+    <article class="card">
+      <h3>${dir || line}</h3>
+      <p class="meta">${line}${updn ? ` · ${updn}` : ""}</p>
+      <p class="arv">🚊 ${msg || "도착정보 없음"}</p>
+      ${pos ? `<p class="meta">현재 위치: ${pos}</p>` : ""}
+    </article>`;
+}
+function renderPosition(it) {
+  return `
+    <article class="card">
+      <h3>${esc(it.statnNm || "-")}</h3>
+      <p class="meta">${esc(it.subwayNm || "")}${it.trainNo ? ` · 열차 ${esc(it.trainNo)}` : ""}${it.updnLine ? ` · 방향 ${esc(it.updnLine)}` : ""}</p>
+    </article>`;
+}
+function renderStationInfo(it) {
+  const parts = [it.LINE_NUM, it.FR_CODE ? `외부코드 ${it.FR_CODE}` : "", it.STATION_CD ? `역코드 ${it.STATION_CD}` : ""].filter(Boolean).map(esc);
+  return `
+    <article class="card">
+      <h3>${esc(it.STATION_NM || "-")}</h3>
+      <p class="meta">${parts.join(" · ")}</p>
+    </article>`;
+}
+function renderFacilitySub(it) {
+  const ok = String(it.USE_YN || "").includes("사용") && !String(it.USE_YN || "").includes("불");
+  return `
+    <article class="card">
+      <div class="card-top">
+        <h3>${esc(it.STN_NM || "-")}</h3>
+        ${it.USE_YN ? `<span class="bed ${ok ? "ok" : "full"}">${esc(it.USE_YN)}</span>` : ""}
+      </div>
+      <p class="addr">${esc(it.ELVTR_NM || "")}</p>
+      <p class="meta">${[esc(it.INSTL_PSTN || ""), esc(it.OPR_SEC || "")].filter(Boolean).join(" · ")}</p>
+    </article>`;
+}
+
 const isYes = (v) => { const s = String(v ?? "").trim(); return s === "Y" || s === "가능"; };
 function renderSevere(it) {
   const name = esc(it.dutyName || it.hpid || "-");
@@ -441,8 +537,10 @@ document.querySelectorAll(".tab").forEach((b) =>
 $("searchBtn").addEventListener("click", searchRegion);
 $("geoBtn").addEventListener("click", searchGeo);
 $("seoulBtn").addEventListener("click", searchSeoul);
+$("subBtn").addEventListener("click", searchSubway);
 $("keyword").addEventListener("keydown", (e) => { if (e.key === "Enter") searchRegion(); });
 $("seoulKw").addEventListener("keydown", (e) => { if (e.key === "Enter") searchSeoul(); });
+$("subQ").addEventListener("keydown", (e) => { if (e.key === "Enter") searchSubway(); });
 
 // 상세 버튼(동적 생성) — 이벤트 위임
 $("results").addEventListener("click", (e) => {
@@ -458,4 +556,5 @@ document.addEventListener("keydown", (e) => {
 initRegions();
 initSeoulArea();
 initSevere();
+initSubLine();
 setTab("emergency");

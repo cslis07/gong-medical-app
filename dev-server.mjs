@@ -5,6 +5,7 @@ import { extname, join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import proxyHandler from "./api/proxy.js";
 import seoulHandler from "./api/seoul.js";
+import subwayHandler from "./api/subway.js";
 
 const MIME = { ".html":"text/html", ".css":"text/css", ".js":"text/javascript", ".json":"application/json" };
 const root = dirname(fileURLToPath(import.meta.url));
@@ -27,6 +28,9 @@ createServer(async (req, res) => {
   }
   if (u.pathname === "/api/seoul") {
     return seoulHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
+  }
+  if (u.pathname === "/api/subway") {
+    return subwayHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
   }
   let p = u.pathname === "/" ? "/index.html" : u.pathname;
   try {

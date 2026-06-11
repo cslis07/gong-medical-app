@@ -8,6 +8,7 @@
 - 🏥 **병·의원**: 시/도·시/군/구·기관명 검색, 오늘 진료시간 / 🌙달빛어린이병원(야간 소아진료)
 - 💊 **약국**: 시/도·시/군/구·기관명 검색, 오늘 운영시간 / 📍내 주변(위치기반)
 - 🎫 **서울 예약**: 서울시 공공서비스예약(문화행사·교육·진료·체육시설·시설대관·종합), 자치구·접수상태·키워드 필터, 예약 바로가기
+- 🚇 **지하철**: 실시간 도착 · 실시간 열차 위치 · 역 정보(호선/코드) · 편의시설(엘리베이터/에스컬레이터)
 
 ## 구조
 ```
@@ -30,7 +31,14 @@ api/seoul.js        # Vercel 서버리스 — 서울 OpenAPI(JSON) 프록시 (SE
 **서울 열린데이터광장 (openapi.seoul.go.kr)** — `SEOUL_API_KEY` (계정당 1키)
 | 카테고리 | SERVICE |
 |---|---|
-| 종합 / 문화행사 / 교육 / 진료 / 체육시설 / 시설대관 | `tvYeyakCOllect` / `ListPublicReservationCulture` / `...Education` / `...Medical` / `...Sport` / `...Institution` |
+| 공공서비스예약 종합/문화행사/교육/진료/체육시설/시설대관 | `tvYeyakCOllect` / `ListPublicReservationCulture` / `...Education` / `...Medical` / `...Sport` / `...Institution` |
+| 지하철 역정보/편의시설 | `SearchInfoBySubwayNameService` / `SeoulMetroFaciInfo` |
+
+**서울 지하철 실시간 (swopenapi.seoul.go.kr)** — `SEOUL_REALTIME_KEY` (실시간 전용 권한 키)
+| 기능 | SERVICE |
+|---|---|
+| 실시간 도착 / 실시간 위치 | `realtimeStationArrival` / `realtimePosition` |
+> ⚠️ 실시간 서비스는 일반 `SEOUL_API_KEY`로는 `ERROR-338`(권한없음). 실시간 데이터셋용 별도 키 필요.
 
 ## 로컬 실행
 ```bash
