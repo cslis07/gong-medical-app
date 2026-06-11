@@ -4,14 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>응급의료·병원·약국 찾기 | 공공의료 정보</title>
-  <meta name="description" content="국립중앙의료원 공공데이터 기반 응급실 실시간 가용병상, 병·의원, 약국 찾기 서비스" />
+  <meta name="description" content="국립중앙의료원 공공데이터 기반 응급실 실시간 가용병상, 내 주변 응급실·약국, 외상센터, 달빛어린이병원, 병·의원, 약국 찾기" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
   <header class="app-header">
     <div class="wrap">
       <h1>🏥 공공의료 정보 찾기</h1>
-      <p class="sub">국립중앙의료원 공공데이터 · 응급실 실시간 가용병상 · 병의원 · 약국</p>
+      <p class="sub">국립중앙의료원 공공데이터 · 실시간 가용병상 · 내 주변 · 외상센터 · 달빛어린이병원</p>
     </div>
   </header>
 
@@ -22,20 +22,23 @@
   </nav>
 
   <main class="wrap">
+    <div id="modes" class="modes" role="tablist"></div>
+
     <section class="controls">
-      <div class="field">
+      <div class="field region-only">
         <label for="sido">시/도</label>
         <select id="sido"></select>
       </div>
-      <div class="field">
+      <div class="field region-only">
         <label for="sigungu">시/군/구</label>
         <select id="sigungu"></select>
       </div>
-      <div class="field" id="keyword-field">
+      <div class="field region-only" id="keyword-field">
         <label for="keyword">기관명 <span class="opt">(선택)</span></label>
         <input type="text" id="keyword" placeholder="예: 삼성서울병원" />
       </div>
-      <button id="searchBtn" class="search-btn">조회</button>
+      <button id="searchBtn" class="search-btn region-only">조회</button>
+      <button id="geoBtn" class="search-btn geo-only" style="display:none">📍 내 위치로 검색</button>
     </section>
 
     <p id="hint" class="hint"></p>
