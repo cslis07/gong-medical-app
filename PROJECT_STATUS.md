@@ -31,9 +31,9 @@
 
 ### 📋 2차 요청(생활서비스.txt 확장) 진행상황 — 2026-07-07
 추가 요청 6종 중:
-- ✅ **로또** 완료(dhlottery IP차단 → 공개 CDN 미러 smok95.github.io/lotto 프록시. 키 불요)
-- ⏳ **주유소(OPINET)** — OPINET 무료 키 필요 + WGS84→KATEC 변환. 무키 호출 시 빈 결과. 키 확보 후 구현·검증 예정
-- ⏳ **주차장(data.go.kr)** — 기존 DATA_API_KEY가 tn_pubr_prkplce_info_api "미등록(코드30)". data.go.kr에서 해당 API 활용신청(같은 키 재사용) 후 구현
+- ✅ **로또** 완료(dhlottery IP차단 → 공개 CDN 미러 smok95.github.io/lotto 프록시. 키 불요) · `api/lotto.js`
+- 🔑 **주유소(OPINET)** — **구현완료(api/gas.js), OPINET 인증키 대기**. proj4로 WGS84→KATEC(Opinet 공식 def `+towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43`). aroundAll.do(가격순)+detailById.do(주소·편의시설). 키 param=`certkey`(무키 시 빈결과였음). env `OPINET_API_KEY` 설정 시 동작. ⚠️OPINET Vercel IP차단 여부는 키 넣고 검증 필요
+- ⏳ **주차장** — 사용자가 활용신청함(2026-07-07). **한국교통안전공단 주차정보 API(B553881), 처리상태 "신청"·심의여부 "심의" = 승인 대기 중**(자동승인 아님). End Point `https://apis.data.go.kr/B553881/Parking`, 기능 `/PrkSttusInfo`(시설·주소·위치)·`/PrkOprInfo`·`/PrkRealtimeInfo`(실시간 주차면). 참고문서 `주차정보시스템_기술문서_수정본_20240702.docx`. 승인 후 구현. (기존 tn_pubr API가 아니라 이 API로 진행)
 - ⏳ **화장실(data.go.kr)** — localdata CSV 다운로드 깨짐(error.html) → data.go.kr 공중화장실 표준 API 활용신청 후 구현
 - ❌ **공연 잔여석** — 인터파크가 NOL로 개편, 이름검색 API가 SPA HTML만 반환·유효 goodsCode 확인 불가. YES24 axPerf도 리다이렉트. 신뢰성 구현 보류(참고: k-skill 스크립트 엔드포인트는 api-ticketfront.interpark.com/v1/goods/{id}/playSeq + .../PlaySeq/{seq}/REMAINSEAT)
 - ⏸️ **대중교통 길찾기(ODsay)** — 1차에서 제외 유지(ODsay 키+IP화이트리스트)
