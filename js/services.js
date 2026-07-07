@@ -158,15 +158,23 @@ const BUS_OFFICIAL = { express: "https://www.kobus.co.kr/main.do", intercity: "h
 const busCache = {};        // type -> {terminals, routes, byName}
 let busTerminalsLoading = false;
 
+function busOfficialCard(type, depName, arrName) {
+  const label = depName && arrName ? `${E(depName)} → ${E(arrName)}` : (type === "express" ? "고속버스" : "시외버스");
+  const name = type === "express" ? "KOBUS 고속버스" : "티머니 시외버스";
+  return `<article class="card busroute"><div class="card-top"><h3>${label}</h3><span class="bed warn">공식 조회</span></div>
+    <p class="meta">현재 서버 환경에서 <strong>${name}</strong> 실시간 조회가 제한됩니다(해당 사이트가 외부 서버 접속을 차단). 아래에서 공식 페이지로 시간표·예매를 확인하세요.</p>
+    <div class="card-actions"><a class="btn map" href="${BUS_OFFICIAL[type]}" target="_blank" rel="noopener">🎫 공식 예매 페이지 열기</a></div></article>`;
+}
 async function ensureTerminals() {
   const type = byId("busType").value;
-  if (busCache[type]) { fillTerminalLists(type); return; }
+  if (busCache[type]) { if (busCache[type].blocked) showBusBlocked(type); else fillTerminalLists(type); return; }
   if (busTerminalsLoading) return;
   busTerminalsLoading = true;
   setBox("busStatus", "터미널 목록 불러오는 중…", "loading");
   try {
     const r = await fetch(`/api/bus?type=${type}&op=terminals`);
     const d = await r.json();
+    if (d.blocked) { busCache[type] = { blocked: true, terminals: [], byName: {} }; setBox("busStatus", "", ""); showBusBlocked(type); return; }
     if (!r.ok || !d.terminals) throw new Error(d.error || `HTTP ${r.status}`);
     const byName = {}; d.terminals.forEach((t) => { byName[t.name] = t.code; });
     busCache[type] = { terminals: d.terminals, routes: d.routes || null, byName };
@@ -174,6 +182,10 @@ async function ensureTerminals() {
     fillTerminalLists(type);
   } catch (e) { setBox("busStatus", `터미널 목록 오류: ${e.message}`, "error"); }
   finally { busTerminalsLoading = false; }
+}
+function showBusBlocked(type) {
+  setBox("busStatus", "실시간 조회 제한 — 공식 페이지 안내", "warn");
+  byId("busResults").innerHTML = busOfficialCard(type, "", "");
 }
 function fillTerminalLists(type) {
   const c = busCache[type]; if (!c) return;
@@ -192,6 +204,7 @@ function resolveTerminal(type, val) {
 async function searchBus() {
   const type = byId("busType").value;
   await ensureTerminals();
+  if (busCache[type]?.blocked) { showBusBlocked(type); return; }
   const dep = resolveTerminal(type, byId("busDep").value.trim());
   const arr = resolveTerminal(type, byId("busArr").value.trim());
   const date = ymd(byId("busDate").value);
@@ -203,6 +216,7 @@ async function searchBus() {
     const r = await fetch(`/api/bus?${qs.toString()}`);
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    if (d.blocked) { byId("busResults").innerHTML = busOfficialCard(type, dep.name, arr.name); setBox("busStatus", "실시간 조회 제한 — 공식 페이지 안내", "warn"); return; }
     const rows = d.rows || [];
     const link = `<a class="btn map" href="${BUS_OFFICIAL[type]}" target="_blank" rel="noopener">🎫 공식 예매 페이지</a>`;
     if (!rows.length) {

@@ -97,9 +97,15 @@ async function kobusPost(path, bodyObj, cookie, referer) {
     body,
   });
 }
+// KOBUS 서버가 Vercel 등 데이터센터 IP를 차단/타임아웃하는 경우 감지 → 링크 안내로 폴백
+function isUnreachable(e) { return /ETIMEDOUT|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|fetch failed|시간 초과|socket hang up|EHOSTUNREACH|ECONNRESET/i.test(String(e?.message || e)); }
+
 async function kobusTerminals() {
-  const cookie = await kobusSeedCookie();
-  const { text } = await kobusPost("/mrs/readRotLinInf.ajax", {}, cookie, `${KOBUS}/main.do`);
+  let cookie, text;
+  try {
+    cookie = await kobusSeedCookie();
+    ({ text } = await kobusPost("/mrs/readRotLinInf.ajax", {}, cookie, `${KOBUS}/main.do`));
+  } catch (e) { if (isUnreachable(e)) return { terminals: [], routes: {}, blocked: true }; throw e; }
   let data; try { data = JSON.parse(text); } catch { return { terminals: [], routes: {} }; }
   const list = data.rotInfList || [];
   const tmap = new Map();       // code -> name
@@ -114,11 +120,14 @@ async function kobusTerminals() {
 }
 
 async function kobusSchedule(dep, arr, date) {
-  const cookie = await kobusSeedCookie();
-  const { text } = await kobusPost("/mrs/alcnSrch.do", {
-    deprCd: dep, arvlCd: arr, pathDvs: "sngl", pathStep: "1", deprDtm: date,
-    busClsCd: "0", rtrpChc: "1", timeLinkMin: "00", timeLinkMax: "23",
-  }, cookie, `${KOBUS}/main.do`);
+  let cookie, text;
+  try {
+    cookie = await kobusSeedCookie();
+    ({ text } = await kobusPost("/mrs/alcnSrch.do", {
+      deprCd: dep, arvlCd: arr, pathDvs: "sngl", pathStep: "1", deprDtm: date,
+      busClsCd: "0", rtrpChc: "1", timeLinkMin: "00", timeLinkMax: "23",
+    }, cookie, `${KOBUS}/main.do`));
+  } catch (e) { if (isUnreachable(e)) return { rows: [], blocked: true }; throw e; }
 
   // KOBUS 서버 HTML은 첫 행만 완전 렌더(나머지는 클라 JS) → 신뢰 가능한 fnSatsChc 인자만 사용
   const seen = new Set(); const rows = [];
