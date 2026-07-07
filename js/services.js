@@ -338,6 +338,50 @@ byId("lottoBtn").addEventListener("click", searchLotto);
 byId("lottoRound").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLotto(); });
 byId("lottoMine").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLotto(); });
 
+// ==================== ⛽ 주유소 ====================
+// 공용 위치 획득 (브라우저 geolocation, WGS84)
+function getLocation(statusId) {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("이 브라우저는 위치 기능을 지원하지 않습니다."));
+    setBox(statusId, "위치 확인 중… (권한을 허용해주세요)", "loading");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      (err) => reject(new Error(err.code === 1 ? "위치 권한이 거부되었습니다. 주소창 자물쇠에서 허용해주세요." : `위치 확인 실패: ${err.message}`)),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+}
+async function searchGas() {
+  try {
+    const { lat, lon } = await getLocation("gasStatus");
+    const prodcd = byId("gasProd").value, radius = byId("gasRadius").value;
+    setBox("gasStatus", "주유소 조회 중…", "loading"); byId("gasResults").innerHTML = "";
+    const r = await fetch(`/api/gas?lat=${lat}&lon=${lon}&prodcd=${prodcd}&radius=${radius}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    if (d.needKey) return setBox("gasStatus", "⚠️ 주유소 기능은 OPINET 인증키 설정 후 이용 가능합니다.", "warn");
+    const rows = d.rows || [];
+    if (!rows.length) return setBox("gasStatus", d.message || "반경 내 주유소가 없습니다.", "warn");
+    setBox("gasStatus", `가격순 ${rows.length}곳 (반경 ${Number(d.radius) / 1000}km)`, "ok");
+    byId("gasResults").innerHTML = rows.map((s, i) => renderGas(s, i)).join("");
+  } catch (e) { setBox("gasStatus", `오류: ${e.message}`, "error"); }
+}
+function renderGas(s, i) {
+  const chips = [s.selfYn ? "셀프" : "", s.carWash ? "세차장" : "", s.maint ? "경정비" : "", s.cvs ? "편의점" : "", s.kpetro ? "품질인증" : ""]
+    .filter(Boolean).map((c) => `<span class="chip">${E(c)}</span>`).join("");
+  const map = s.address ? `<a class="btn map" href="https://map.kakao.com/link/search/${encodeURIComponent(s.name)}" target="_blank" rel="noopener">🗺️ 지도</a>` : "";
+  const tel = s.tel ? `<a class="btn tel" href="tel:${E(s.tel).replace(/[^0-9]/g, "")}">📞 ${E(s.tel)}</a>` : "";
+  return `<article class="card">
+    <div class="card-top"><h3>${i === 0 ? "🥇 " : ""}${E(s.name)}</h3>
+      <span class="bed ok">${s.price ? s.price.toLocaleString() + "원/L" : "-"}</span></div>
+    <p class="meta">${E(s.brand)}${s.distance ? " · " + s.distance.toLocaleString() + "m" : ""}</p>
+    ${s.address ? `<p class="addr">📍 ${E(s.address)}</p>` : ""}
+    ${chips ? `<div class="chips">${chips}</div>` : ""}
+    <div class="card-actions">${tel}${map}</div>
+  </article>`;
+}
+byId("gasBtn").addEventListener("click", searchGas);
+
 // ---------- 초기값 ----------
 (function initServices() {
   const today = kstTodayISO();

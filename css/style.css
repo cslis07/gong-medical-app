@@ -426,3 +426,6 @@ input, button, select, textarea { font-family: inherit; }
 .lotto-plus { font-size: 20px; font-weight: 700; color: var(--muted); margin: 0 2px; }
 .stats-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; }
 .stats-list .meta { padding: 4px 0; border-bottom: 1px solid var(--border); }
+
+/* 주유소 칩 */
+#panel-gas .chips { margin-top: 6px; }
