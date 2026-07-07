@@ -4,9 +4,39 @@
 //   - 고속버스: 서버 HTML은 첫 행만 완전 렌더 → fnSatsChc 인자에서 출발시각·등급을 추출(잔여석/요금은 공식에서).
 //   - 시외버스: readSasFeeInf 인자에 시각·운수사·등급·잔여/총좌석이 모두 담겨 완전 조회 가능.
 
+import https from "node:https";
+import { request as httpsRequest } from "node:https";
+
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36";
 const KOBUS = "https://www.kobus.co.kr";
 const TMONEY = "https://intercitybus.tmoney.co.kr";
+
+// KOBUS는 레거시 TLS(낮은 SECLEVEL) 서버라 Vercel의 엄격한 OpenSSL에서 global fetch가 실패한다.
+// node:https 에 완화된 cipher/minVersion 을 지정한 커스텀 에이전트로 우회한다.
+const legacyAgent = new https.Agent({
+  keepAlive: true,
+  ciphers: "DEFAULT@SECLEVEL=0",
+  minVersion: "TLSv1",
+  rejectUnauthorized: false,
+});
+// node:https 기반 요청 — {status, text, setCookie[]} 반환
+function rawRequest(urlStr, { method = "GET", headers = {}, body = null, timeout = 22000 } = {}) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(urlStr);
+    const req = httpsRequest(
+      { hostname: u.hostname, port: 443, path: u.pathname + u.search, method, headers: { "User-Agent": UA, ...headers }, agent: legacyAgent, timeout },
+      (res) => {
+        const chunks = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () => resolve({ status: res.statusCode, text: Buffer.concat(chunks).toString("utf-8"), setCookie: res.headers["set-cookie"] || [] }));
+      }
+    );
+    req.on("error", reject);
+    req.on("timeout", () => { req.destroy(new Error("KOBUS 응답 시간 초과")); });
+    if (body) req.write(body);
+    req.end();
+  });
+}
 
 // KOBUS 등급 코드(indVBusClsCd) — 확실한 값만 매핑, 나머지는 공백
 const KOBUS_GRADE = { "1": "일반", "2": "우등", "3": "심야우등", "4": "프리미엄", "5": "심야프리미엄" };
@@ -49,11 +79,27 @@ async function postText(jar, url, body, referer, timeout, charset = "utf-8") {
 function decodeEntities(s) { return String(s || "").replace(/&#39;/g, "'").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">"); }
 function hhmm(v) { const s = String(v || ""); return /^\d{4,6}$/.test(s) ? `${s.slice(0, 2)}:${s.slice(2, 4)}` : s; }
 
-// ===== 고속버스(KOBUS) =====
+// ===== 고속버스(KOBUS) — node:https(레거시 TLS) 경유 =====
+function cookieFrom(setCookie) { return (setCookie || []).map((c) => c.split(";")[0]).join("; "); }
+async function kobusSeedCookie() {
+  const r = await rawRequest(`${KOBUS}/main.do`);
+  return cookieFrom(r.setCookie);
+}
+async function kobusPost(path, bodyObj, cookie, referer) {
+  const body = new URLSearchParams(bodyObj).toString();
+  return rawRequest(`${KOBUS}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      "Content-Length": Buffer.byteLength(body), "Referer": referer,
+      "X-Requested-With": "XMLHttpRequest", "Cookie": cookie,
+    },
+    body,
+  });
+}
 async function kobusTerminals() {
-  const jar = makeJar();
-  await seed(jar, `${KOBUS}/main.do`);
-  const { text } = await postText(jar, `${KOBUS}/mrs/readRotLinInf.ajax`, "", `${KOBUS}/main.do`, 22000);
+  const cookie = await kobusSeedCookie();
+  const { text } = await kobusPost("/mrs/readRotLinInf.ajax", {}, cookie, `${KOBUS}/main.do`);
   let data; try { data = JSON.parse(text); } catch { return { terminals: [], routes: {} }; }
   const list = data.rotInfList || [];
   const tmap = new Map();       // code -> name
@@ -68,12 +114,11 @@ async function kobusTerminals() {
 }
 
 async function kobusSchedule(dep, arr, date) {
-  const jar = makeJar();
-  await seed(jar, `${KOBUS}/main.do`);
-  const { text } = await postText(jar, `${KOBUS}/mrs/alcnSrch.do`, {
+  const cookie = await kobusSeedCookie();
+  const { text } = await kobusPost("/mrs/alcnSrch.do", {
     deprCd: dep, arvlCd: arr, pathDvs: "sngl", pathStep: "1", deprDtm: date,
     busClsCd: "0", rtrpChc: "1", timeLinkMin: "00", timeLinkMax: "23",
-  }, `${KOBUS}/main.do`, 24000);
+  }, cookie, `${KOBUS}/main.do`);
 
   // KOBUS 서버 HTML은 첫 행만 완전 렌더(나머지는 클라 JS) → 신뢰 가능한 fnSatsChc 인자만 사용
   const seen = new Set(); const rows = [];
