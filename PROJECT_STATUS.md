@@ -27,6 +27,18 @@
 | 🚌 시외버스 | 티머니 intercitybus (스크래핑) | `api/bus.js` type=intercity | ✅ 라이브 (터미널409·시간표·운수사·등급·잔여석) |
 | 🚌 고속버스 | KOBUS (스크래핑) | `api/bus.js` type=express | ⚠️ **Vercel IP 차단** → 공식 링크 폴백 |
 | 🧳 분실물 | LOST112·서울교통공사 | (프론트 전용) | ✅ 안내형 (조건 정리 + 공식 조회 링크) |
+| 🎰 로또 | dhlottery(IP차단)→smok95 CDN 미러 | `api/lotto.js` | ✅ 라이브 (당첨번호·등위별 당첨금·내번호 등수계산) |
+
+### 📋 2차 요청(생활서비스.txt 확장) 진행상황 — 2026-07-07
+추가 요청 6종 중:
+- ✅ **로또** 완료(dhlottery IP차단 → 공개 CDN 미러 smok95.github.io/lotto 프록시. 키 불요)
+- ⏳ **주유소(OPINET)** — OPINET 무료 키 필요 + WGS84→KATEC 변환. 무키 호출 시 빈 결과. 키 확보 후 구현·검증 예정
+- ⏳ **주차장(data.go.kr)** — 기존 DATA_API_KEY가 tn_pubr_prkplce_info_api "미등록(코드30)". data.go.kr에서 해당 API 활용신청(같은 키 재사용) 후 구현
+- ⏳ **화장실(data.go.kr)** — localdata CSV 다운로드 깨짐(error.html) → data.go.kr 공중화장실 표준 API 활용신청 후 구현
+- ❌ **공연 잔여석** — 인터파크가 NOL로 개편, 이름검색 API가 SPA HTML만 반환·유효 goodsCode 확인 불가. YES24 axPerf도 리다이렉트. 신뢰성 구현 보류(참고: k-skill 스크립트 엔드포인트는 api-ticketfront.interpark.com/v1/goods/{id}/playSeq + .../PlaySeq/{seq}/REMAINSEAT)
+- ⏸️ **대중교통 길찾기(ODsay)** — 1차에서 제외 유지(ODsay 키+IP화이트리스트)
+
+> 키 확보 시 추가 예정 env: `OPINET_API_KEY`(주유소). 주차장·화장실은 기존 `DATA_API_KEY`에 API 활용신청만 추가하면 재사용. '근처' 기능은 브라우저 geolocation(navigator.geolocation, WGS84) 사용 예정.
 
 ### ⚠️ 고속버스(KOBUS) Vercel 차단 — 중요
 - KOBUS(www.kobus.co.kr, 211.205.100.209)가 **Vercel 데이터센터 IP를 차단**(`connect ETIMEDOUT`). 로컬 Node에서는 정상.
