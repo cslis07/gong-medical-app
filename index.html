@@ -6,16 +6,16 @@
   <meta name="theme-color" content="#1a5fd0" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>서울 지하철 정보 찾기 | 실시간 도착·노선도</title>
-  <meta name="description" content="서울 열린데이터 기반 지하철 노선도, 실시간 도착·열차 위치, 첫차/막차, 최단경로, 편의시설, 승하차 통계, 실내공기질 조회" />
+  <title>서울 교통·생활 정보 | 지하철·버스·혼잡도·영화관</title>
+  <meta name="description" content="서울 지하철 노선도·실시간 도착, 고속·시외버스 시간표, 실시간 인구 혼잡도, 영화관 상영정보, 지하철 분실물까지 공공데이터로 한 번에" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
   <header class="app-header">
     <div class="wrap header-row">
       <div>
-        <h1>🚇 서울 지하철 정보 찾기</h1>
-        <p class="sub">서울 열린데이터 · 노선도 · 실시간 도착 · 첫차/막차 · 최단경로 · 편의시설</p>
+        <h1>🚇 서울 교통·생활 정보</h1>
+        <p class="sub">지하철 · 고속/시외버스 · 실시간 혼잡도 · 영화관 · 분실물</p>
       </div>
       <div class="header-links">
         <a class="guide-link" href="guide.html">📖 이용가이드</a>
@@ -23,88 +23,188 @@
     </div>
   </header>
 
+  <!-- 상단 서비스 탭 -->
+  <nav class="toptabs wrap" role="tablist">
+    <button class="toptab active" data-panel="subway" role="tab">🚇 지하철</button>
+    <button class="toptab" data-panel="density" role="tab">👥 혼잡도</button>
+    <button class="toptab" data-panel="cinema" role="tab">🎬 영화관</button>
+    <button class="toptab" data-panel="bus" role="tab">🚌 버스</button>
+    <button class="toptab" data-panel="lost" role="tab">🧳 분실물</button>
+  </nav>
+
   <main class="wrap">
-    <div id="modes" class="modes" role="tablist"></div>
 
-    <section class="controls">
-      <!-- 지하철 전용 컨트롤 -->
-      <div class="field subway-only sub-q" style="display:none">
-        <label for="subQ">역명 <span class="opt">(선택 — 비우면 전체)</span></label>
-        <input type="text" id="subQ" placeholder="예: 서울, 강남, 사당" />
-      </div>
-      <div class="field subway-only sub-line" style="display:none">
-        <label for="subLine">호선</label>
-        <select id="subLine"></select>
-      </div>
-
-      <!-- 실내공기질 등급 필터 -->
-      <div class="field subway-only sub-air" style="display:none">
-        <label for="airFilter">대기질</label>
-        <select id="airFilter">
-          <option value="">전체 (나쁜 순)</option>
-          <option value="full">나쁨만</option>
-          <option value="warn">보통만</option>
-          <option value="ok">좋음만</option>
-        </select>
-      </div>
-
-      <!-- 지하철 첫차/막차 전용 -->
-      <div class="field subway-only sub-firstlast" style="display:none">
-        <label for="flLine">호선</label>
-        <select id="flLine"></select>
-      </div>
-      <div class="field subway-only sub-firstlast" style="display:none">
-        <label for="flUpdn">상하행</label>
-        <select id="flUpdn">
-          <option value="상행">상행</option>
-          <option value="하행">하행</option>
-        </select>
-      </div>
-      <div class="field subway-only sub-firstlast" style="display:none">
-        <label for="flDow">요일</label>
-        <select id="flDow">
-          <option value="평일">평일</option>
-          <option value="토요일">토요일</option>
-          <option value="일요일">일요일</option>
-        </select>
-      </div>
-
-      <!-- 지하철 승하차 통계 전용 -->
-      <div class="field subway-only sub-stats" style="display:none">
-        <label for="stLine">호선</label>
-        <select id="stLine"></select>
-      </div>
-      <div class="field subway-only sub-stats" style="display:none">
-        <label for="stStn">역명</label>
-        <input type="text" id="stStn" placeholder="예: 강남" />
-      </div>
-      <div class="field subway-only sub-stats" style="display:none">
-        <label for="stYm">연월/일자<span class="opt"> (YYYYMM·YYYYMMDD)</span></label>
-        <input type="text" id="stYm" placeholder="예: 202605 또는 20260601" maxlength="8" />
-      </div>
-
-      <!-- 지하철 최단경로 전용 -->
-      <div class="field subway-only sub-path" style="display:none">
-        <label for="pathDep">출발역</label>
-        <input type="text" id="pathDep" placeholder="예: 강남" />
-      </div>
-      <div class="field subway-only sub-path" style="display:none">
-        <label for="pathArr">도착역</label>
-        <input type="text" id="pathArr" placeholder="예: 홍대입구" />
-      </div>
-
-      <!-- 지하철 조회 버튼 — 모든 입력 그룹 뒤(오른쪽 끝)에 위치 -->
-      <button id="subBtn" class="search-btn subway-only" style="display:none">조회</button>
+    <!-- ============ 🚇 지하철 ============ -->
+    <section class="panel active" id="panel-subway">
+      <div id="modes" class="modes" role="tablist"></div>
+      <section class="controls">
+        <div class="field subway-only sub-q" style="display:none">
+          <label for="subQ">역명 <span class="opt">(선택 — 비우면 전체)</span></label>
+          <input type="text" id="subQ" placeholder="예: 서울, 강남, 사당" />
+        </div>
+        <div class="field subway-only sub-line" style="display:none">
+          <label for="subLine">호선</label>
+          <select id="subLine"></select>
+        </div>
+        <div class="field subway-only sub-air" style="display:none">
+          <label for="airFilter">대기질</label>
+          <select id="airFilter">
+            <option value="">전체 (나쁜 순)</option>
+            <option value="full">나쁨만</option>
+            <option value="warn">보통만</option>
+            <option value="ok">좋음만</option>
+          </select>
+        </div>
+        <div class="field subway-only sub-firstlast" style="display:none">
+          <label for="flLine">호선</label>
+          <select id="flLine"></select>
+        </div>
+        <div class="field subway-only sub-firstlast" style="display:none">
+          <label for="flUpdn">상하행</label>
+          <select id="flUpdn"><option value="상행">상행</option><option value="하행">하행</option></select>
+        </div>
+        <div class="field subway-only sub-firstlast" style="display:none">
+          <label for="flDow">요일</label>
+          <select id="flDow"><option value="평일">평일</option><option value="토요일">토요일</option><option value="일요일">일요일</option></select>
+        </div>
+        <div class="field subway-only sub-stats" style="display:none">
+          <label for="stLine">호선</label>
+          <select id="stLine"></select>
+        </div>
+        <div class="field subway-only sub-stats" style="display:none">
+          <label for="stStn">역명</label>
+          <input type="text" id="stStn" placeholder="예: 강남" />
+        </div>
+        <div class="field subway-only sub-stats" style="display:none">
+          <label for="stYm">연월/일자<span class="opt"> (YYYYMM·YYYYMMDD)</span></label>
+          <input type="text" id="stYm" placeholder="예: 202605 또는 20260601" maxlength="8" />
+        </div>
+        <div class="field subway-only sub-path" style="display:none">
+          <label for="pathDep">출발역</label>
+          <input type="text" id="pathDep" placeholder="예: 강남" />
+        </div>
+        <div class="field subway-only sub-path" style="display:none">
+          <label for="pathArr">도착역</label>
+          <input type="text" id="pathArr" placeholder="예: 홍대입구" />
+        </div>
+        <button id="subBtn" class="search-btn subway-only" style="display:none">조회</button>
+      </section>
+      <p id="hint" class="hint"></p>
+      <div id="status" class="status"></div>
+      <div id="results" class="results"></div>
     </section>
 
-    <p id="hint" class="hint"></p>
-    <div id="status" class="status"></div>
-    <div id="results" class="results"></div>
+    <!-- ============ 👥 실시간 혼잡도 ============ -->
+    <section class="panel" id="panel-density">
+      <section class="controls">
+        <div class="field grow">
+          <label for="densQ">장소 <span class="opt">(서울 주요 핫스팟)</span></label>
+          <input type="text" id="densQ" list="densList" placeholder="예: 강남역, 홍대 관광특구, 여의도한강공원" autocomplete="off" />
+          <datalist id="densList"></datalist>
+        </div>
+        <button id="densBtn" class="search-btn">혼잡도 조회</button>
+      </section>
+      <p class="hint">KT·SKT 통신 신호 기반 <strong>추계치</strong>이며 약 15분 전 값입니다(5분 주기 갱신). 새벽 01~05시는 미제공될 수 있어요.</p>
+      <div id="densStatus" class="status"></div>
+      <div id="densResults" class="results"></div>
+    </section>
+
+    <!-- ============ 🎬 영화관 ============ -->
+    <section class="panel" id="panel-cinema">
+      <section class="controls">
+        <div class="field">
+          <label for="cineChain">영화관</label>
+          <select id="cineChain">
+            <option value="cgv">CGV</option>
+            <option value="megabox">메가박스</option>
+            <option value="lottecinema">롯데시네마</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="cineOp">구분</label>
+          <select id="cineOp">
+            <option value="theaters">영화관 찾기</option>
+            <option value="movies">상영작</option>
+            <option value="timetable">시간표/잔여석</option>
+          </select>
+        </div>
+        <div class="field grow">
+          <label for="cineKw">지역/지점</label>
+          <input type="text" id="cineKw" placeholder="예: 강남, 코엑스, 월드타워" />
+        </div>
+        <div class="field cine-date" style="display:none">
+          <label for="cineDate">날짜</label>
+          <input type="date" id="cineDate" />
+        </div>
+        <button id="cineBtn" class="search-btn">조회</button>
+      </section>
+      <p class="hint">CGV는 시간표, 메가박스·롯데시네마는 잔여석을 제공합니다. 잔여석은 조회 시점 참고값이며, 예매는 공식 앱/웹에서 확인하세요.</p>
+      <div id="cineStatus" class="status"></div>
+      <div id="cineResults" class="results"></div>
+    </section>
+
+    <!-- ============ 🚌 버스 ============ -->
+    <section class="panel" id="panel-bus">
+      <section class="controls">
+        <div class="field">
+          <label for="busType">종류</label>
+          <select id="busType">
+            <option value="express">고속버스 (KOBUS)</option>
+            <option value="intercity">시외버스 (티머니)</option>
+          </select>
+        </div>
+        <div class="field grow">
+          <label for="busDep">출발 터미널</label>
+          <input type="text" id="busDep" list="busDepList" placeholder="예: 서울경부, 동서울" autocomplete="off" />
+          <datalist id="busDepList"></datalist>
+        </div>
+        <div class="field grow">
+          <label for="busArr">도착 터미널</label>
+          <input type="text" id="busArr" list="busArrList" placeholder="예: 부산, 속초" autocomplete="off" />
+          <datalist id="busArrList"></datalist>
+        </div>
+        <div class="field">
+          <label for="busDate">날짜</label>
+          <input type="date" id="busDate" />
+        </div>
+        <button id="busBtn" class="search-btn">시간표 조회</button>
+      </section>
+      <p class="hint">시간표·잔여석(가능 범위) <strong>조회</strong> 후, 예매·결제는 공식 페이지에서 진행합니다. 고속버스는 출발시각·등급 위주로 제공됩니다.</p>
+      <div id="busStatus" class="status"></div>
+      <div id="busResults" class="results"></div>
+    </section>
+
+    <!-- ============ 🧳 지하철 분실물 ============ -->
+    <section class="panel" id="panel-lost">
+      <section class="controls">
+        <div class="field">
+          <label for="lostStn">역명/보관장소</label>
+          <input type="text" id="lostStn" placeholder="예: 강남역" />
+        </div>
+        <div class="field">
+          <label for="lostItem">물품명</label>
+          <input type="text" id="lostItem" placeholder="예: 지갑, 휴대폰, 가방" />
+        </div>
+        <div class="field">
+          <label for="lostDays">검색 기간</label>
+          <select id="lostDays">
+            <option value="7">최근 7일</option>
+            <option value="14" selected>최근 14일</option>
+            <option value="30">최근 30일</option>
+          </select>
+        </div>
+        <button id="lostBtn" class="search-btn">공식 조회 열기</button>
+      </section>
+      <p class="hint">지하철 유실물은 <strong>LOST112(경찰청 통합 유실물)</strong>·<strong>서울교통공사 유실물센터</strong> 공식 창구에서 조회합니다. 아래에서 조건을 정리해 공식 페이지로 바로 이동하세요.</p>
+      <div id="lostStatus" class="status"></div>
+      <div id="lostResults" class="results"></div>
+    </section>
+
   </main>
 
   <footer class="app-footer wrap">
-    <p>출처: 서울교통공사 · 서울 열린데이터광장(data.seoul.go.kr) OpenAPI</p>
-    <p class="disclaimer">실시간 도착·열차 위치는 제공 시점 기준이며 실제 운행과 다를 수 있습니다.</p>
+    <p>출처: 서울교통공사 · 서울 열린데이터광장 · KOBUS · 티머니 시외버스 · LOST112 · 영화관 공개 API</p>
+    <p class="disclaimer">실시간 정보는 제공 시점 기준이며 실제와 다를 수 있습니다. 버스·영화 예매/결제는 각 공식 페이지에서 진행하세요.</p>
   </footer>
 
   <!-- 공용 상세 모달 (지하철 역 정보 등) -->
@@ -117,5 +217,6 @@
   </div>
 
   <script src="/js/app.js"></script>
+  <script src="/js/services.js"></script>
 </body>
 </html>

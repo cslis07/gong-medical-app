@@ -4,6 +4,9 @@ import { readFile } from "node:fs/promises";
 import { extname, join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import subwayHandler from "./api/subway.js";
+import densityHandler from "./api/density.js";
+import cinemaHandler from "./api/cinema.js";
+import busHandler from "./api/bus.js";
 
 const MIME = { ".html":"text/html", ".css":"text/css", ".js":"text/javascript", ".json":"application/json",
   ".png":"image/png", ".jpg":"image/jpeg", ".jpeg":"image/jpeg", ".svg":"image/svg+xml", ".webp":"image/webp" };
@@ -24,6 +27,15 @@ createServer(async (req, res) => {
   const apiRes = { status: (c) => ({ json: (o) => { res.writeHead(c, {"content-type":"application/json"}); res.end(JSON.stringify(o)); } }) };
   if (u.pathname === "/api/subway") {
     return subwayHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
+  }
+  if (u.pathname === "/api/density") {
+    return densityHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
+  }
+  if (u.pathname === "/api/cinema") {
+    return cinemaHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
+  }
+  if (u.pathname === "/api/bus") {
+    return busHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
   }
   let p = u.pathname === "/" ? "/index.html" : u.pathname;
   try {

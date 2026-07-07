@@ -286,13 +286,14 @@ kbd{
 <section class="hero">
   <div class="hero-inner">
     <span class="hero-badge">📖 이용가이드 · 무료 · 회원가입 불필요</span>
-    <h1>공공데이터로 만나는 서울 지하철 정보</h1>
-    <p>공식 노선도 위에서 역 하나를 검색하면 실시간 도착·열차 위치·첫차/막차·최단경로·편의시설·승하차 통계·실내공기질까지, 흩어져 있던 지하철 공공 API를 한 모달에 모아 보여드립니다.</p>
+    <h1>공공데이터로 만나는 서울 교통·생활 정보</h1>
+    <p>지하철 노선도·실시간 도착부터 고속·시외버스 시간표, 실시간 인구 혼잡도, 영화관 상영정보, 지하철 분실물까지 — 흩어져 있던 서울 생활 공공/공식 API를 한 화면에 모았습니다.</p>
     <div class="hero-chips">
-      <span>🗺️ 공식 노선도</span>
-      <span>🚊 실시간 도착·위치</span>
-      <span>⏰ 첫차/막차</span>
-      <span>🗺️ 최단경로</span>
+      <span>🚇 지하철 종합정보</span>
+      <span>👥 실시간 혼잡도</span>
+      <span>🚌 고속·시외버스</span>
+      <span>🎬 영화관 상영정보</span>
+      <span>🧳 지하철 분실물</span>
       <span>📱 모바일 최적화</span>
     </div>
   </div>
@@ -323,6 +324,18 @@ kbd{
       <div class="sidebar-sub">
         <a href="#feat-map">전체 노선도</a>
         <a href="#feat-station-modal">역 종합 정보</a>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-life">
+        <span class="sidebar-dot" style="background:var(--c1)"></span>생활서비스
+      </a>
+      <div class="sidebar-sub">
+        <a href="#feat-density">실시간 혼잡도</a>
+        <a href="#feat-cinema">영화관</a>
+        <a href="#feat-bus">고속·시외버스</a>
+        <a href="#feat-lost">지하철 분실물</a>
       </div>
     </div>
 
@@ -358,6 +371,20 @@ kbd{
       </div>
       <div class="section-body">
         <div class="updates">
+
+          <div class="update-card new">
+            <div class="update-head">
+              <span class="update-date">2026.07.07</span>
+              <span class="update-badge">NEW</span>
+            </div>
+            <div class="update-title">🌆 생활서비스 4종 추가 — 혼잡도·영화관·버스·분실물</div>
+            <div class="update-body">
+              지하철 전용에서 <strong>서울 교통·생활 정보 앱</strong>으로 확장했습니다. 상단 탭에서
+              <strong>👥 실시간 혼잡도</strong>(서울 핫스팟 인구), <strong>🎬 영화관</strong>(CGV·메가박스·롯데 상영정보),
+              <strong>🚌 고속·시외버스</strong>(터미널 시간표 조회 + 공식 예매 링크),
+              <strong>🧳 지하철 분실물</strong>(LOST112·서울교통공사 안내)을 이용할 수 있습니다.
+            </div>
+          </div>
 
           <div class="update-card new">
             <div class="update-head">
@@ -420,19 +447,22 @@ kbd{
         </div>
       </div>
       <div class="section-body">
-        <p style="margin-top:0;color:var(--text2)">앱을 열면 <strong>서울 지하철 공식 노선도</strong>가 바로 표시됩니다. 위 검색창에 역 이름을 넣으면 그 역의 모든 정보가 한 모달에 통합되어 나타납니다.</p>
+        <p style="margin-top:0;color:var(--text2)">상단에 <strong>5개 서비스 탭</strong>이 있습니다. 각 탭은 독립적으로 동작하며, 회원가입·로그인 없이 바로 사용합니다.</p>
 
         <table class="info-table">
           <thead>
-            <tr><th>화면</th><th>다루는 정보</th><th>주된 사용 상황</th></tr>
+            <tr><th>탭</th><th>다루는 정보</th><th>주된 사용 상황</th></tr>
           </thead>
           <tbody>
-            <tr><td><strong>🗺️ 노선도</strong></td><td>수도권 지하철 전체 노선도</td><td>노선 확인, 역 위치 파악</td></tr>
-            <tr><td><strong>🚉 역 종합 정보</strong></td><td>도착·경로·편의시설·통계 등</td><td>역 정보·도착시간·경로 한 번에</td></tr>
+            <tr><td><strong>🚇 지하철</strong></td><td>공식 노선도 → 역 종합 정보(도착·경로·편의시설·통계)</td><td>역 정보·도착시간·경로 한 번에</td></tr>
+            <tr><td><strong>👥 혼잡도</strong></td><td>서울 주요 핫스팟 실시간 인구 혼잡도</td><td>지금 그곳이 얼마나 붐비는지</td></tr>
+            <tr><td><strong>🎬 영화관</strong></td><td>CGV·메가박스·롯데시네마 영화관·상영작·시간표/잔여석</td><td>가까운 영화관, 오늘 상영작</td></tr>
+            <tr><td><strong>🚌 버스</strong></td><td>고속(KOBUS)·시외(티머니) 시간표·잔여석 조회</td><td>시외 이동 시간표 확인·예매 진입</td></tr>
+            <tr><td><strong>🧳 분실물</strong></td><td>LOST112·서울교통공사 유실물 공식 조회 안내</td><td>지하철에서 물건을 잃어버렸을 때</td></tr>
           </tbody>
         </table>
 
-        <div class="tip">💡 모든 정보는 <strong>서울 열린데이터광장(data.seoul.go.kr)</strong>의 공식 API에서 실시간으로 가져옵니다. 회원가입·로그인은 필요 없습니다.</div>
+        <div class="tip">💡 데이터 출처는 서울 열린데이터광장·서울교통공사·KOBUS·티머니 시외버스·LOST112·영화관 공개 API입니다. 버스·영화 예매/결제는 각 공식 페이지에서 진행합니다.</div>
       </div>
     </section>
 
@@ -480,6 +510,48 @@ kbd{
           </ul>
 
           <div class="tip">💡 <strong>최단경로</strong>: 도착역 입력칸에 654개 역이 자동완성됩니다. <kbd>Enter</kbd>로도 조회 가능.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 5.5 생활서비스 (혼잡도·영화관·버스·분실물) -->
+    <section class="guide-section" id="sec-life">
+      <div class="section-header sh-overview">
+        <span class="section-icon">🌆</span>
+        <div>
+          <div class="section-title">생활서비스</div>
+          <div class="section-subtitle">혼잡도 · 영화관 · 버스 · 분실물</div>
+        </div>
+      </div>
+      <div class="section-body">
+
+        <div class="feature" id="feat-density">
+          <h3>👥 실시간 혼잡도</h3>
+          <p>서울 주요 <strong>120여 개 핫스팟</strong>(강남역·홍대 관광특구·여의도한강공원 등)의 실시간 혼잡도 단계(여유 / 보통 / 약간 붐빔 / 붐빔)와 추정 인구, 성별·연령 분포를 보여줍니다. 입력창에 장소명을 넣으면 자동완성됩니다.</p>
+          <div class="tip tip-warn">⚠️ 인구 수치는 KT·SKT 통신 신호 기반 <strong>추계치</strong>이며, 조회 시점 약 15분 전 값(5분 주기 갱신)입니다. 새벽 01~05시는 제공되지 않을 수 있습니다.</div>
+        </div>
+
+        <div class="feature" id="feat-cinema">
+          <h3>🎬 영화관</h3>
+          <p><strong>CGV·메가박스·롯데시네마</strong>의 영화관 검색, 상영작, 시간표(CGV)·잔여석(메가박스·롯데)을 조회합니다. 지역/지점 키워드로 찾고, 날짜를 지정해 상영정보를 확인합니다.</p>
+          <div class="tip">💡 잔여석·시간표는 조회 시점 참고값입니다. 예매·결제는 각 영화관 공식 앱/웹에서 진행하세요.</div>
+        </div>
+
+        <div class="feature" id="feat-bus">
+          <h3>🚌 고속·시외버스</h3>
+          <p><strong>고속버스(KOBUS)</strong>와 <strong>시외버스(티머니)</strong>의 출발·도착 터미널을 자동완성으로 선택하고 날짜별 시간표를 조회합니다. 시외버스는 운수사·등급·잔여/총좌석까지, 고속버스는 출발시각·등급 위주로 제공됩니다.</p>
+          <ul class="func-list">
+            <li><span class="fi">🕐</span><div><span class="ft">시간표 조회</span><span class="fd">출발시각·등급, (시외) 운수사·잔여석</span></div></li>
+            <li><span class="fi">🎫</span><div><span class="ft">공식 예매 링크</span><span class="fd">예매·결제는 KOBUS·티머니 공식 페이지에서</span></div></li>
+          </ul>
+          <div class="tip tip-warn">⚠️ 시간표는 공식 사이트 조회 결과이며 좌석 상황은 실시간으로 바뀝니다. <strong>예매/결제는 자동화하지 않으며</strong> 공식 페이지에서 직접 진행합니다.</div>
+        </div>
+
+        <div class="feature" id="feat-lost">
+          <h3>🧳 지하철 분실물</h3>
+          <p>역명·물품명·기간을 입력하면 <strong>LOST112(경찰청 통합 유실물)</strong> 검색 조건을 정리하고, LOST112와 <strong>서울교통공사 유실물센터</strong> 공식 창구로 바로 이동하는 버튼을 제공합니다.</p>
+          <div class="tip">💡 역명으로 결과가 없으면 <strong>‘역’ 없이</strong> 또는 <strong>호선명</strong>으로 넓혀 검색하세요. 공개 자동조회 API가 확정되지 않아 조회는 공식 창구에서 진행하는 안내형 기능입니다.</div>
         </div>
 
       </div>
@@ -633,14 +705,15 @@ kbd{
   <div class="guide-footer-inner">
     <div class="footer-grid">
       <div>
-        <h4>서울 지하철 정보 찾기</h4>
-        <p>공식 노선도와 역 종합 정보(실시간 도착·경로·편의시설·통계)를 한 화면에 모은 공공데이터 기반 무료 웹앱.</p>
+        <h4>서울 교통·생활 정보</h4>
+        <p>지하철·버스·혼잡도·영화관·분실물을 한 화면에 모은 공공데이터 기반 무료 웹앱.</p>
       </div>
       <div>
         <h4>바로가기</h4>
         <p><a href="index.html">🚇 앱 열기</a></p>
         <p><a href="#sec-updates">📌 변경 사항</a></p>
         <p><a href="#sec-subway">🚇 지하철 가이드</a></p>
+        <p><a href="#sec-life">🌆 생활서비스</a></p>
         <p><a href="#sec-faq">❓ 자주 묻는 질문</a></p>
       </div>
       <div>
@@ -677,6 +750,11 @@ kbd{
     <div class="sidebar-section">
       <a class="sidebar-link" href="#sec-subway" onclick="closeDrawer()">
         <span class="sidebar-dot" style="background:var(--c2)"></span>지하철 노선도
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-life" onclick="closeDrawer()">
+        <span class="sidebar-dot" style="background:var(--c1)"></span>생활서비스
       </a>
     </div>
     <div class="sidebar-section">
