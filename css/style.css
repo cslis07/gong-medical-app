@@ -418,3 +418,11 @@ input, button, select, textarea { font-family: inherit; }
   .toptab { flex: 0 0 auto; padding: 9px 13px; font-size: 13px; }
   .field.grow { flex: 1 1 100%; }
 }
+
+/* ===== 로또 ===== */
+.lotto-balls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
+.lotto-ball { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; color: #fff; font-weight: 800; font-size: 16px; box-shadow: inset -2px -3px 4px rgba(0,0,0,.18); }
+.lotto-ball.bonus { outline: 2px dashed #b45309; }
+.lotto-plus { font-size: 20px; font-weight: 700; color: var(--muted); margin: 0 2px; }
+.stats-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; }
+.stats-list .meta { padding: 4px 0; border-bottom: 1px solid var(--border); }

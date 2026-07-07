@@ -30,6 +30,7 @@
     <button class="toptab" data-panel="cinema" role="tab">🎬 영화관</button>
     <button class="toptab" data-panel="bus" role="tab">🚌 버스</button>
     <button class="toptab" data-panel="lost" role="tab">🧳 분실물</button>
+    <button class="toptab" data-panel="lotto" role="tab">🎰 로또</button>
   </nav>
 
   <main class="wrap">
@@ -198,6 +199,24 @@
       <p class="hint">지하철 유실물은 <strong>LOST112(경찰청 통합 유실물)</strong>·<strong>서울교통공사 유실물센터</strong> 공식 창구에서 조회합니다. 아래에서 조건을 정리해 공식 페이지로 바로 이동하세요.</p>
       <div id="lostStatus" class="status"></div>
       <div id="lostResults" class="results"></div>
+    </section>
+
+    <!-- ============ 🎰 로또 ============ -->
+    <section class="panel" id="panel-lotto">
+      <section class="controls">
+        <div class="field">
+          <label for="lottoRound">회차 <span class="opt">(비우면 최신)</span></label>
+          <input type="text" id="lottoRound" placeholder="예: 1231" inputmode="numeric" maxlength="5" />
+        </div>
+        <div class="field grow">
+          <label for="lottoMine">내 번호 <span class="opt">(선택 — 6개, 쉼표/공백)</span></label>
+          <input type="text" id="lottoMine" placeholder="예: 4, 13, 14, 18, 31, 38" />
+        </div>
+        <button id="lottoBtn" class="search-btn">당첨결과 조회</button>
+      </section>
+      <p class="hint">동행복권 공식 결과를 공개 미러(CDN)로 조회합니다. 내 번호를 넣으면 등수를 계산합니다. 구매·당첨금 수령은 공식 채널에서 확인하세요.</p>
+      <div id="lottoStatus" class="status"></div>
+      <div id="lottoResults" class="results"></div>
     </section>
 
   </main>

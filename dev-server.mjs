@@ -7,6 +7,7 @@ import subwayHandler from "./api/subway.js";
 import densityHandler from "./api/density.js";
 import cinemaHandler from "./api/cinema.js";
 import busHandler from "./api/bus.js";
+import lottoHandler from "./api/lotto.js";
 
 const MIME = { ".html":"text/html", ".css":"text/css", ".js":"text/javascript", ".json":"application/json",
   ".png":"image/png", ".jpg":"image/jpeg", ".jpeg":"image/jpeg", ".svg":"image/svg+xml", ".webp":"image/webp" };
@@ -36,6 +37,9 @@ createServer(async (req, res) => {
   }
   if (u.pathname === "/api/bus") {
     return busHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
+  }
+  if (u.pathname === "/api/lotto") {
+    return lottoHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
   }
   let p = u.pathname === "/" ? "/index.html" : u.pathname;
   try {

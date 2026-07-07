@@ -279,6 +279,65 @@ function searchLost() {
 }
 byId("lostBtn").addEventListener("click", searchLost);
 
+// ==================== 🎰 로또 ====================
+function lottoBallColor(n) {
+  if (n <= 10) return "#fbc400"; if (n <= 20) return "#69c8f2";
+  if (n <= 30) return "#ff7272"; if (n <= 40) return "#aaa"; return "#b0d840";
+}
+const lottoBall = (n, bonus = false) => `<span class="lotto-ball${bonus ? " bonus" : ""}" style="background:${lottoBallColor(n)}">${n}</span>`;
+const won = (v) => Number(v || 0).toLocaleString() + "원";
+function parseMyNumbers(s) {
+  return [...new Set((s.match(/\d+/g) || []).map(Number).filter((n) => n >= 1 && n <= 45))];
+}
+function lottoRank(matchCount, bonusHit) {
+  if (matchCount === 6) return 1;
+  if (matchCount === 5 && bonusHit) return 2;
+  if (matchCount === 5) return 3;
+  if (matchCount === 4) return 4;
+  if (matchCount === 3) return 5;
+  return 0;
+}
+async function searchLotto() {
+  const round = byId("lottoRound").value.trim();
+  const mine = parseMyNumbers(byId("lottoMine").value);
+  if (byId("lottoMine").value.trim() && mine.length !== 6)
+    return setBox("lottoStatus", "내 번호는 1~45 사이 서로 다른 6개를 입력하세요.", "warn");
+  setBox("lottoStatus", "조회 중…", "loading"); byId("lottoResults").innerHTML = "";
+  try {
+    const r = await fetch(`/api/lotto?round=${encodeURIComponent(round || "latest")}`);
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    setBox("lottoStatus", `${d.round}회 (${d.date})`, "ok");
+    const nums = (d.numbers || []).slice().sort((a, b) => a - b);
+    let mineBlock = "";
+    if (mine.length === 6) {
+      const set = new Set(nums);
+      const hit = mine.filter((n) => set.has(n));
+      const bonusHit = mine.includes(d.bonus);
+      const rank = lottoRank(hit.length, bonusHit);
+      mineBlock = `
+        <article class="card">
+          <div class="card-top"><h3>내 번호 결과</h3>
+            <span class="bed ${rank && rank <= 3 ? "ok" : rank ? "warn" : "full"}">${rank ? rank + "등" : "미당첨"}</span></div>
+          <div class="lotto-balls">${mine.sort((a, b) => a - b).map((n) => lottoBall(n)).join("")}</div>
+          <p class="meta">일치 ${hit.length}개${bonusHit ? " + 보너스" : ""}${hit.length ? " (" + hit.sort((a, b) => a - b).join(", ") + ")" : ""}</p>
+        </article>`;
+    }
+    const divs = (d.divisions || []).map((x) =>
+      `<li class="meta">${x.rank}등 · ${won(x.prize)} · ${Number(x.winners || 0).toLocaleString()}명</li>`).join("");
+    byId("lottoResults").innerHTML = `
+      <article class="card">
+        <div class="card-top"><h3>🎰 ${d.round}회 당첨번호</h3><span class="bed ok">${E(d.date)}</span></div>
+        <div class="lotto-balls">${nums.map((n) => lottoBall(n)).join("")}<span class="lotto-plus">+</span>${lottoBall(d.bonus, true)}</div>
+        <ul class="stats-list">${divs}</ul>
+        ${d.totalSales ? `<p class="meta">총 판매액 ${won(d.totalSales)}</p>` : ""}
+      </article>` + mineBlock;
+  } catch (e) { setBox("lottoStatus", `오류: ${e.message}`, "error"); retryBox("lottoResults", e.message, searchLotto); }
+}
+byId("lottoBtn").addEventListener("click", searchLotto);
+byId("lottoRound").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLotto(); });
+byId("lottoMine").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLotto(); });
+
 // ---------- 초기값 ----------
 (function initServices() {
   const today = kstTodayISO();
