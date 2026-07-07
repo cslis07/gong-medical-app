@@ -2,77 +2,98 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>응급의료·병원·약국 찾기 | 공공의료 정보</title>
-  <meta name="description" content="국립중앙의료원 공공데이터 기반 응급실 실시간 가용병상, 내 주변 응급실·약국, 외상센터, 달빛어린이병원, 병·의원, 약국 찾기" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1a5fd0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>서울 지하철 정보 찾기 | 실시간 도착·노선도</title>
+  <meta name="description" content="서울 열린데이터 기반 지하철 노선도, 실시간 도착·열차 위치, 첫차/막차, 최단경로, 편의시설, 승하차 통계, 실내공기질 조회" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
   <header class="app-header">
-    <div class="wrap">
-      <h1>🏥 공공의료 정보 찾기</h1>
-      <p class="sub">국립중앙의료원 공공데이터 · 실시간 가용병상 · 내 주변 · 외상센터 · 달빛어린이병원</p>
+    <div class="wrap header-row">
+      <div>
+        <h1>🚇 서울 지하철 정보 찾기</h1>
+        <p class="sub">서울 열린데이터 · 노선도 · 실시간 도착 · 첫차/막차 · 최단경로 · 편의시설</p>
+      </div>
+      <div class="header-links">
+        <a class="guide-link" href="guide.html">📖 이용가이드</a>
+      </div>
     </div>
   </header>
-
-  <nav class="tabs wrap" role="tablist">
-    <button class="tab active" data-tab="emergency" role="tab">🚑 응급실</button>
-    <button class="tab" data-tab="hospital" role="tab">🏥 병·의원</button>
-    <button class="tab" data-tab="pharmacy" role="tab">💊 약국</button>
-    <button class="tab" data-tab="seoul" role="tab">🎫 서울 예약</button>
-    <button class="tab" data-tab="subway" role="tab">🚇 지하철</button>
-  </nav>
 
   <main class="wrap">
     <div id="modes" class="modes" role="tablist"></div>
 
     <section class="controls">
-      <div class="field region-only">
-        <label for="sido">시/도</label>
-        <select id="sido"></select>
-      </div>
-      <div class="field region-only">
-        <label for="sigungu">시/군/구</label>
-        <select id="sigungu"></select>
-      </div>
-      <div class="field region-only" id="keyword-field">
-        <label for="keyword">기관명 <span class="opt">(선택)</span></label>
-        <input type="text" id="keyword" placeholder="예: 삼성서울병원" />
-      </div>
-      <div class="field severe-only" style="display:none">
-        <label for="severeType">중증질환 <span class="opt">(선택)</span></label>
-        <select id="severeType"></select>
-      </div>
-      <button id="searchBtn" class="search-btn region-only">조회</button>
-      <button id="geoBtn" class="search-btn geo-only" style="display:none">📍 내 위치로 검색</button>
-
-      <!-- 서울 공공서비스예약 전용 컨트롤 -->
-      <div class="field seoul-only" style="display:none">
-        <label for="seoulArea">자치구</label>
-        <select id="seoulArea"></select>
-      </div>
-      <div class="field seoul-only" style="display:none">
-        <label for="seoulStat">접수상태</label>
-        <select id="seoulStat">
-          <option value="">전체</option>
-          <option value="접수중">접수중만</option>
-        </select>
-      </div>
-      <div class="field seoul-only" style="display:none">
-        <label for="seoulKw">서비스명 <span class="opt">(선택)</span></label>
-        <input type="text" id="seoulKw" placeholder="예: 테니스장" />
-      </div>
-      <button id="seoulBtn" class="search-btn seoul-only" style="display:none">조회</button>
-
       <!-- 지하철 전용 컨트롤 -->
       <div class="field subway-only sub-q" style="display:none">
-        <label for="subQ">역명</label>
+        <label for="subQ">역명 <span class="opt">(선택 — 비우면 전체)</span></label>
         <input type="text" id="subQ" placeholder="예: 서울, 강남, 사당" />
       </div>
       <div class="field subway-only sub-line" style="display:none">
         <label for="subLine">호선</label>
         <select id="subLine"></select>
       </div>
+
+      <!-- 실내공기질 등급 필터 -->
+      <div class="field subway-only sub-air" style="display:none">
+        <label for="airFilter">대기질</label>
+        <select id="airFilter">
+          <option value="">전체 (나쁜 순)</option>
+          <option value="full">나쁨만</option>
+          <option value="warn">보통만</option>
+          <option value="ok">좋음만</option>
+        </select>
+      </div>
+
+      <!-- 지하철 첫차/막차 전용 -->
+      <div class="field subway-only sub-firstlast" style="display:none">
+        <label for="flLine">호선</label>
+        <select id="flLine"></select>
+      </div>
+      <div class="field subway-only sub-firstlast" style="display:none">
+        <label for="flUpdn">상하행</label>
+        <select id="flUpdn">
+          <option value="상행">상행</option>
+          <option value="하행">하행</option>
+        </select>
+      </div>
+      <div class="field subway-only sub-firstlast" style="display:none">
+        <label for="flDow">요일</label>
+        <select id="flDow">
+          <option value="평일">평일</option>
+          <option value="토요일">토요일</option>
+          <option value="일요일">일요일</option>
+        </select>
+      </div>
+
+      <!-- 지하철 승하차 통계 전용 -->
+      <div class="field subway-only sub-stats" style="display:none">
+        <label for="stLine">호선</label>
+        <select id="stLine"></select>
+      </div>
+      <div class="field subway-only sub-stats" style="display:none">
+        <label for="stStn">역명</label>
+        <input type="text" id="stStn" placeholder="예: 강남" />
+      </div>
+      <div class="field subway-only sub-stats" style="display:none">
+        <label for="stYm">연월/일자<span class="opt"> (YYYYMM·YYYYMMDD)</span></label>
+        <input type="text" id="stYm" placeholder="예: 202605 또는 20260601" maxlength="8" />
+      </div>
+
+      <!-- 지하철 최단경로 전용 -->
+      <div class="field subway-only sub-path" style="display:none">
+        <label for="pathDep">출발역</label>
+        <input type="text" id="pathDep" placeholder="예: 강남" />
+      </div>
+      <div class="field subway-only sub-path" style="display:none">
+        <label for="pathArr">도착역</label>
+        <input type="text" id="pathArr" placeholder="예: 홍대입구" />
+      </div>
+
+      <!-- 지하철 조회 버튼 — 모든 입력 그룹 뒤(오른쪽 끝)에 위치 -->
       <button id="subBtn" class="search-btn subway-only" style="display:none">조회</button>
     </section>
 
@@ -82,11 +103,11 @@
   </main>
 
   <footer class="app-footer wrap">
-    <p>출처: 국립중앙의료원 — 공공데이터포털(data.go.kr) OpenAPI</p>
-    <p class="disclaimer">실시간 정보는 의료기관 입력 시점 기준이며 실제와 다를 수 있습니다. 응급상황 시 <strong>119</strong>에 신고하세요.</p>
+    <p>출처: 서울교통공사 · 서울 열린데이터광장(data.seoul.go.kr) OpenAPI</p>
+    <p class="disclaimer">실시간 도착·열차 위치는 제공 시점 기준이며 실제 운행과 다를 수 있습니다.</p>
   </footer>
 
-  <!-- 서울 예약 상세 모달 -->
+  <!-- 공용 상세 모달 (지하철 역 정보 등) -->
   <div id="modal" class="modal" style="display:none">
     <div class="modal-backdrop" id="modalBackdrop"></div>
     <div class="modal-box" role="dialog" aria-modal="true">
@@ -95,7 +116,6 @@
     </div>
   </div>
 
-  <script src="/js/regions.js"></script>
   <script src="/js/app.js"></script>
 </body>
 </html>

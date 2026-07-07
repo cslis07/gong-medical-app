@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#1a5fd0" />
+<title>이용가이드 · 서울 지하철 정보 찾기</title>
+<meta name="description" content="서울 지하철 노선도·실시간 도착·첫차/막차·최단경로·편의시설·승하차 통계를 한 번에 조회하는 공공데이터 기반 무료 웹앱. 사용법과 기능을 한 페이지에 정리했습니다." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="이용가이드 · 서울 지하철 정보 찾기" />
+<meta property="og:description" content="공식 노선도에서 역을 검색하면 실시간 도착·경로·편의시설까지 한 모달에 — 서울 지하철 정보 앱 이용 가이드" />
+<meta property="og:url" content="https://gong-medical-app.vercel.app/guide.html" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --primary:#1a5fd0;
+  --primary-dark:#14479c;
+  --primary-lt:#eff6ff;
+
+  /* 섹션 색상 */
+  --c-update:#ef4444; --c-update-lt:#fef2f2;
+  --c1:#1a5fd0;       --c1-lt:#eff6ff;   /* 의료·검색 */
+  --c2:#0ea5e9;       --c2-lt:#f0f9ff;   /* 지하철·실시간 */
+  --c3:#10b981;       --c3-lt:#ecfdf5;   /* 정보·내 주변 */
+  --c4:#f59e0b;       --c4-lt:#fffbeb;   /* 서울 예약 */
+  --c5:#8b5cf6;       --c5-lt:#f5f3ff;   /* 모바일·접근성 */
+  --c6:#ec4899;       --c6-lt:#fdf2f8;   /* 데이터 출처 */
+
+  --text:#1e293b; --text2:#475569; --text3:#94a3b8;
+  --border:#e2e8f0; --surface:#fff; --bg:#f8fafc;
+  --radius:10px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
+  --shadow-md:0 4px 16px rgba(0,0,0,.10);
+  --sidebar:260px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:"Noto Sans KR","Pretendard",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  line-height:1.6;
+}
+
+/* ── 상단 sticky 바 ── */
+.top-bar{
+  position:sticky; top:0; z-index:50; height:60px;
+  background:rgba(255,255,255,.92); backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border); display:flex; align-items:center;
+}
+.top-inner{max-width:1200px; margin:0 auto; padding:0 20px; width:100%; display:flex; align-items:center; justify-content:space-between; gap:16px;}
+.brand{display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--text); font-weight:800; font-size:16px;}
+.brand-logo{width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:17px;}
+.top-actions{display:flex; gap:8px;}
+.top-actions a{
+  text-decoration:none; padding:8px 14px; border-radius:999px;
+  background:var(--primary-lt); color:var(--primary-dark); font-size:13.5px; font-weight:700;
+  border:1px solid #dbeafe; white-space:nowrap;
+}
+.top-actions a.primary{background:var(--primary); color:#fff; border-color:var(--primary);}
+
+/* ── Hero ── */
+.hero{background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:#fff; padding:56px 0 64px;}
+.hero-inner{max-width:1200px; margin:0 auto; padding:0 20px;}
+.hero-badge{display:inline-block; padding:5px 13px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.28); border-radius:999px; font-size:12.5px; font-weight:600; margin-bottom:14px;}
+.hero h1{font-size:36px; margin:0 0 12px; line-height:1.25; letter-spacing:-.5px;}
+.hero p{margin:0; opacity:.94; font-size:16.5px; max-width:720px; line-height:1.55;}
+.hero-chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:18px;}
+.hero-chips span{background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.3); padding:6px 12px; border-radius:999px; font-size:12.5px; font-weight:600;}
+
+/* ── 레이아웃 ── */
+.layout{max-width:1200px; margin:0 auto; padding:0 20px; display:grid; grid-template-columns:var(--sidebar) 1fr; gap:0;}
+.sidebar{position:sticky; top:80px; align-self:start; height:calc(100vh - 100px); overflow-y:auto; padding:32px 0; border-right:1px solid var(--border);}
+.sidebar-title{font-size:11.5px; font-weight:800; color:var(--text3); letter-spacing:1.5px; text-transform:uppercase; padding:0 14px; margin-bottom:10px;}
+.sidebar-section{margin-bottom:14px;}
+.sidebar-link{
+  display:flex; align-items:center; gap:10px; padding:9px 14px; text-decoration:none; color:var(--text2);
+  font-size:14px; font-weight:600; border-radius:8px; transition:.15s;
+}
+.sidebar-link:hover{background:var(--bg); color:var(--text);}
+.sidebar-link.active{background:var(--primary-lt); color:var(--primary-dark); font-weight:700;}
+.sidebar-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+.sidebar-sub{margin:2px 0 0 32px; display:flex; flex-direction:column; gap:1px;}
+.sidebar-sub a{text-decoration:none; color:var(--text2); font-size:12.5px; padding:5px 10px; border-radius:6px;}
+.sidebar-sub a:hover{background:var(--bg); color:var(--text);}
+
+.main{padding:40px 0 40px 40px;}
+.guide-section{margin-bottom:48px; scroll-margin-top:80px;}
+.guide-section:last-child{margin-bottom:0;}
+
+/* 섹션 헤더 */
+.section-header{
+  display:flex; align-items:center; gap:16px; padding:20px 24px; border-radius:14px 14px 0 0;
+  color:#fff; box-shadow:var(--shadow);
+}
+.section-icon{font-size:28px; flex-shrink:0;}
+.section-title{font-size:22px; font-weight:800; line-height:1.2;}
+.section-subtitle{font-size:13.5px; opacity:.92; margin-top:2px;}
+.sh-update{background:linear-gradient(135deg,#b91c1c,#ef4444)}
+.sh-overview{background:linear-gradient(135deg,#475569,#94a3b8)}
+.sh-1{background:linear-gradient(135deg,var(--primary-dark),var(--primary))}
+.sh-2{background:linear-gradient(135deg,#0c4a6e,#0ea5e9)}
+.sh-3{background:linear-gradient(135deg,#065f46,#10b981)}
+.sh-4{background:linear-gradient(135deg,#92400e,#f59e0b)}
+.sh-5{background:linear-gradient(135deg,#5b21b6,#8b5cf6)}
+.sh-6{background:linear-gradient(135deg,#9d174d,#ec4899)}
+
+.section-body{background:var(--surface); padding:28px; border:1px solid var(--border); border-top:0; border-radius:0 0 14px 14px; box-shadow:var(--shadow);}
+.feature{margin-bottom:28px; scroll-margin-top:80px;}
+.feature:last-child{margin-bottom:0;}
+.feature h3{font-size:17px; margin:0 0 10px; color:var(--text); display:flex; align-items:center; gap:8px;}
+.feature p{margin:0 0 10px; color:var(--text2); font-size:14.5px;}
+.feature p:last-child{margin-bottom:0;}
+
+/* 업데이트 카드 */
+.updates{display:flex; flex-direction:column; gap:12px;}
+.update-card{
+  background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--c-update);
+  border-radius:var(--radius); padding:16px 18px;
+}
+.update-card.new{background:linear-gradient(180deg,var(--c-update-lt) 0%,var(--surface) 60%);}
+.update-head{display:flex; align-items:center; gap:8px; margin-bottom:6px;}
+.update-date{font-size:12px; font-weight:700; color:var(--text3); letter-spacing:.3px;}
+.update-badge{font-size:10.5px; font-weight:800; padding:2px 7px; border-radius:4px; background:var(--c-update); color:#fff; letter-spacing:.5px;}
+.update-title{font-size:15.5px; font-weight:700; color:var(--text); margin-bottom:6px;}
+.update-body{font-size:13.5px; color:var(--text2); line-height:1.6;}
+.update-body ul{margin:6px 0 0; padding-left:18px;}
+.update-body li{margin-bottom:3px;}
+
+/* 스텝 */
+.steps{display:flex; flex-direction:column; gap:14px; margin-top:6px;}
+.step{display:flex; gap:14px; position:relative;}
+.step:not(:last-child)::after{
+  content:""; position:absolute; left:14px; top:36px; bottom:-14px; width:2px;
+  background:var(--border); border-radius:1px;
+}
+.step-num{
+  width:30px; height:30px; flex-shrink:0; border-radius:50%; color:#fff;
+  display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13.5px;
+  position:relative; z-index:1;
+}
+.step-body{flex:1; padding-top:1px;}
+.step-label{font-size:14.5px; font-weight:700; color:var(--text); margin-bottom:3px;}
+.step-text{font-size:13.5px; color:var(--text2); line-height:1.6;}
+.step-text code{background:var(--bg); padding:1px 6px; border-radius:4px; font-size:12.5px; color:var(--primary-dark); font-family:ui-monospace,Menlo,Consolas,monospace;}
+
+/* 기능 그리드 */
+.feat-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+.feat-card{
+  border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px;
+  background:#fff; transition:.15s;
+}
+.feat-card:hover{border-color:var(--primary); box-shadow:var(--shadow-md);}
+.feat-card-icon{font-size:22px; margin-bottom:6px;}
+.feat-card-title{font-size:14.5px; font-weight:700; color:var(--text); margin-bottom:4px;}
+.feat-card-desc{font-size:13px; color:var(--text2); line-height:1.55;}
+
+/* 기능 리스트 */
+.func-list{list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;}
+.func-list li{display:flex; gap:12px; padding:12px 14px; border:1px solid var(--border); border-radius:var(--radius); background:#fff;}
+.func-list .fi{font-size:20px; flex-shrink:0;}
+.func-list .ft{display:block; font-size:14.5px; font-weight:700; color:var(--text); margin-bottom:2px;}
+.func-list .fd{display:block; font-size:13px; color:var(--text2); line-height:1.55;}
+
+/* 정보 테이블 */
+.info-table{width:100%; border-collapse:collapse; margin:6px 0; font-size:13.5px;}
+.info-table th, .info-table td{padding:10px 12px; text-align:left; border-bottom:1px solid var(--border);}
+.info-table thead th{background:var(--bg); font-weight:700; color:var(--text2); font-size:12.5px; text-transform:uppercase; letter-spacing:.4px;}
+.info-table tbody tr:last-child td{border-bottom:0;}
+.info-table strong{color:var(--text); font-weight:700;}
+.info-table code{background:var(--bg); padding:1px 6px; border-radius:4px; font-size:12.5px; color:var(--primary-dark); font-family:ui-monospace,Menlo,Consolas,monospace;}
+
+/* 팁 박스 */
+.tip{border-radius:var(--radius); padding:12px 14px; font-size:13.5px; line-height:1.6; margin-top:10px;}
+.tip{background:var(--c1-lt); border-left:4px solid var(--c1); color:#1e3a8a;}
+.tip-warn{background:var(--c-update-lt); border-left-color:var(--c-update); color:#991b1b;}
+.tip-green{background:var(--c3-lt); border-left-color:var(--c3); color:#065f46;}
+.tip-amber{background:var(--c4-lt); border-left-color:var(--c4); color:#92400e;}
+
+kbd{
+  display:inline-block; padding:2px 7px; border:1px solid var(--border); border-bottom-width:2px;
+  border-radius:5px; background:#fff; font-family:ui-monospace,Menlo,Consolas,monospace;
+  font-size:12px; color:var(--text); box-shadow:0 1px 0 rgba(0,0,0,.05);
+}
+
+/* FAQ — details/summary 아코디언 */
+.faq-list{display:flex; flex-direction:column; gap:10px;}
+.faq-item{
+  border:1px solid var(--border); border-radius:var(--radius); background:#fff;
+  overflow:hidden; transition:border-color .15s, box-shadow .15s;
+}
+.faq-item[open]{border-color:#7c3aed; box-shadow:var(--shadow-md);}
+.faq-item summary{
+  list-style:none; cursor:pointer; padding:14px 44px 14px 18px; position:relative;
+  font-size:14.5px; font-weight:700; color:var(--text); line-height:1.5;
+}
+.faq-item summary::-webkit-details-marker{display:none;}
+.faq-item summary::after{
+  content:"+"; position:absolute; right:18px; top:50%; transform:translateY(-50%);
+  font-size:20px; font-weight:700; color:#7c3aed; transition:transform .2s;
+}
+.faq-item[open] summary::after{content:"−";}
+.faq-item summary:hover{background:#fafafa;}
+.faq-body{padding:0 18px 16px; color:var(--text2); font-size:13.5px; line-height:1.7;}
+.faq-body p{margin:0 0 8px;}
+.faq-body p:last-child{margin-bottom:0;}
+.faq-body ul{margin:6px 0 0; padding-left:20px;}
+.faq-body li{margin-bottom:4px;}
+.faq-body code{background:var(--bg); padding:1px 6px; border-radius:4px; font-size:12.5px; color:#7c3aed; font-family:ui-monospace,Menlo,Consolas,monospace;}
+
+/* 푸터 */
+.guide-footer{background:#0f172a; color:#cbd5e1; padding:40px 20px 32px; margin-top:48px;}
+.guide-footer-inner{max-width:1200px; margin:0 auto;}
+.guide-footer h4{color:#fff; font-size:14px; margin:0 0 10px;}
+.guide-footer p{font-size:13px; line-height:1.7; margin:6px 0;}
+.guide-footer a{color:#93c5fd; text-decoration:none;}
+.guide-footer a:hover{text-decoration:underline;}
+.guide-footer .footer-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:32px; margin-bottom:24px;}
+.guide-footer .copy{padding-top:18px; border-top:1px solid #1e293b; font-size:12px; color:#64748b;}
+
+/* 모바일 FAB + 드로어 */
+.toc-fab{
+  position:fixed; right:20px; bottom:calc(20px + env(safe-area-inset-bottom));
+  width:54px; height:54px; border-radius:50%; background:var(--primary); color:#fff;
+  border:0; font-size:22px; box-shadow:0 6px 16px rgba(26,95,208,.4); z-index:60; cursor:pointer;
+  display:none;
+}
+.toc-drawer{
+  position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:70; display:none;
+}
+.toc-drawer.open{display:block;}
+.toc-drawer-panel{
+  position:absolute; right:0; top:0; bottom:0; width:min(82vw,320px);
+  background:#fff; padding:24px 20px; overflow-y:auto;
+  box-shadow:-10px 0 40px rgba(0,0,0,.25);
+}
+.toc-drawer-close{
+  position:absolute; top:14px; right:14px; width:36px; height:36px; border-radius:50%;
+  background:var(--bg); border:0; font-size:18px; cursor:pointer; color:var(--text2);
+}
+
+/* 모바일 */
+@media (max-width:900px){
+  .layout{grid-template-columns:1fr; padding:0 14px;}
+  .sidebar{display:none;}
+  .main{padding:24px 0;}
+  .hero{padding:40px 0 48px;}
+  .hero h1{font-size:26px;}
+  .hero p{font-size:14.5px;}
+  .top-inner{padding:0 14px;}
+  .top-actions a{padding:7px 10px; font-size:12.5px;}
+  .top-actions a:not(.primary){display:none;}
+  .toc-fab{display:flex; align-items:center; justify-content:center;}
+  .feat-grid{grid-template-columns:1fr;}
+  .section-header{padding:16px 18px;}
+  .section-icon{font-size:24px;}
+  .section-title{font-size:18px;}
+  .section-body{padding:20px 18px;}
+  .guide-footer .footer-grid{grid-template-columns:1fr; gap:24px;}
+}
+@media (max-width:640px){
+  .hero h1{font-size:22px;}
+  .hero-badge{font-size:11.5px;}
+  .feature h3{font-size:15.5px;}
+}
+</style>
+</head>
+<body>
+
+<!-- 상단 sticky -->
+<div class="top-bar">
+  <div class="top-inner">
+    <a href="index.html" class="brand">
+      <div class="brand-logo">🚇</div>
+      <span>서울 지하철 정보 찾기</span>
+    </a>
+    <div class="top-actions">
+      <a href="#sec-updates">📌 변경사항</a>
+      <a href="index.html" class="primary">앱 열기 →</a>
+    </div>
+  </div>
+</div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-inner">
+    <span class="hero-badge">📖 이용가이드 · 무료 · 회원가입 불필요</span>
+    <h1>공공데이터로 만나는 서울 지하철 정보</h1>
+    <p>공식 노선도 위에서 역 하나를 검색하면 실시간 도착·열차 위치·첫차/막차·최단경로·편의시설·승하차 통계·실내공기질까지, 흩어져 있던 지하철 공공 API를 한 모달에 모아 보여드립니다.</p>
+    <div class="hero-chips">
+      <span>🗺️ 공식 노선도</span>
+      <span>🚊 실시간 도착·위치</span>
+      <span>⏰ 첫차/막차</span>
+      <span>🗺️ 최단경로</span>
+      <span>📱 모바일 최적화</span>
+    </div>
+  </div>
+</section>
+
+<!-- 본문 -->
+<div class="layout">
+
+  <!-- 사이드바 -->
+  <aside class="sidebar">
+    <div class="sidebar-title">목차</div>
+
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-updates">
+        <span class="sidebar-dot" style="background:var(--c-update)"></span>수정된 사항
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-overview">
+        <span class="sidebar-dot" style="background:#94a3b8"></span>화면 구성
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-subway">
+        <span class="sidebar-dot" style="background:var(--c2)"></span>지하철 노선도
+      </a>
+      <div class="sidebar-sub">
+        <a href="#feat-map">전체 노선도</a>
+        <a href="#feat-station-modal">역 종합 정보</a>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-mobile">
+        <span class="sidebar-dot" style="background:var(--c5)"></span>모바일·접근성
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-faq">
+        <span class="sidebar-dot" style="background:#7c3aed"></span>자주 묻는 질문
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-data">
+        <span class="sidebar-dot" style="background:var(--c6)"></span>데이터 출처·주의
+      </a>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- 1. 수정된 사항 -->
+    <section class="guide-section" id="sec-updates">
+      <div class="section-header sh-update">
+        <span class="section-icon">📌</span>
+        <div>
+          <div class="section-title">수정된 사항</div>
+          <div class="section-subtitle">최근 적용된 변경 내역</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="updates">
+
+          <div class="update-card new">
+            <div class="update-head">
+              <span class="update-date">2026.07.07</span>
+              <span class="update-badge">NEW</span>
+            </div>
+            <div class="update-title">🚇 지하철 전용 앱으로 개편</div>
+            <div class="update-body">
+              생활서비스 앱으로 방향을 정리하면서 <strong>지하철 정보에 집중</strong>했습니다. 기존 의료(응급실·병의원·약국) 기능은 분리되었고, 이제 공식 노선도와 역 종합 정보만 남아 더 가볍고 빠릅니다.
+            </div>
+          </div>
+
+          <div class="update-card new">
+            <div class="update-head">
+              <span class="update-date">2026.06.30</span>
+              <span class="update-badge">NEW</span>
+            </div>
+            <div class="update-title">📱 모바일 UI 전면 개선</div>
+            <div class="update-body">
+              <ul>
+                <li>모달이 화면 하단에서 올라오는 <strong>바텀 시트</strong> 형태로 동작</li>
+                <li>입력창 자동 확대(iOS 줌인) 방지 — 폰트 16px, 터치 영역 44px 이상</li>
+                <li>탭이 좁은 화면에서 가로 스크롤, 노선도 줌 버튼 46×46으로 확대</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="update-card new">
+            <div class="update-head">
+              <span class="update-date">2026.06.30</span>
+              <span class="update-badge">NEW</span>
+            </div>
+            <div class="update-title">🚇 지하철 탭을 노선도 한 화면으로 단순화</div>
+            <div class="update-body">
+              공식 서울 지하철 노선도 위에서 <strong>역을 검색하면 모든 정보가 한 모달에</strong> 통합됩니다 — 실시간 도착·열차 위치·첫차/막차·최단경로·편의시설·승하차 통계·실내공기질까지.
+            </div>
+          </div>
+
+          <div class="update-card">
+            <div class="update-head">
+              <span class="update-date">2026.06.30</span>
+            </div>
+            <div class="update-title">🗺️ 공식 서울 지하철 노선도 이미지 적용</div>
+            <div class="update-body">
+              좌표 기반 자체 SVG에서 <strong>공식 노선도(고해상도 5612×5612 PNG)</strong>로 교체. 손에 익숙한 디자인 그대로 확대·축소·드래그 가능.
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 화면 구성 -->
+    <section class="guide-section" id="sec-overview">
+      <div class="section-header sh-overview">
+        <span class="section-icon">🧭</span>
+        <div>
+          <div class="section-title">화면 구성 &amp; 메뉴</div>
+          <div class="section-subtitle">앱 전체 지도와 탭별 역할</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <p style="margin-top:0;color:var(--text2)">앱을 열면 <strong>서울 지하철 공식 노선도</strong>가 바로 표시됩니다. 위 검색창에 역 이름을 넣으면 그 역의 모든 정보가 한 모달에 통합되어 나타납니다.</p>
+
+        <table class="info-table">
+          <thead>
+            <tr><th>화면</th><th>다루는 정보</th><th>주된 사용 상황</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>🗺️ 노선도</strong></td><td>수도권 지하철 전체 노선도</td><td>노선 확인, 역 위치 파악</td></tr>
+            <tr><td><strong>🚉 역 종합 정보</strong></td><td>도착·경로·편의시설·통계 등</td><td>역 정보·도착시간·경로 한 번에</td></tr>
+          </tbody>
+        </table>
+
+        <div class="tip">💡 모든 정보는 <strong>서울 열린데이터광장(data.seoul.go.kr)</strong>의 공식 API에서 실시간으로 가져옵니다. 회원가입·로그인은 필요 없습니다.</div>
+      </div>
+    </section>
+
+    <!-- 5. 지하철 -->
+    <section class="guide-section" id="sec-subway">
+      <div class="section-header sh-2">
+        <span class="section-icon">🚇</span>
+        <div>
+          <div class="section-title">지하철 노선도</div>
+          <div class="section-subtitle">공식 노선도 → 역 검색 → 모든 정보 한 모달</div>
+        </div>
+      </div>
+      <div class="section-body">
+
+        <div class="feature" id="feat-map">
+          <h3>🗺️ 전체 노선도</h3>
+          <p>지하철 탭을 열면 <strong>서울 지하철 공식 노선도</strong>가 바로 표시됩니다. 우하단 <kbd>+</kbd> <kbd>−</kbd> <kbd>⟲</kbd> 버튼으로 확대·축소·복원, <strong>드래그로 이동</strong>할 수 있습니다.</p>
+
+          <div class="feat-grid">
+            <div class="feat-card">
+              <div class="feat-card-icon">🔍</div>
+              <div class="feat-card-title">검색</div>
+              <div class="feat-card-desc">상단 검색창에 역 이름 입력 → 654개 역 자동완성 지원</div>
+            </div>
+            <div class="feat-card">
+              <div class="feat-card-icon">📱</div>
+              <div class="feat-card-title">모바일 친화</div>
+              <div class="feat-card-desc">큰 줌 버튼, 핀치 줌 지원, 64vh 높이로 콘텐츠 보이게</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature" id="feat-station-modal">
+          <h3>🚉 역 종합 정보 모달</h3>
+          <p>역을 검색하면 그 역의 <strong>모든 정보가 하나의 모달</strong>에 표시됩니다. 호선이 여러 개라면 상단의 호선 버튼을 눌러 전환할 수 있습니다.</p>
+
+          <ul class="func-list">
+            <li><span class="fi">🚊</span><div><span class="ft">실시간 정보</span><span class="fd">도착 임박 열차 + 운행 중 열차 위치</span></div></li>
+            <li><span class="fi">⏰</span><div><span class="ft">첫차 / 막차</span><span class="fd">평일 상행·하행 시간</span></div></li>
+            <li><span class="fi">🗺️</span><div><span class="ft">최단경로</span><span class="fd">현재 역이 출발지로 자동 설정, 도착역만 입력하면 경로·시간·요금 조회</span></div></li>
+            <li><span class="fi">♿</span><div><span class="ft">편의시설</span><span class="fd">엘리베이터·에스컬레이터·휠체어리프트·수평자동보도 대수</span></div></li>
+            <li><span class="fi">📊</span><div><span class="ft">승하차 통계</span><span class="fd">직전 달 호선별 승차·하차 인원</span></div></li>
+            <li><span class="fi">🚧</span><div><span class="ft">출입구 폐쇄</span><span class="fd">임시폐쇄 공사 현황이 있을 때만 표시</span></div></li>
+            <li><span class="fi">🌬️</span><div><span class="ft">실내공기질</span><span class="fd">미세먼지 수치 + 좋음·보통·나쁨 등급</span></div></li>
+          </ul>
+
+          <div class="tip">💡 <strong>최단경로</strong>: 도착역 입력칸에 654개 역이 자동완성됩니다. <kbd>Enter</kbd>로도 조회 가능.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 6. 모바일 -->
+    <section class="guide-section" id="sec-mobile">
+      <div class="section-header sh-5">
+        <span class="section-icon">📱</span>
+        <div>
+          <div class="section-title">모바일·접근성</div>
+          <div class="section-subtitle">스마트폰에서 더 잘 쓰도록 다듬은 부분</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="feat-grid">
+          <div class="feat-card">
+            <div class="feat-card-icon">🚀</div>
+            <div class="feat-card-title">바텀 시트 모달</div>
+            <div class="feat-card-desc">모달이 화면 하단에서 올라옴. 한 손으로 닫기 쉬움</div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-card-icon">👆</div>
+            <div class="feat-card-title">큰 터치 타겟</div>
+            <div class="feat-card-desc">모든 버튼·입력창 최소 44px (Apple HIG 권장값)</div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-card-icon">🔠</div>
+            <div class="feat-card-title">자동 확대 방지</div>
+            <div class="feat-card-desc">iOS Safari에서 입력창 탭 시 줌인되지 않도록 16px 폰트</div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-card-icon">↔️</div>
+            <div class="feat-card-title">탭 가로 스크롤</div>
+            <div class="feat-card-desc">좁은 화면에서 탭 글자 잘림 없이 모두 보이게</div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-card-icon">📐</div>
+            <div class="feat-card-title">1열 그리드</div>
+            <div class="feat-card-desc">카드·입력 폼이 자동으로 1열로 재배치</div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-card-icon">🌐</div>
+            <div class="feat-card-title">PWA 메타</div>
+            <div class="feat-card-desc">홈 화면 추가, 상태바 색상, 노치(safe-area) 대응</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. FAQ -->
+    <section class="guide-section" id="sec-faq">
+      <div class="section-header" style="background:linear-gradient(135deg,#5b21b6,#7c3aed)">
+        <span class="section-icon">❓</span>
+        <div>
+          <div class="section-title">자주 묻는 질문</div>
+          <div class="section-subtitle">처음 쓰시는 분들이 가장 많이 묻는 질문</div>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="faq-list">
+
+          <details class="faq-item">
+            <summary>회원가입이나 로그인이 필요한가요?</summary>
+            <div class="faq-body">
+              <p><strong>아니요.</strong> 회원가입·로그인 없이 모든 기능을 사용할 수 있습니다. 개인 식별 정보는 수집하지 않으며, 입력하신 검색어나 위치는 브라우저 안에서만 사용되고 서버에 저장되지 않습니다.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>어떤 지역까지 지원하나요?</summary>
+            <div class="faq-body">
+              <p><strong>지하철</strong>은 수도권(서울·인천·경기) 전 노선과 일부 광역철도(GTX-A, 신분당선 등)를 포함합니다. 실시간 도착·역 편의시설·승하차 통계 등 세부 데이터는 서울교통공사 운영 노선을 중심으로 제공됩니다.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>스마트폰 앱이 있나요? 홈 화면에 추가할 수 있나요?</summary>
+            <div class="faq-body">
+              <p>별도의 앱은 없습니다. <strong>웹 브라우저에서 바로 사용</strong>하며 별도 설치가 필요하지 않습니다.</p>
+              <p>iOS Safari나 Android Chrome에서 주소 표시줄의 공유·메뉴 버튼을 눌러 <strong>'홈 화면에 추가'</strong>하시면 앱처럼 아이콘으로 실행할 수 있습니다.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>검색 결과가 비어있어요. 왜 그런가요?</summary>
+            <div class="faq-body">
+              <ul>
+                <li><strong>역명을 정확히 입력</strong>했는지 확인하세요 (예: '서울' → '서울역').</li>
+                <li>공공 API가 일시적으로 응답하지 않을 수 있습니다. 잠시 후 다시 시도해 보세요.</li>
+                <li>새벽 시간대(예: 02~04시)에는 운행 중인 열차나 도착 정보가 거의 없을 수 있습니다.</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>지하철 모달의 '열차 위치'에 '통과 중 열차 없음'이 자주 떠요</summary>
+            <div class="faq-body">
+              <p>'열차 위치' API는 <strong>1~9호선만</strong> 데이터를 제공합니다. 공항철도·GTX-A·신분당선 등 광역철도 단독역에서는 정보가 표시되지 않을 수 있습니다.</p>
+              <p>같은 모달의 <strong>'실시간 도착'</strong>은 광역철도까지 포함하므로, 두 항목을 함께 확인하시면 됩니다.</p>
+            </div>
+          </details>
+
+        </div>
+
+        <div class="tip" style="margin-top:18px;">💡 더 궁금한 점이 있다면 데이터 출처 섹션의 원본 사이트(서울 열린데이터광장)를 참고하세요.</div>
+      </div>
+    </section>
+
+    <!-- 8. 데이터 출처 -->
+    <section class="guide-section" id="sec-data">
+      <div class="section-header sh-6">
+        <span class="section-icon">🔗</span>
+        <div>
+          <div class="section-title">데이터 출처 &amp; 주의사항</div>
+          <div class="section-subtitle">공공 API와 책임 한계</div>
+        </div>
+      </div>
+      <div class="section-body">
+
+        <table class="info-table">
+          <thead><tr><th>분야</th><th>출처</th><th>운영기관</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>지하철 실시간·정보·통계</strong></td>
+              <td><a href="https://data.seoul.go.kr" target="_blank" rel="noopener">서울 열린데이터광장</a></td>
+              <td>서울교통공사 외</td>
+            </tr>
+            <tr>
+              <td><strong>지하철 노선도 이미지</strong></td>
+              <td>공식 노선도 PDF</td>
+              <td>서울교통공사</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="tip tip-warn" style="margin-top:18px;">
+          <strong>⚠️ 책임 한계</strong><br>
+          실시간 도착·열차 위치 등 시시각각 변하는 정보는 제공 시점 기준이며 실제 운행과 다를 수 있습니다. 본 앱은 참고용이며, 정확한 운행 정보는 각 철도 운영기관의 공식 안내를 확인하시기 바랍니다.
+        </div>
+
+        <div class="tip">💡 회원가입·로그인이 없으며 개인 위치는 브라우저 안에서만 사용됩니다. 서버에 저장되는 것은 익명화된 API 호출 통계뿐입니다.</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Footer -->
+<footer class="guide-footer">
+  <div class="guide-footer-inner">
+    <div class="footer-grid">
+      <div>
+        <h4>서울 지하철 정보 찾기</h4>
+        <p>공식 노선도와 역 종합 정보(실시간 도착·경로·편의시설·통계)를 한 화면에 모은 공공데이터 기반 무료 웹앱.</p>
+      </div>
+      <div>
+        <h4>바로가기</h4>
+        <p><a href="index.html">🚇 앱 열기</a></p>
+        <p><a href="#sec-updates">📌 변경 사항</a></p>
+        <p><a href="#sec-subway">🚇 지하철 가이드</a></p>
+        <p><a href="#sec-faq">❓ 자주 묻는 질문</a></p>
+      </div>
+      <div>
+        <h4>출처</h4>
+        <p><a href="https://data.seoul.go.kr" target="_blank" rel="noopener">서울 열린데이터광장</a></p>
+        <p>서울특별시 · 서울교통공사</p>
+      </div>
+    </div>
+    <div class="copy">
+      © 서울 지하철 정보 찾기 · 본 앱은 참고용이며 실시간 정보는 제공 시점 기준으로 실제 운행과 다를 수 있습니다.
+    </div>
+  </div>
+</footer>
+
+<!-- 모바일 FAB -->
+<button class="toc-fab" onclick="document.getElementById('toc-drawer').classList.add('open')" aria-label="목차 열기">📑</button>
+
+<!-- 모바일 드로어 -->
+<div class="toc-drawer" id="toc-drawer" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="toc-drawer-panel">
+    <button class="toc-drawer-close" onclick="document.getElementById('toc-drawer').classList.remove('open')" aria-label="닫기">✕</button>
+    <div class="sidebar-title">목차</div>
+
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-updates" onclick="closeDrawer()">
+        <span class="sidebar-dot" style="background:var(--c-update)"></span>수정된 사항
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-overview" onclick="closeDrawer()">
+        <span class="sidebar-dot" style="background:#94a3b8"></span>화면 구성
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-subway" onclick="closeDrawer()">
+        <span class="sidebar-dot" style="background:var(--c2)"></span>지하철 노선도
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-mobile" onclick="closeDrawer()">
+        <span class="sidebar-dot" style="background:var(--c5)"></span>모바일·접근성
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-faq" onclick="closeDrawer()">
+        <span class="sidebar-dot" style="background:#7c3aed"></span>자주 묻는 질문
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-data" onclick="closeDrawer()">
+        <span class="sidebar-dot" style="background:var(--c6)"></span>데이터 출처
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+function closeDrawer(){ document.getElementById('toc-drawer').classList.remove('open'); }
+
+// 스크롤-스파이
+(() => {
+  const links = document.querySelectorAll('.sidebar-link[href^="#sec-"]');
+  const sections = [...links]
+    .map(a => document.querySelector(a.getAttribute('href')))
+    .filter(Boolean);
+  function update(){
+    const y = window.scrollY + 110;
+    let cur = sections[0];
+    for(const s of sections){ if(s.offsetTop <= y) cur = s; }
+    if(!cur) return;
+    links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + cur.id));
+  }
+  window.addEventListener('scroll', update, {passive:true});
+  update();
+})();
+
+// 모바일 드로어 닫기 (앵커 클릭 시)
+document.querySelectorAll('.toc-drawer-panel a').forEach(a => a.addEventListener('click', closeDrawer));
+// ESC 키
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeDrawer(); });
+</script>
+</body>
+</html>

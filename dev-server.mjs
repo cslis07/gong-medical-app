@@ -1,13 +1,12 @@
-// 로컬 검증용 서버 (Vercel 라우팅 모사: 정적파일 + /api/proxy). 배포에는 사용 안 함.
+// 로컬 검증용 서버 (Vercel 라우팅 모사: 정적파일 + /api/subway). 배포에는 사용 안 함.
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import proxyHandler from "./api/proxy.js";
-import seoulHandler from "./api/seoul.js";
 import subwayHandler from "./api/subway.js";
 
-const MIME = { ".html":"text/html", ".css":"text/css", ".js":"text/javascript", ".json":"application/json" };
+const MIME = { ".html":"text/html", ".css":"text/css", ".js":"text/javascript", ".json":"application/json",
+  ".png":"image/png", ".jpg":"image/jpeg", ".jpeg":"image/jpeg", ".svg":"image/svg+xml", ".webp":"image/webp" };
 const root = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3005;
 
@@ -23,12 +22,6 @@ try {
 createServer(async (req, res) => {
   const u = new URL(req.url, "http://localhost");
   const apiRes = { status: (c) => ({ json: (o) => { res.writeHead(c, {"content-type":"application/json"}); res.end(JSON.stringify(o)); } }) };
-  if (u.pathname === "/api/proxy") {
-    return proxyHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
-  }
-  if (u.pathname === "/api/seoul") {
-    return seoulHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
-  }
   if (u.pathname === "/api/subway") {
     return subwayHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
   }
