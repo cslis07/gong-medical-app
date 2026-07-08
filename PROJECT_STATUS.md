@@ -37,6 +37,16 @@
 - ⏳ **화장실(data.go.kr)** — localdata CSV 다운로드 깨짐(error.html) → data.go.kr 공중화장실 표준 API 활용신청 후 구현
 - ❌ **공연 잔여석** — 인터파크가 NOL로 개편, 이름검색 API가 SPA HTML만 반환·유효 goodsCode 확인 불가. YES24 axPerf도 리다이렉트. 신뢰성 구현 보류(참고: k-skill 스크립트 엔드포인트는 api-ticketfront.interpark.com/v1/goods/{id}/playSeq + .../PlaySeq/{seq}/REMAINSEAT)
 - ⏸️ **대중교통 길찾기(ODsay)** — 1차에서 제외 유지(ODsay 키+IP화이트리스트)
+- ✅ **따릉이** 완료(2026-07-07) — `api/bike.js`, 서울 bikeList 3페이지 병렬+haversine, 기존 SEOUL_API_KEY 재사용. 검증: 강남역 주변 2732개
+- ✅ **주유소 전국 평균유가** 추가 — gas.js `?op=avg`(avgAllPrice), 주유소 탭 상단 표시
+
+### 📋 3차 확장 요청(2026-07-07) — 키 제공자별 대기목록
+사용자 요청: 제안기능 전부 + 휴게소폴더(EX·OPINET) + 아파트실거래가/LH/SH. 키별 분류:
+- **OPINET(키 보유)**: ✅평균유가 추가. 추가가능=지역별최저가top20(lowTop20.do)·고속도로 주유소가격 등
+- **EX 키 필요(data.ex.co.kr 별도 발급)**: 휴게소 편의시설(`data.ex.co.kr/openapi/restinfo/restConvList`)·푸드메뉴(`restBestfoodList`)·고속도로주유소가격(restBestOilList)·실시간교통. 파라미터 key+type 필수. **사용자 EX키 발급 필요**
+- **data.go.kr 활용신청 필요(기존 DATA_API_KEY 재사용, 대부분 자동승인)**: 날씨(기상청 단기예보)·미세먼지(에어코리아)·시내버스(TAGO 버스도착)·아파트실거래가(국토부)·LH청약·공공와이파이·관광TourAPI·화장실. 주차장=심의 대기중
+- **SH**: i-sh.co.kr 또는 data.seoul.go.kr SH임대 확인 필요(SEOUL키 재사용 가능성)
+- **미해결**: 택배(CJ 응답없음), 공연(NOL개편), KTX/SRT(코레일 로그인—TAGO 열차정보로 시간표만 가능)
 
 > 키 확보 시 추가 예정 env: `OPINET_API_KEY`(주유소). 주차장·화장실은 기존 `DATA_API_KEY`에 API 활용신청만 추가하면 재사용. '근처' 기능은 브라우저 geolocation(navigator.geolocation, WGS84) 사용 예정.
 
