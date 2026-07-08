@@ -437,3 +437,6 @@ input, button, select, textarea { font-family: inherit; }
 .ga-item b { color: var(--text); }
 .ga-diff.up { color: var(--error); }
 .ga-diff.dn { color: #1d4ed8; }
+
+/* 고속도로 휴게소 모드 */
+#panel-highway .rt-label { font-weight: 700; font-size: 13.5px; color: var(--text); }

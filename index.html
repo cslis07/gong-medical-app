@@ -33,6 +33,7 @@
     <button class="toptab" data-panel="lotto" role="tab">🎰 로또</button>
     <button class="toptab" data-panel="gas" role="tab">⛽ 주유소</button>
     <button class="toptab" data-panel="bike" role="tab">🚲 따릉이</button>
+    <button class="toptab" data-panel="highway" role="tab">🛣️ 고속도로</button>
   </nav>
 
   <main class="wrap">
@@ -259,6 +260,27 @@
       <p class="hint">브라우저 위치 권한이 필요합니다. 가까운 순으로 <strong>대여 가능 자전거 수</strong>와 거치대를 보여줍니다. (서울시 실시간)</p>
       <div id="bikeStatus" class="status"></div>
       <div id="bikeResults" class="results"></div>
+    </section>
+
+    <!-- ============ 🛣️ 고속도로 ============ -->
+    <section class="panel" id="panel-highway">
+      <section class="controls">
+        <div class="field">
+          <label for="hwMode">구분</label>
+          <select id="hwMode">
+            <option value="rest">🍜 휴게소 정보</option>
+            <option value="congest">🚗 실시간 소통</option>
+          </select>
+        </div>
+        <div class="field grow hw-rest">
+          <label for="hwQ">휴게소명</label>
+          <input type="text" id="hwQ" placeholder="예: 죽전, 안성, 천안삼거리, 행담도" />
+        </div>
+        <button id="hwBtn" class="search-btn">조회</button>
+      </section>
+      <p class="hint">전국 고속도로 휴게소의 편의시설·대표음식·주유소 유가, 그리고 실시간 정체/서행 구간을 조회합니다. (한국도로공사)</p>
+      <div id="hwStatus" class="status"></div>
+      <div id="hwResults" class="results"></div>
     </section>
 
   </main>

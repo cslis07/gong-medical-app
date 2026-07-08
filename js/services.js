@@ -421,8 +421,58 @@ async function searchBike() {
 }
 byId("bikeBtn").addEventListener("click", searchBike);
 
+// ==================== 🛣️ 고속도로 (휴게소 + 소통) ====================
+function syncHwMode() {
+  byId("panel-highway").querySelector(".hw-rest").style.display = byId("hwMode").value === "rest" ? "" : "none";
+}
+byId("hwMode").addEventListener("change", syncHwMode);
+async function searchHighway() {
+  const mode = byId("hwMode").value;
+  if (mode === "rest" && !byId("hwQ").value.trim()) return setBox("hwStatus", "휴게소명을 입력하세요.", "warn");
+  setBox("hwStatus", "조회 중…", "loading"); byId("hwResults").innerHTML = "";
+  try {
+    const url = mode === "congest" ? "/api/highway?op=congest" : `/api/highway?op=rest&q=${encodeURIComponent(byId("hwQ").value.trim())}`;
+    const d = await (await fetch(url)).json();
+    if (d.needKey) return setBox("hwStatus", "⚠️ 고속도로 기능은 EX 인증키 설정 후 이용 가능합니다.", "warn");
+    if (!d.ok) return setBox("hwStatus", d.message || "조회 실패", "warn");
+    const rows = d.rows || [];
+    if (!rows.length) return setBox("hwStatus", mode === "congest" ? "현재 정체/서행 구간이 없습니다. 원활합니다 🎉" : "일치하는 휴게소가 없습니다.", mode === "congest" ? "ok" : "warn");
+    if (mode === "congest") {
+      setBox("hwStatus", `현재 정체/서행 ${rows.length}구간`, "warn");
+      byId("hwResults").innerHTML = rows.map(renderCongest).join("");
+    } else {
+      setBox("hwStatus", `휴게소 ${rows.length}곳`, "ok");
+      byId("hwResults").innerHTML = rows.map(renderRestArea).join("");
+    }
+  } catch (e) { setBox("hwStatus", `오류: ${e.message}`, "error"); retryBox("hwResults", e.message, searchHighway); }
+}
+function renderRestArea(r) {
+  const fac = (r.facilities || []).map((f) => `<span class="chip">${E(f)}</span>`).join("");
+  const foods = (r.foods || []).map((f) =>
+    `<li class="meta">${f.recommend ? "⭐ " : f.best ? "🔥 " : ""}${E(f.name)}${f.cost ? ` · ${f.cost.toLocaleString()}원` : ""}</li>`).join("");
+  const oil = r.oil && (r.oil.gasoline || r.oil.diesel)
+    ? `<p class="meta">⛽ ${E(r.oil.company)} · ${r.oil.gasoline ? `휘발유 ${r.oil.gasoline.toLocaleString()}` : ""}${r.oil.diesel ? ` · 경유 ${r.oil.diesel.toLocaleString()}` : ""}원</p>` : "";
+  return `<article class="card">
+    <div class="card-top"><h3>🛣️ ${E(r.name)}</h3>${r.route ? `<span class="bed ok">${E(r.route)}</span>` : ""}</div>
+    ${r.addr ? `<p class="addr">📍 ${E(r.addr)}</p>` : ""}
+    ${fac ? `<div class="chips">${fac}</div>` : ""}
+    ${foods ? `<p class="rt-label" style="margin-top:8px">🍜 대표·추천 메뉴</p><ul class="time-stats">${foods}</ul>` : ""}
+    ${oil}
+  </article>`;
+}
+function renderCongest(r) {
+  const lvl = r.gradeCode >= 3 ? "full" : "busy";
+  return `<article class="card busrow">
+    <div class="card-top"><h3>${E(r.route)} <span class="opt">${E(r.zone)}</span></h3><span class="bed ${lvl}">${E(r.grade)}</span></div>
+    <p class="meta">${r.updown ? E(r.updown) + " · " : ""}${r.speed != null ? `현재 ${r.speed}km/h` : ""}</p>
+  </article>`;
+}
+byId("hwBtn").addEventListener("click", searchHighway);
+byId("hwQ").addEventListener("keydown", (e) => { if (e.key === "Enter") searchHighway(); });
+
 // ---------- 초기값 ----------
 (function initServices() {
+  syncHwMode();
   const today = kstTodayISO();
   ["cineDate", "busDate"].forEach((id) => { const el = byId(id); if (el && !el.value) el.value = today; });
   syncCineDate();
