@@ -429,3 +429,11 @@ input, button, select, textarea { font-family: inherit; }
 
 /* 주유소 칩 */
 #panel-gas .chips { margin-top: 6px; }
+
+/* 전국 평균유가 바 */
+.gas-avg { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 6px 2px 0; font-size: 13px; color: var(--muted); }
+.gas-avg:empty { display: none; }
+.ga-label { font-weight: 700; color: var(--text); }
+.ga-item b { color: var(--text); }
+.ga-diff.up { color: var(--error); }
+.ga-diff.dn { color: #1d4ed8; }

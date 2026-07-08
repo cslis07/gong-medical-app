@@ -27,6 +27,15 @@ export default async function handler(req, res) {
     const KEY = process.env.OPINET_API_KEY;
     if (!KEY) return res.status(200).json({ ok: false, needKey: true, message: "OPINET_API_KEY(오피넷 인증키)가 설정되지 않았습니다." });
 
+    // 전국 평균유가 (avgAllPrice)
+    if (String(req.query.op) === "avg") {
+      const j = await getJson(`${OPINET}/avgAllPrice.do?out=json&code=${encodeURIComponent(KEY)}&certkey=${encodeURIComponent(KEY)}`);
+      let oil = j?.RESULT?.OIL || [];
+      if (!Array.isArray(oil)) oil = oil ? [oil] : [];
+      const rows = oil.map((o) => ({ prodcd: o.PRODCD, name: o.PRODNM, price: Number(o.PRICE) || null, diff: Number(o.DIFF) || 0, date: o.TRADE_DT }));
+      return res.status(200).json({ ok: true, avg: rows });
+    }
+
     const lat = Number(req.query.lat), lon = Number(req.query.lon);
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return res.status(400).json({ error: "현재 위치(lat, lon)가 필요합니다." });
     const prodcd = PRODS.has(String(req.query.prodcd)) ? String(req.query.prodcd) : "B027";

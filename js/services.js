@@ -11,6 +11,21 @@ function switchPanel(name) {
   document.querySelectorAll(".toptab").forEach((b) => b.classList.toggle("active", b.dataset.panel === name));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === `panel-${name}`));
   if (name === "bus") ensureTerminals();
+  if (name === "gas") loadGasAvg();
+}
+// 전국 평균유가 (1회 로드)
+let gasAvgLoaded = false;
+async function loadGasAvg() {
+  if (gasAvgLoaded) return; gasAvgLoaded = true;
+  try {
+    const d = await (await fetch("/api/gas?op=avg")).json();
+    if (!d.ok || !d.avg) return;
+    const pick = d.avg.filter((a) => ["B027", "D047", "K015"].includes(a.prodcd));
+    byId("gasAvg").innerHTML = `<span class="ga-label">전국 평균</span>` + pick.map((a) => {
+      const up = a.diff > 0, dn = a.diff < 0;
+      return `<span class="ga-item">${E(a.name)} <b>${a.price ? a.price.toLocaleString() : "-"}</b>원 <span class="ga-diff ${up ? "up" : dn ? "dn" : ""}">${up ? "▲" : dn ? "▼" : ""}${Math.abs(a.diff).toFixed(2)}</span></span>`;
+    }).join("");
+  } catch { gasAvgLoaded = false; }
 }
 document.querySelectorAll(".toptab").forEach((b) => b.addEventListener("click", () => switchPanel(b.dataset.panel)));
 
