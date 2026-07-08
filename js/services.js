@@ -382,6 +382,30 @@ function renderGas(s, i) {
 }
 byId("gasBtn").addEventListener("click", searchGas);
 
+// ==================== 🚲 따릉이 ====================
+async function searchBike() {
+  try {
+    const { lat, lon } = await getLocation("bikeStatus");
+    setBox("bikeStatus", "대여소 조회 중…", "loading"); byId("bikeResults").innerHTML = "";
+    const r = await fetch(`/api/bike?lat=${lat}&lon=${lon}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    const rows = d.rows || [];
+    if (!rows.length) return setBox("bikeStatus", d.message || "주변 대여소가 없습니다.", "warn");
+    setBox("bikeStatus", `가까운 대여소 ${rows.length}곳`, "ok");
+    byId("bikeResults").innerHTML = rows.map((s) => {
+      const lvl = s.bikes === 0 ? "full" : s.bikes <= 2 ? "busy" : "ok";
+      const map = `<a class="btn map" href="https://map.kakao.com/link/map/${encodeURIComponent(s.name)},${s.lat},${s.lon}" target="_blank" rel="noopener">🗺️ 지도</a>`;
+      return `<article class="card">
+        <div class="card-top"><h3>${E(s.name)}</h3><span class="bed ${lvl}">자전거 ${s.bikes}대</span></div>
+        <p class="meta">🚲 거치대 ${s.racks}개 · 📍 ${s.distance.toLocaleString()}m</p>
+        <div class="card-actions">${map}</div>
+      </article>`;
+    }).join("");
+  } catch (e) { setBox("bikeStatus", `오류: ${e.message}`, "error"); }
+}
+byId("bikeBtn").addEventListener("click", searchBike);
+
 // ---------- 초기값 ----------
 (function initServices() {
   const today = kstTodayISO();

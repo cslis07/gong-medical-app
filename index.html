@@ -32,6 +32,7 @@
     <button class="toptab" data-panel="lost" role="tab">🧳 분실물</button>
     <button class="toptab" data-panel="lotto" role="tab">🎰 로또</button>
     <button class="toptab" data-panel="gas" role="tab">⛽ 주유소</button>
+    <button class="toptab" data-panel="bike" role="tab">🚲 따릉이</button>
   </nav>
 
   <main class="wrap">
@@ -247,6 +248,16 @@
       <p class="hint">브라우저 위치 권한이 필요합니다. Opinet 공식 가격 기준 <strong>가격순</strong>으로 반경 내 주유소를 보여줍니다.</p>
       <div id="gasStatus" class="status"></div>
       <div id="gasResults" class="results"></div>
+    </section>
+
+    <!-- ============ 🚲 따릉이 ============ -->
+    <section class="panel" id="panel-bike">
+      <section class="controls">
+        <button id="bikeBtn" class="search-btn">📍 내 주변 따릉이 대여소</button>
+      </section>
+      <p class="hint">브라우저 위치 권한이 필요합니다. 가까운 순으로 <strong>대여 가능 자전거 수</strong>와 거치대를 보여줍니다. (서울시 실시간)</p>
+      <div id="bikeStatus" class="status"></div>
+      <div id="bikeResults" class="results"></div>
     </section>
 
   </main>
