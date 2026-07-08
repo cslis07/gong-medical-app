@@ -451,3 +451,8 @@ input, button, select, textarea { font-family: inherit; }
 .dust-box.warn { background: #fff6e0; } .dust-box.warn em { color: #92600a; }
 .dust-box.busy { background: #fef1e0; } .dust-box.busy em { color: #b45309; }
 .dust-box.full { background: #fde8e6; } .dust-box.full em { color: var(--full); }
+
+/* 시내버스 정류소 카드 / LH 공고 링크카드 */
+.cb-arrivals { margin-top: 4px; }
+a.card.lh-card { display: block; text-decoration: none; color: inherit; }
+a.card.lh-card:hover { border-color: var(--primary); }

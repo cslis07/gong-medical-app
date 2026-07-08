@@ -354,21 +354,28 @@ byId("lottoRound").addEventListener("keydown", (e) => { if (e.key === "Enter") s
 byId("lottoMine").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLotto(); });
 
 // ==================== ⛽ 주유소 ====================
-// 공용 위치 획득 (브라우저 geolocation, WGS84)
-function getLocation(statusId) {
+// 공용 위치 획득 — 주소 입력(addrInputId)이 있으면 vworld 지오코딩 우선, 없으면 브라우저 geolocation
+async function getLocation(statusId, addrInputId) {
+  const addr = addrInputId && byId(addrInputId) ? byId(addrInputId).value.trim() : "";
+  if (addr) {
+    setBox(statusId, `'${addr}' 위치 확인 중…`, "loading");
+    const d = await (await fetch(`/api/geocode?q=${encodeURIComponent(addr)}`)).json();
+    if (!d.ok) throw new Error(d.message || d.error || "주소를 찾을 수 없습니다.");
+    return { lat: d.lat, lon: d.lon };
+  }
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) return reject(new Error("이 브라우저는 위치 기능을 지원하지 않습니다."));
+    if (!navigator.geolocation) return reject(new Error("이 브라우저는 위치 기능을 지원하지 않습니다. 주소를 입력해보세요."));
     setBox(statusId, "위치 확인 중… (권한을 허용해주세요)", "loading");
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-      (err) => reject(new Error(err.code === 1 ? "위치 권한이 거부되었습니다. 주소창 자물쇠에서 허용해주세요." : `위치 확인 실패: ${err.message}`)),
+      (err) => reject(new Error(err.code === 1 ? "위치 권한이 거부되었습니다. 주소를 입력하거나 권한을 허용해주세요." : `위치 확인 실패: ${err.message}`)),
       { enableHighAccuracy: true, timeout: 10000 }
     );
   });
 }
 async function searchGas() {
   try {
-    const { lat, lon } = await getLocation("gasStatus");
+    const { lat, lon } = await getLocation("gasStatus", "gasAddr");
     const prodcd = byId("gasProd").value, radius = byId("gasRadius").value;
     setBox("gasStatus", "주유소 조회 중…", "loading"); byId("gasResults").innerHTML = "";
     const r = await fetch(`/api/gas?lat=${lat}&lon=${lon}&prodcd=${prodcd}&radius=${radius}`);
@@ -400,7 +407,7 @@ byId("gasBtn").addEventListener("click", searchGas);
 // ==================== 🚲 따릉이 ====================
 async function searchBike() {
   try {
-    const { lat, lon } = await getLocation("bikeStatus");
+    const { lat, lon } = await getLocation("bikeStatus", "bikeAddr");
     setBox("bikeStatus", "대여소 조회 중…", "loading"); byId("bikeResults").innerHTML = "";
     const r = await fetch(`/api/bike?lat=${lat}&lon=${lon}`);
     const d = await r.json();
@@ -552,6 +559,77 @@ function airGradeOf(v, kind) {
   return { t, c };
 }
 byId("airBtn").addEventListener("click", searchAir);
+
+// ==================== 🚏 시내버스 ====================
+async function searchCitybus() {
+  try {
+    const { lat, lon } = await getLocation("cbStatus", "cbAddr");
+    setBox("cbStatus", "정류소 조회 중…", "loading"); byId("cbResults").innerHTML = "";
+    const d = await (await fetch(`/api/citybus?op=near&lat=${lat}&lon=${lon}`)).json();
+    if (d.needKey) return setBox("cbStatus", "⚠️ 시내버스 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
+    const stops = d.stops || [];
+    if (!stops.length) return setBox("cbStatus", "주변 정류소가 없습니다.", "warn");
+    setBox("cbStatus", `가까운 정류소 ${stops.length}곳 · 정류소를 누르면 도착정보`, "ok");
+    byId("cbResults").innerHTML = stops.map((s) => `
+      <article class="card cb-stop" data-city="${E(s.city)}" data-node="${E(s.node)}" data-name="${E(s.name)}" style="cursor:pointer">
+        <div class="card-top"><h3>🚏 ${E(s.name)}${s.arsno ? ` <span class="opt">${E(s.arsno)}</span>` : ""}</h3>
+          ${s.distance != null ? `<span class="bed ok">${s.distance.toLocaleString()}m</span>` : ""}</div>
+        <p class="meta">누르면 실시간 도착정보 표시 <span class="opt">▾</span></p>
+        <div class="cb-arrivals"></div>
+      </article>`).join("");
+  } catch (e) { setBox("cbStatus", `오류: ${e.message}`, "error"); }
+}
+async function loadArrivals(cardEl) {
+  const box = cardEl.querySelector(".cb-arrivals");
+  if (cardEl.dataset.loaded === "1") { box.style.display = box.style.display === "none" ? "" : "none"; return; }
+  box.innerHTML = `<p class="meta">도착정보 조회 중…</p>`;
+  try {
+    const d = await (await fetch(`/api/citybus?op=arrival&city=${encodeURIComponent(cardEl.dataset.city)}&node=${encodeURIComponent(cardEl.dataset.node)}`)).json();
+    const buses = d.buses || [];
+    box.innerHTML = buses.length
+      ? `<ul class="time-stats">${buses.slice(0, 12).map((b) => `<li class="meta"><b>${E(b.route)}</b>${b.type ? `<span class="chip" style="margin-left:6px">${E(b.type)}</span>` : ""} — ${b.min <= 1 ? "곧 도착" : b.min + "분 후"} · ${b.prevCnt}정류장 전</li>`).join("")}</ul>`
+      : `<p class="meta">현재 도착 예정 버스가 없습니다.</p>`;
+    cardEl.dataset.loaded = "1";
+  } catch (e) { box.innerHTML = `<p class="status warn">도착정보 오류: ${E(e.message)}</p>`; }
+}
+byId("cbBtn").addEventListener("click", searchCitybus);
+byId("cbResults").addEventListener("click", (e) => {
+  const card = e.target.closest(".cb-stop");
+  if (card) loadArrivals(card);
+});
+
+// ==================== 🏘️ LH 청약 ====================
+async function searchLH() {
+  const name = byId("lhName").value.trim();
+  setBox("lhStatus", "공고 조회 중…", "loading"); byId("lhResults").innerHTML = "";
+  try {
+    const qs = new URLSearchParams({ size: "40" });
+    if (name) qs.set("name", name);
+    const d = await (await fetch(`/api/lh?${qs}`)).json();
+    if (d.needKey) return setBox("lhStatus", "⚠️ LH 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
+    if (!d.ok) return setBox("lhStatus", d.message || "조회 실패", "warn");
+    let rows = d.rows || [];
+    if (name && rows.length === 0) {
+      // 서버 필터 미지원 대비: 전체에서 클라 필터
+      const d2 = await (await fetch(`/api/lh?size=100`)).json();
+      rows = (d2.rows || []).filter((r) => r.name.includes(name));
+    }
+    if (!rows.length) return setBox("lhStatus", "공고가 없습니다.", "warn");
+    setBox("lhStatus", `공고 ${rows.length}건`, "ok");
+    byId("lhResults").innerHTML = rows.map((r) => {
+      const open = r.status.includes("공고중");
+      const inner = `
+        <div class="card-top"><h3>${E(r.name)}</h3><span class="bed ${open ? "ok" : "warn"}">${E(r.status || "-")}</span></div>
+        <p class="meta">${[r.type, r.region].filter(Boolean).map(E).join(" · ")}</p>
+        <p class="meta">📅 게시 ${E(r.postDate || "-")}${r.closeDate ? ` · 마감 ${E(r.closeDate)}` : ""}${r.url ? ' · <span class="opt">클릭하면 상세공고 ↗</span>' : ""}</p>`;
+      return r.url
+        ? `<a class="card lh-card" href="${E(r.url)}" target="_blank" rel="noopener">${inner}</a>`
+        : `<article class="card">${inner}</article>`;
+    }).join("");
+  } catch (e) { setBox("lhStatus", `오류: ${e.message}`, "error"); retryBox("lhResults", e.message, searchLH); }
+}
+byId("lhBtn").addEventListener("click", searchLH);
+byId("lhName").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLH(); });
 
 // ---------- 초기값 ----------
 (function initServices() {

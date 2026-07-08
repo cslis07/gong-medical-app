@@ -13,6 +13,9 @@ import bikeHandler from "./api/bike.js";
 import highwayHandler from "./api/highway.js";
 import realestateHandler from "./api/realestate.js";
 import airHandler from "./api/air.js";
+import citybusHandler from "./api/citybus.js";
+import lhHandler from "./api/lh.js";
+import geocodeHandler from "./api/geocode.js";
 
 const MIME = { ".html":"text/html", ".css":"text/css", ".js":"text/javascript", ".json":"application/json",
   ".png":"image/png", ".jpg":"image/jpeg", ".jpeg":"image/jpeg", ".svg":"image/svg+xml", ".webp":"image/webp" };
@@ -60,6 +63,15 @@ createServer(async (req, res) => {
   }
   if (u.pathname === "/api/air") {
     return airHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
+  }
+  if (u.pathname === "/api/citybus") {
+    return citybusHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
+  }
+  if (u.pathname === "/api/lh") {
+    return lhHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
+  }
+  if (u.pathname === "/api/geocode") {
+    return geocodeHandler({ query: Object.fromEntries(u.searchParams) }, apiRes);
   }
   let p = u.pathname === "/" ? "/index.html" : u.pathname;
   try {
