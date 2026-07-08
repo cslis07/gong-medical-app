@@ -34,6 +34,8 @@
     <button class="toptab" data-panel="gas" role="tab">⛽ 주유소</button>
     <button class="toptab" data-panel="bike" role="tab">🚲 따릉이</button>
     <button class="toptab" data-panel="highway" role="tab">🛣️ 고속도로</button>
+    <button class="toptab" data-panel="realestate" role="tab">🏠 실거래가</button>
+    <button class="toptab" data-panel="air" role="tab">😷 미세먼지</button>
   </nav>
 
   <main class="wrap">
@@ -281,6 +283,46 @@
       <p class="hint">전국 고속도로 휴게소의 편의시설·대표음식·주유소 유가, 그리고 실시간 정체/서행 구간을 조회합니다. (한국도로공사)</p>
       <div id="hwStatus" class="status"></div>
       <div id="hwResults" class="results"></div>
+    </section>
+
+    <!-- ============ 🏠 아파트 실거래가 ============ -->
+    <section class="panel" id="panel-realestate">
+      <section class="controls">
+        <div class="field">
+          <label for="reType">거래유형</label>
+          <select id="reType">
+            <option value="trade">매매</option>
+            <option value="rent">전월세</option>
+            <option value="silv">분양권전매</option>
+          </select>
+        </div>
+        <div class="field grow">
+          <label for="reRegion">지역</label>
+          <select id="reRegion"></select>
+        </div>
+        <div class="field">
+          <label for="reYm">거래연월</label>
+          <input type="month" id="reYm" />
+        </div>
+        <button id="reBtn" class="search-btn">실거래가 조회</button>
+      </section>
+      <p class="hint">국토교통부 실거래가 공개자료입니다. 지역·연월 기준 신고된 아파트 거래를 최신순으로 보여줍니다.</p>
+      <div id="reStatus" class="status"></div>
+      <div id="reResults" class="results"></div>
+    </section>
+
+    <!-- ============ 😷 미세먼지 ============ -->
+    <section class="panel" id="panel-air">
+      <section class="controls">
+        <div class="field grow">
+          <label for="airSido">지역(시·도)</label>
+          <select id="airSido"></select>
+        </div>
+        <button id="airBtn" class="search-btn">대기질 조회</button>
+      </section>
+      <p class="hint">에어코리아 실시간 측정정보입니다. 측정소별 미세먼지(PM10)·초미세먼지(PM2.5)와 오늘 예보를 보여줍니다.</p>
+      <div id="airStatus" class="status"></div>
+      <div id="airResults" class="results"></div>
     </section>
 
   </main>

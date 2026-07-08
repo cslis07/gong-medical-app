@@ -440,3 +440,14 @@ input, button, select, textarea { font-family: inherit; }
 
 /* 고속도로 휴게소 모드 */
 #panel-highway .rt-label { font-weight: 700; font-size: 13.5px; color: var(--text); }
+
+/* 미세먼지 요약 박스 */
+.dust-summary { display: flex; gap: 12px; margin: 8px 0; }
+.dust-box { flex: 1; border-radius: 10px; padding: 12px; text-align: center; border: 1px solid var(--border); }
+.dust-box span { display: block; font-size: 12px; color: var(--muted); }
+.dust-box b { display: block; font-size: 28px; font-weight: 800; margin: 2px 0; }
+.dust-box em { font-style: normal; font-weight: 700; font-size: 13px; }
+.dust-box.ok { background: #e6f4ea; } .dust-box.ok em { color: var(--ok); }
+.dust-box.warn { background: #fff6e0; } .dust-box.warn em { color: #92600a; }
+.dust-box.busy { background: #fef1e0; } .dust-box.busy em { color: #b45309; }
+.dust-box.full { background: #fde8e6; } .dust-box.full em { color: var(--full); }

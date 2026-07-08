@@ -470,9 +470,94 @@ function renderCongest(r) {
 byId("hwBtn").addEventListener("click", searchHighway);
 byId("hwQ").addEventListener("keydown", (e) => { if (e.key === "Enter") searchHighway(); });
 
+// ==================== 🏠 아파트 실거래가 ====================
+// 시군구 법정동코드(LAWD_CD, 5자리) — 서울 25구 + 주요 광역/경기
+const LAWD = {
+  "서울": { "종로구": "11110", "중구": "11140", "용산구": "11170", "성동구": "11200", "광진구": "11215", "동대문구": "11230", "중랑구": "11260", "성북구": "11290", "강북구": "11305", "도봉구": "11320", "노원구": "11350", "은평구": "11380", "서대문구": "11410", "마포구": "11440", "양천구": "11470", "강서구": "11500", "구로구": "11530", "금천구": "11545", "영등포구": "11560", "동작구": "11590", "관악구": "11620", "서초구": "11650", "강남구": "11680", "송파구": "11710", "강동구": "11740" },
+  "경기": { "수원 영통구": "41117", "수원 팔달구": "41115", "성남 분당구": "41135", "성남 수정구": "41131", "용인 수지구": "41465", "용인 기흥구": "41463", "고양 일산동구": "41285", "부천시": "41190", "안양 동안구": "41173", "화성시": "41590", "김포시": "41570", "하남시": "41450", "남양주시": "41360", "광명시": "41210", "의정부시": "41150" },
+  "인천": { "연수구": "28185", "남동구": "28200", "서구": "28260", "부평구": "28237" },
+  "부산": { "해운대구": "26350", "수영구": "26500", "동래구": "26260", "부산진구": "26230" },
+  "대구": { "수성구": "27260", "달서구": "27290" }, "대전": { "유성구": "30200", "서구": "30170" }, "광주": { "서구": "29140", "남구": "29155" },
+};
+function initRealEstate() {
+  const sel = byId("reRegion");
+  sel.innerHTML = Object.entries(LAWD).map(([sido, gus]) =>
+    `<optgroup label="${sido}">${Object.entries(gus).map(([nm, cd]) => `<option value="${cd}">${sido} ${E(nm)}</option>`).join("")}</optgroup>`).join("");
+  sel.value = "11680"; // 강남구 기본
+  const d = new Date(Date.now() + 9 * 3600e3); d.setUTCMonth(d.getUTCMonth() - 1); // 지난달
+  byId("reYm").value = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+async function searchRealEstate() {
+  const type = byId("reType").value, lawd = byId("reRegion").value, ym = (byId("reYm").value || "").replace("-", "");
+  if (!/^\d{6}$/.test(ym)) return setBox("reStatus", "거래연월을 선택하세요.", "warn");
+  setBox("reStatus", "조회 중…", "loading"); byId("reResults").innerHTML = "";
+  try {
+    const d = await (await fetch(`/api/realestate?type=${type}&lawd=${lawd}&ym=${ym}`)).json();
+    if (d.needKey) return setBox("reStatus", "⚠️ 실거래가 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
+    if (!d.ok) return setBox("reStatus", d.error || "조회 실패", "warn");
+    const rows = d.rows || [];
+    if (!rows.length) return setBox("reStatus", "해당 지역·연월에 신고된 거래가 없습니다.", "warn");
+    setBox("reStatus", `${rows.length}건 (최신순)`, "ok");
+    byId("reResults").innerHTML = rows.map((r) => renderRealEstate(type, r)).join("");
+  } catch (e) { setBox("reStatus", `오류: ${e.message}`, "error"); retryBox("reResults", e.message, searchRealEstate); }
+}
+const eok = (manwon) => manwon >= 10000 ? `${(manwon / 10000).toFixed(manwon % 10000 ? 1 : 0)}억` + (manwon % 10000 ? ` ${(manwon % 10000).toLocaleString()}만` : "") : `${manwon.toLocaleString()}만`;
+function renderRealEstate(type, r) {
+  let price;
+  if (type === "rent") price = r.kind === "월세" ? `보증 ${eok(r.deposit)} / 월 ${r.monthly.toLocaleString()}만` : `전세 ${eok(r.deposit)}`;
+  else price = eok(r.amount) + "원";
+  return `<article class="card">
+    <div class="card-top"><h3>${E(r.apt)}</h3><span class="bed ok">${E(price)}</span></div>
+    <p class="meta">${E(r.dong)}${r.area ? ` · ${r.area}㎡(${(r.area / 3.3058).toFixed(0)}평)` : ""}${r.floor ? ` · ${E(r.floor)}층` : ""}${r.buildYear ? ` · ${E(r.buildYear)}년준공` : ""}</p>
+    <p class="meta">📅 ${E(r.date)} 신고${type === "rent" && r.kind ? ` · ${E(r.kind)}` : ""}</p>
+  </article>`;
+}
+byId("reBtn").addEventListener("click", searchRealEstate);
+
+// ==================== 😷 미세먼지 ====================
+const SIDOS = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
+function initAir() { byId("airSido").innerHTML = SIDOS.map((s) => `<option value="${s}">${s}</option>`).join(""); }
+async function searchAir() {
+  const sido = byId("airSido").value;
+  setBox("airStatus", "조회 중…", "loading"); byId("airResults").innerHTML = "";
+  try {
+    const d = await (await fetch(`/api/air?sido=${encodeURIComponent(sido)}`)).json();
+    if (d.needKey) return setBox("airStatus", "⚠️ 미세먼지 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
+    if (!d.ok) return setBox("airStatus", d.error || "조회 실패", "warn");
+    const st = d.stations || [];
+    if (!st.length) return setBox("airStatus", "측정 데이터가 없습니다.", "warn");
+    setBox("airStatus", `${sido} · 측정소 ${st.length}곳`, "ok");
+    const g10 = airGradeOf(d.summary.pm10, "pm10"), g25 = airGradeOf(d.summary.pm25, "pm25");
+    const head = `<article class="card">
+      <div class="card-top"><h3>${E(sido)} 평균</h3></div>
+      <div class="dust-summary">
+        <div class="dust-box ${g10.c}"><span>미세먼지 PM10</span><b>${d.summary.pm10 ?? "-"}</b><em>${g10.t}</em></div>
+        <div class="dust-box ${g25.c}"><span>초미세 PM2.5</span><b>${d.summary.pm25 ?? "-"}</b><em>${g25.t}</em></div>
+      </div>
+      ${d.forecast && d.forecast.overall ? `<p class="meta">📢 ${E(d.forecast.overall)}</p>` : ""}
+    </article>`;
+    byId("airResults").innerHTML = head + st.map((s) => `
+      <article class="card">
+        <div class="card-top"><h3>${E(s.station)}</h3><span class="bed ${s.pm10Grade.c}">PM10 ${s.pm10 ?? "-"} · ${E(s.pm10Grade.t)}</span></div>
+        <p class="meta">초미세(PM2.5) ${s.pm25 ?? "-"} · ${E(s.pm25Grade.t)}${s.o3 != null ? ` · 오존 ${s.o3}` : ""}${s.time ? ` · ${E(s.time)}` : ""}</p>
+      </article>`).join("");
+  } catch (e) { setBox("airStatus", `오류: ${e.message}`, "error"); retryBox("airResults", e.message, searchAir); }
+}
+// PM 수치 → 등급(환경부 기준)
+function airGradeOf(v, kind) {
+  if (v == null) return { t: "-", c: "" };
+  const th = kind === "pm10" ? [30, 80, 150] : [15, 35, 75];
+  const c = v <= th[0] ? "ok" : v <= th[1] ? "warn" : v <= th[2] ? "busy" : "full";
+  const t = v <= th[0] ? "좋음" : v <= th[1] ? "보통" : v <= th[2] ? "나쁨" : "매우나쁨";
+  return { t, c };
+}
+byId("airBtn").addEventListener("click", searchAir);
+
 // ---------- 초기값 ----------
 (function initServices() {
   syncHwMode();
+  initRealEstate();
+  initAir();
   const today = kstTodayISO();
   ["cineDate", "busDate"].forEach((id) => { const el = byId(id); if (el && !el.value) el.value = today; });
   syncCineDate();
