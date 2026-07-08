@@ -43,7 +43,7 @@
 ### 📋 3차 확장 요청(2026-07-07) — 키 제공자별 대기목록
 사용자 요청: 제안기능 전부 + 휴게소폴더(EX·OPINET) + 아파트실거래가/LH/SH. 키별 분류:
 - **OPINET(키 보유)**: ✅평균유가 추가. 추가가능=지역별최저가top20(lowTop20.do)·고속도로 주유소가격 등
-- **EX 키 필요(data.ex.co.kr 별도 발급)**: 휴게소 편의시설(`data.ex.co.kr/openapi/restinfo/restConvList`)·푸드메뉴(`restBestfoodList`)·고속도로주유소가격(restBestOilList)·실시간교통. 파라미터 key+type 필수. **사용자 EX키 발급 필요**
+- ✅ **고속도로(EX) 완료**(2026-07-07) — `api/highway.js`, 🛣️ 고속도로 탭. EX키 `EX_API_KEY`=1936242194(Vercel Production+.env). **EX는 봇차단 있어 UA+Referer 필수**, **Vercel IP 허용 확인**. 통합 4종: 휴게소 편의시설(`restinfo/restConvList`)+음식(`restinfo/restBestfoodList`)+유가(`business/curStateStation`)를 휴게소명(부분매칭 stdRestNm/serviceAreaName)으로 병합한 카드 + 실시간 소통(`odtraffic/trafficAmountByCongest`=현재 정체/서행 구간만, grade 2서행/3정체). 검증: 죽전·행담도 휴게소, 정체 36구간(브라우저 OK)
 - **data.go.kr 활용신청 필요(기존 DATA_API_KEY 재사용, 대부분 자동승인)**: 날씨(기상청 단기예보)·미세먼지(에어코리아)·시내버스(TAGO 버스도착)·아파트실거래가(국토부)·LH청약·공공와이파이·관광TourAPI·화장실. 주차장=심의 대기중
 - **SH**: i-sh.co.kr 또는 data.seoul.go.kr SH임대 확인 필요(SEOUL키 재사용 가능성)
 - **미해결**: 택배(CJ 응답없음), 공연(NOL개편), KTX/SRT(코레일 로그인—TAGO 열차정보로 시간표만 가능)
