@@ -1,7 +1,15 @@
 # PROJECT_STATUS — 서울 교통·생활 정보 앱
 
-> 최종 갱신: 2026-07-07 · 위치: `C:\Users\GB\Documents\gong-medical-app`
+> 최종 갱신: 2026-07-09 · 위치: `C:\Users\GB\Documents\gong-medical-app`
 > 배포: cslis07/Vercel · 공개 URL: https://gong-medical-app.vercel.app
+
+## ★ 현재 라이브 서비스 (탭 13종 + 1 대기)
+지하철 · 혼잡도 · 영화관 · 버스(고속/시외) · 분실물 · 로또 · 주유소 · 따릉이 · 고속도로(휴게소/소통) · **아파트 실거래가** · **미세먼지** · **시내버스(TAGO)** · **청약·임대(LH공고+공공임대단지)**. 공공임대단지(myhome)만 키 전파+IP 제한으로 대기.
+
+### ⚙️ 아키텍처 주의 (2026-07-09)
+- **Vercel Hobby 함수 12개 제한** → `api/[service].js` **단일 catch-all 라우터**가 `lib/*.js` 핸들러(14개)에 위임. 프론트는 `/api/{service}?...` 그대로 호출. 신규 기능은 `lib/`에 핸들러 추가 + `api/[service].js`의 HANDLERS에 등록.
+- **env 키**: SEOUL_API_KEY(지하철·혼잡도·따릉이), SEOUL_REALTIME_KEY, OPINET_API_KEY(주유소), EX_API_KEY(고속도로, UA+Referer 필수), DATA_API_KEY(실거래가·미세먼지·시내버스·LH·myhome — data.go.kr 계정키 9ae13365…), VWORLD_API_KEY(지오코딩, Vercel서 IP차단→Nominatim 폴백).
+- **위치 기능**: 브라우저 geolocation 또는 주소입력→`/api/geocode`(vworld→Nominatim 폴백). gas·bike·citybus 지원.
 
 ---
 
