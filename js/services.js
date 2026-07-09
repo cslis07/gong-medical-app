@@ -628,12 +628,39 @@ async function searchLH() {
     }).join("");
   } catch (e) { setBox("lhStatus", `오류: ${e.message}`, "error"); retryBox("lhResults", e.message, searchLH); }
 }
-byId("lhBtn").addEventListener("click", searchLH);
+// 공공임대 단지 (마이홈, LH·SH·지방)
+async function searchRental() {
+  const brtc = byId("lhSido").value;
+  setBox("lhStatus", "공공임대 단지 조회 중…", "loading"); byId("lhResults").innerHTML = "";
+  try {
+    const d = await (await fetch(`/api/myhome?brtc=${brtc}&size=60`)).json();
+    if (d.needKey) return setBox("lhStatus", "⚠️ DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
+    if (d.pending) return setBox("lhStatus", "ℹ️ " + d.message, "warn");
+    if (!d.ok) return setBox("lhStatus", d.message || "조회 실패", "warn");
+    const rows = d.rows || [];
+    if (!rows.length) return setBox("lhStatus", "단지 정보가 없습니다.", "warn");
+    setBox("lhStatus", `공공임대 단지 ${rows.length}곳`, "ok");
+    byId("lhResults").innerHTML = rows.map((r) => `
+      <article class="card">
+        <div class="card-top"><h3>🏢 ${E(r.name)}</h3>${r.supply ? `<span class="bed ok">${E(r.supply)}</span>` : ""}</div>
+        ${r.addr ? `<p class="addr">📍 ${E(r.addr)}</p>` : ""}
+        <p class="meta">${[r.households ? `${r.households.toLocaleString()}세대` : "", r.area ? `${r.area}` : "", r.built ? `준공 ${r.built}` : ""].filter(Boolean).map(E).join(" · ")}</p>
+      </article>`).join("");
+  } catch (e) { setBox("lhStatus", `오류: ${e.message}`, "error"); retryBox("lhResults", e.message, searchRental); }
+}
+function syncLhMode() {
+  const rental = byId("lhMode").value === "rental";
+  byId("panel-lh").querySelector(".lh-notice").style.display = rental ? "none" : "";
+  byId("panel-lh").querySelector(".lh-rental").style.display = rental ? "" : "none";
+}
+byId("lhMode").addEventListener("change", syncLhMode);
+byId("lhBtn").addEventListener("click", () => byId("lhMode").value === "rental" ? searchRental() : searchLH());
 byId("lhName").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLH(); });
 
 // ---------- 초기값 ----------
 (function initServices() {
   syncHwMode();
+  syncLhMode();
   initRealEstate();
   initAir();
   const today = kstTodayISO();

@@ -349,16 +349,34 @@
       <div id="cbResults" class="results"></div>
     </section>
 
-    <!-- ============ 🏘️ LH 청약 ============ -->
+    <!-- ============ 🏘️ 청약·임대 (LH·SH) ============ -->
     <section class="panel" id="panel-lh">
       <section class="controls">
-        <div class="field grow">
+        <div class="field">
+          <label for="lhMode">구분</label>
+          <select id="lhMode">
+            <option value="notice">📢 청약공고 (LH)</option>
+            <option value="rental">🏢 공공임대 단지 (LH·SH·지방)</option>
+          </select>
+        </div>
+        <div class="field grow lh-notice">
           <label for="lhName">공고명 검색 <span class="opt">(선택)</span></label>
           <input type="text" id="lhName" placeholder="예: 행복주택, 신혼희망, 국민임대" />
         </div>
-        <button id="lhBtn" class="search-btn">공고 조회</button>
+        <div class="field lh-rental" style="display:none">
+          <label for="lhSido">지역(시·도)</label>
+          <select id="lhSido">
+            <option value="11">서울</option><option value="41">경기</option><option value="28">인천</option>
+            <option value="26">부산</option><option value="27">대구</option><option value="29">광주</option>
+            <option value="30">대전</option><option value="31">울산</option><option value="36">세종</option>
+            <option value="43">충북</option><option value="44">충남</option><option value="45">전북</option>
+            <option value="46">전남</option><option value="47">경북</option><option value="48">경남</option>
+            <option value="50">제주</option><option value="42">강원</option>
+          </select>
+        </div>
+        <button id="lhBtn" class="search-btn">조회</button>
       </section>
-      <p class="hint">LH(한국토지주택공사) 분양·임대 공고입니다. 공고를 누르면 LH청약플러스 상세 페이지로 이동합니다.</p>
+      <p class="hint">LH 분양·임대 공고, 그리고 LH·SH·지방공사 <strong>공공임대주택 단지</strong>를 조회합니다. (마이홈포털)</p>
       <div id="lhStatus" class="status"></div>
       <div id="lhResults" class="results"></div>
     </section>
