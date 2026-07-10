@@ -397,14 +397,11 @@ input, button, select, textarea { font-family: inherit; }
 .ppl { font-size: 15px; margin: 4px 0; }
 .ppl b { color: var(--primary); }
 
-/* 버스 */
-.card.busroute { border-left: 4px solid var(--primary); }
+/* 컴팩트 행 카드 (고속도로 정체 구간) */
 .card.busrow { padding: 12px 16px; }
 .card.busrow h3 { font-size: 16px; }
+/* 지하철 노선 배지 (js/app.js) */
 .line-badge { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 6px; color: #fff; font-size: 12px; font-weight: 700; }
-
-/* 영화관 raw fallback */
-.rawjson { background: #0f172a; color: #cbd5e1; padding: 10px; border-radius: 8px; font-size: 11px; overflow-x: auto; white-space: pre; }
 
 /* 분실물 안내 표/단계 */
 .lost-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 14px; }

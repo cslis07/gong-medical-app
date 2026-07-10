@@ -1,4 +1,4 @@
-// ===== 생활서비스 확장 로직 (혼잡도·영화관·버스·분실물) =====
+// ===== 생활서비스 확장 로직 (혼잡도·분실물·로또·주유소·따릉이·고속도로 등) =====
 // 지하철(app.js)과 별개 <script>. 전역 충돌을 피하려 helper 이름을 app.js와 다르게 둔다.
 const byId = (id) => document.getElementById(id);
 const E = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -10,7 +10,6 @@ const ymd = (iso) => String(iso || "").replace(/-/g, "");
 function switchPanel(name) {
   document.querySelectorAll(".toptab").forEach((b) => b.classList.toggle("active", b.dataset.panel === name));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === `panel-${name}`));
-  if (name === "bus") ensureTerminals();
   if (name === "gas") loadGasAvg();
 }
 // 전국 평균유가 (1회 로드)
@@ -118,180 +117,6 @@ function renderDensity(it) {
 byId("densBtn").addEventListener("click", searchDensity);
 byId("densQ").addEventListener("keydown", (e) => { if (e.key === "Enter") searchDensity(); });
 byId("densQ").addEventListener("change", searchDensity); // datalist 선택 시
-
-// ==================== 🎬 영화관 ====================
-const CINE_NAME = { cgv: "CGV", megabox: "메가박스", lottecinema: "롯데시네마" };
-function cineOpsFor(chain) {
-  // CGV=timetable, 메가박스·롯데=seats. UI의 '시간표/잔여석'을 체인에 맞게 매핑.
-  return chain === "cgv" ? "timetable" : "seats";
-}
-function syncCineDate() {
-  const op = byId("cineOp").value;
-  byId("panel-cinema").querySelector(".cine-date").style.display = op === "theaters" ? "none" : "";
-}
-byId("cineOp").addEventListener("change", syncCineDate);
-
-async function searchCinema() {
-  const chain = byId("cineChain").value;
-  let op = byId("cineOp").value;
-  if (op === "timetable") op = cineOpsFor(chain); // 체인별 실제 op
-  const kw = byId("cineKw").value.trim();
-  const date = ymd(byId("cineDate").value) || undefined;
-  if (op !== "theaters" && !kw) return setBox("cineStatus", "지역/지점을 입력하세요.", "warn");
-  setBox("cineStatus", "조회 중…", "loading"); byId("cineResults").innerHTML = "";
-  try {
-    const qs = new URLSearchParams({ chain, op });
-    if (kw) qs.set("keyword", kw);
-    if (date && op !== "theaters") qs.set("playDate", date);
-    const r = await fetch(`/api/cinema?${qs.toString()}`);
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
-    if (!d.ok) return setBox("cineStatus", d.message || "조회 결과가 없습니다.", "warn");
-    renderCinema(chain, op, d.data);
-  } catch (e) { setBox("cineStatus", `오류: ${e.message}`, "error"); retryBox("cineResults", e.message, searchCinema); }
-}
-function renderCinema(chain, op, data) {
-  const name = CINE_NAME[chain];
-  if (op === "theaters") {
-    const list = data.theaters || data.list || [];
-    if (!list.length) return setBox("cineStatus", "일치하는 영화관이 없습니다.", "warn");
-    setBox("cineStatus", `${name} · ${list.length}개 영화관`, "ok");
-    byId("cineResults").innerHTML = list.map((t) => `
-      <article class="card">
-        <div class="card-top"><h3>${E(name)} ${E(t.theaterName || t.name || "")}</h3>
-          ${t.distanceKm != null ? `<span class="bed ok">${Number(t.distanceKm).toFixed(1)}km</span>` : ""}</div>
-        ${t.address ? `<p class="addr">📍 ${E(t.address)}</p>` : ""}
-        <p class="meta">코드: ${E(t.theaterCode || t.theaterId || "-")}</p>
-      </article>`).join("");
-    return;
-  }
-  if (op === "movies") {
-    const list = data.movies || data.list || [];
-    if (!list.length) return setBox("cineStatus", "상영작 정보가 없습니다.", "warn");
-    setBox("cineStatus", `${name} · 상영작 ${list.length}편`, "ok");
-    byId("cineResults").innerHTML = list.map((m) => `
-      <article class="card">
-        <div class="card-top"><h3>${E(m.movieName || m.title || m.name || "-")}</h3>
-          ${m.rating || m.grade ? `<span class="bed warn">${E(m.rating || m.grade)}</span>` : ""}</div>
-        <p class="meta">${[m.genre, m.runningTime ? `${m.runningTime}분` : "", m.movieCode ? `코드 ${m.movieCode}` : ""].filter(Boolean).map(E).join(" · ")}</p>
-      </article>`).join("");
-    return;
-  }
-  // timetable(CGV) / seats(메가박스·롯데)
-  const theaters = data.theaters || (data.theaterName ? [data] : []);
-  const schedules = data.schedules || data.timetable || data.playSchedules || [];
-  let items = schedules;
-  if (!items.length && Array.isArray(theaters)) {
-    items = theaters.flatMap((t) => (t.schedules || t.timetable || t.movies || []).map((s) => ({ ...s, _theater: t.theaterName })));
-  }
-  if (!items.length) {
-    // 원본 구조가 다양 → 안내 + 원문 JSON 요약
-    setBox("cineStatus", `${name} · 상영/좌석 데이터 형식을 표준화하지 못했습니다.`, "warn");
-    byId("cineResults").innerHTML = `<article class="card"><p class="meta">조회는 되었으나 표시 형식이 응답과 달라 요약만 제공합니다. 정확한 시간표·잔여석은 ${E(name)} 공식 앱/웹에서 확인하세요.</p>
-      <pre class="rawjson">${E(JSON.stringify(data, null, 1).slice(0, 1200))}</pre></article>`;
-    return;
-  }
-  setBox("cineStatus", `${name} · ${items.length}개 상영`, "ok");
-  byId("cineResults").innerHTML = items.slice(0, 60).map((s) => {
-    const seat = (s.remainSeat ?? s.restSeat ?? s.availableSeat);
-    const total = (s.totalSeat ?? s.seatCapacity);
-    return `<article class="card">
-      <div class="card-top"><h3>${E(s.movieName || s.title || "-")}</h3>
-        ${seat != null ? `<span class="bed ${Number(seat) > 0 ? "ok" : "full"}">잔여 ${E(seat)}${total ? "/" + E(total) : ""}</span>` : ""}</div>
-      <p class="meta">${[s._theater || s.theaterName, s.screenName || s.hallName, s.startTime || s.playStartTime, s.playDate].filter(Boolean).map(E).join(" · ")}</p>
-    </article>`;
-  }).join("");
-}
-byId("cineBtn").addEventListener("click", searchCinema);
-byId("cineKw").addEventListener("keydown", (e) => { if (e.key === "Enter") searchCinema(); });
-
-// ==================== 🚌 버스 ====================
-const BUS_OFFICIAL = { express: "https://www.kobus.co.kr/main.do", intercity: "https://intercitybus.tmoney.co.kr/" };
-const busCache = {};        // type -> {terminals, routes, byName}
-let busTerminalsLoading = false;
-
-function busOfficialCard(type, depName, arrName) {
-  const label = depName && arrName ? `${E(depName)} → ${E(arrName)}` : (type === "express" ? "고속버스" : "시외버스");
-  const name = type === "express" ? "KOBUS 고속버스" : "티머니 시외버스";
-  return `<article class="card busroute"><div class="card-top"><h3>${label}</h3><span class="bed warn">공식 조회</span></div>
-    <p class="meta">현재 서버 환경에서 <strong>${name}</strong> 실시간 조회가 제한됩니다(해당 사이트가 외부 서버 접속을 차단). 아래에서 공식 페이지로 시간표·예매를 확인하세요.</p>
-    <div class="card-actions"><a class="btn map" href="${BUS_OFFICIAL[type]}" target="_blank" rel="noopener">🎫 공식 예매 페이지 열기</a></div></article>`;
-}
-async function ensureTerminals() {
-  const type = byId("busType").value;
-  if (busCache[type]) { if (busCache[type].blocked) showBusBlocked(type); else fillTerminalLists(type); return; }
-  if (busTerminalsLoading) return;
-  busTerminalsLoading = true;
-  setBox("busStatus", "터미널 목록 불러오는 중…", "loading");
-  try {
-    const r = await fetch(`/api/bus?type=${type}&op=terminals`);
-    const d = await r.json();
-    if (d.blocked) { busCache[type] = { blocked: true, terminals: [], byName: {} }; setBox("busStatus", "", ""); showBusBlocked(type); return; }
-    if (!r.ok || !d.terminals) throw new Error(d.error || `HTTP ${r.status}`);
-    const byName = {}; d.terminals.forEach((t) => { byName[t.name] = t.code; });
-    busCache[type] = { terminals: d.terminals, routes: d.routes || null, byName };
-    setBox("busStatus", "", "");
-    fillTerminalLists(type);
-  } catch (e) { setBox("busStatus", `터미널 목록 오류: ${e.message}`, "error"); }
-  finally { busTerminalsLoading = false; }
-}
-function showBusBlocked(type) {
-  setBox("busStatus", "실시간 조회 제한 — 공식 페이지 안내", "warn");
-  byId("busResults").innerHTML = busOfficialCard(type, "", "");
-}
-function fillTerminalLists(type) {
-  const c = busCache[type]; if (!c) return;
-  const opt = (t) => `<option value="${E(t.name)}">${t.area ? E(t.area) : ""}</option>`;
-  byId("busDepList").innerHTML = c.terminals.map(opt).join("");
-  byId("busArrList").innerHTML = c.terminals.map(opt).join("");
-}
-byId("busType").addEventListener("change", () => { byId("busResults").innerHTML = ""; setBox("busStatus", "", ""); ensureTerminals(); });
-
-function resolveTerminal(type, val) {
-  const c = busCache[type]; if (!c) return null;
-  if (c.byName[val]) return { code: c.byName[val], name: val };
-  const hit = c.terminals.find((t) => t.name === val) || c.terminals.find((t) => t.name.includes(val));
-  return hit ? { code: hit.code, name: hit.name } : null;
-}
-async function searchBus() {
-  const type = byId("busType").value;
-  await ensureTerminals();
-  if (busCache[type]?.blocked) { showBusBlocked(type); return; }
-  const dep = resolveTerminal(type, byId("busDep").value.trim());
-  const arr = resolveTerminal(type, byId("busArr").value.trim());
-  const date = ymd(byId("busDate").value);
-  if (!dep || !arr) return setBox("busStatus", "출발·도착 터미널을 목록에서 정확히 선택하세요.", "warn");
-  if (!/^\d{8}$/.test(date)) return setBox("busStatus", "날짜를 선택하세요.", "warn");
-  setBox("busStatus", "시간표 조회 중…", "loading"); byId("busResults").innerHTML = "";
-  try {
-    const qs = new URLSearchParams({ type, op: "schedule", dep: dep.code, arr: arr.code, date, depName: dep.name, arrName: arr.name });
-    const r = await fetch(`/api/bus?${qs.toString()}`);
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
-    if (d.blocked) { byId("busResults").innerHTML = busOfficialCard(type, dep.name, arr.name); setBox("busStatus", "실시간 조회 제한 — 공식 페이지 안내", "warn"); return; }
-    const rows = d.rows || [];
-    const link = `<a class="btn map" href="${BUS_OFFICIAL[type]}" target="_blank" rel="noopener">🎫 공식 예매 페이지</a>`;
-    if (!rows.length) {
-      setBox("busStatus", "해당 날짜 배차가 없거나 조회에 실패했습니다.", "warn");
-      byId("busResults").innerHTML = `<article class="card"><h3>${E(dep.name)} → ${E(arr.name)}</h3><p class="meta">배차 정보를 찾지 못했습니다. 공식 페이지에서 확인하세요.</p><div class="card-actions">${link}</div></article>`;
-      return;
-    }
-    setBox("busStatus", `${dep.name} → ${arr.name} · ${rows.length}편`, "ok");
-    const head = `<article class="card busroute"><div class="card-top"><h3>${E(dep.name)} → ${E(arr.name)}</h3><span class="bed ok">${rows.length}편</span></div>
-      ${d.note ? `<p class="meta">${E(d.note)}</p>` : ""}<div class="card-actions">${link}</div></article>`;
-    byId("busResults").innerHTML = head + rows.map((s) => renderBusRow(type, s)).join("");
-  } catch (e) { setBox("busStatus", `오류: ${e.message}`, "error"); retryBox("busResults", e.message, searchBus); }
-}
-function renderBusRow(type, s) {
-  const grade = s.grade ? `<span class="line-badge" style="background:#1a5fd0">${E(s.grade)}</span>` : "";
-  const seat = (s.remain != null && s.total != null)
-    ? `<span class="bed ${Number(s.remain) > 0 ? "ok" : "full"}">잔여 ${E(s.remain)}/${E(s.total)}</span>` : "";
-  return `<article class="card busrow">
-    <div class="card-top"><h3>🕐 ${E(s.time)}</h3>${seat}</div>
-    <p class="meta">${[s.company, "" ].filter(Boolean).map(E).join(" · ")}${grade}</p>
-  </article>`;
-}
-byId("busBtn").addEventListener("click", searchBus);
 
 // ==================== 🧳 지하철 분실물 (안내형) ====================
 const LOST112 = "https://www.lost112.go.kr/find/findList.do";
@@ -911,7 +736,4 @@ byId("pkAddr").addEventListener("keydown", (e) => { if (e.key === "Enter") searc
   syncReType();
   initAir();
   loadDustBadge();
-  const today = kstTodayISO();
-  ["cineDate", "busDate"].forEach((id) => { const el = byId(id); if (el && !el.value) el.value = today; });
-  syncCineDate();
 })();

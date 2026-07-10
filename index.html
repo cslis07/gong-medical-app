@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#1a5fd0" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>서울 교통·생활 정보 | 지하철·버스·혼잡도·영화관</title>
-  <meta name="description" content="서울 지하철 노선도·실시간 도착, 고속·시외버스 시간표, 실시간 인구 혼잡도, 영화관 상영정보, 지하철 분실물까지 공공데이터로 한 번에" />
+  <title>서울 교통·생활 정보 | 지하철·혼잡도·주차장·실거래가</title>
+  <meta name="description" content="서울 지하철 노선도·실시간 도착, 실시간 인구 혼잡도, 전국 주차장·주유소, 아파트 실거래가, 미세먼지·시내버스·LH청약까지 공공데이터로 한 번에" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -15,7 +15,7 @@
     <div class="wrap header-row">
       <div>
         <h1>🚇 서울 교통·생활 정보</h1>
-        <p class="sub">지하철 · 고속/시외버스 · 실시간 혼잡도 · 영화관 · 분실물</p>
+        <p class="sub">지하철 · 실시간 혼잡도 · 주차장 · 실거래가 · 미세먼지</p>
       </div>
       <div class="header-links">
         <button id="dustBadge" class="dust-badge" title="수도권(서울·경기·인천) 실시간 평균 미세먼지 — 클릭하면 미세먼지 탭" style="display:none"></button>
@@ -28,8 +28,6 @@
   <nav class="toptabs wrap" role="tablist">
     <button class="toptab active" data-panel="subway" role="tab">🚇 지하철</button>
     <button class="toptab" data-panel="density" role="tab">👥 혼잡도</button>
-    <button class="toptab" data-panel="cinema" role="tab">🎬 영화관</button>
-    <button class="toptab" data-panel="bus" role="tab">🚌 버스</button>
     <button class="toptab" data-panel="lost" role="tab">🧳 분실물</button>
     <button class="toptab" data-panel="lotto" role="tab">🎰 로또</button>
     <button class="toptab" data-panel="gas" role="tab">⛽ 주유소</button>
@@ -117,71 +115,6 @@
       <p class="hint">KT·SKT 통신 신호 기반 <strong>추계치</strong>이며 약 15분 전 값입니다(5분 주기 갱신). 새벽 01~05시는 미제공될 수 있어요.</p>
       <div id="densStatus" class="status"></div>
       <div id="densResults" class="results"></div>
-    </section>
-
-    <!-- ============ 🎬 영화관 ============ -->
-    <section class="panel" id="panel-cinema">
-      <section class="controls">
-        <div class="field">
-          <label for="cineChain">영화관</label>
-          <select id="cineChain">
-            <option value="cgv">CGV</option>
-            <option value="megabox">메가박스</option>
-            <option value="lottecinema">롯데시네마</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="cineOp">구분</label>
-          <select id="cineOp">
-            <option value="theaters">영화관 찾기</option>
-            <option value="movies">상영작</option>
-            <option value="timetable">시간표/잔여석</option>
-          </select>
-        </div>
-        <div class="field grow">
-          <label for="cineKw">지역/지점</label>
-          <input type="text" id="cineKw" placeholder="예: 강남, 코엑스, 월드타워" />
-        </div>
-        <div class="field cine-date" style="display:none">
-          <label for="cineDate">날짜</label>
-          <input type="date" id="cineDate" />
-        </div>
-        <button id="cineBtn" class="search-btn">조회</button>
-      </section>
-      <p class="hint">CGV는 시간표, 메가박스·롯데시네마는 잔여석을 제공합니다. 잔여석은 조회 시점 참고값이며, 예매는 공식 앱/웹에서 확인하세요.</p>
-      <div id="cineStatus" class="status"></div>
-      <div id="cineResults" class="results"></div>
-    </section>
-
-    <!-- ============ 🚌 버스 ============ -->
-    <section class="panel" id="panel-bus">
-      <section class="controls">
-        <div class="field">
-          <label for="busType">종류</label>
-          <select id="busType">
-            <option value="express">고속버스 (KOBUS)</option>
-            <option value="intercity">시외버스 (티머니)</option>
-          </select>
-        </div>
-        <div class="field grow">
-          <label for="busDep">출발 터미널</label>
-          <input type="text" id="busDep" list="busDepList" placeholder="예: 서울경부, 동서울" autocomplete="off" />
-          <datalist id="busDepList"></datalist>
-        </div>
-        <div class="field grow">
-          <label for="busArr">도착 터미널</label>
-          <input type="text" id="busArr" list="busArrList" placeholder="예: 부산, 속초" autocomplete="off" />
-          <datalist id="busArrList"></datalist>
-        </div>
-        <div class="field">
-          <label for="busDate">날짜</label>
-          <input type="date" id="busDate" />
-        </div>
-        <button id="busBtn" class="search-btn">시간표 조회</button>
-      </section>
-      <p class="hint">시간표·잔여석(가능 범위) <strong>조회</strong> 후, 예매·결제는 공식 페이지에서 진행합니다. 고속버스는 출발시각·등급 위주로 제공됩니다.</p>
-      <div id="busStatus" class="status"></div>
-      <div id="busResults" class="results"></div>
     </section>
 
     <!-- ============ 🧳 지하철 분실물 ============ -->
@@ -457,8 +390,8 @@
   </main>
 
   <footer class="app-footer wrap">
-    <p>출처: 서울교통공사 · 서울 열린데이터광장 · KOBUS · 티머니 시외버스 · LOST112 · 영화관 공개 API</p>
-    <p class="disclaimer">실시간 정보는 제공 시점 기준이며 실제와 다를 수 있습니다. 버스·영화 예매/결제는 각 공식 페이지에서 진행하세요.</p>
+    <p>출처: 서울교통공사 · 서울 열린데이터광장 · 공공데이터포털 · 한국도로공사 · Opinet · 에어코리아 · LH · LOST112</p>
+    <p class="disclaimer">실시간 정보는 제공 시점 기준이며 실제와 다를 수 있습니다. 요금·운영시간은 현장 안내를 확인하세요.</p>
   </footer>
 
   <!-- 공용 상세 모달 (지하철 역 정보 등) -->

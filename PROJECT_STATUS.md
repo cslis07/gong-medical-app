@@ -9,24 +9,23 @@
 ## 1. 프로젝트 목적
 
 공공/공식 데이터로 **서울(수도권) 교통·생활 정보**를 한 화면에서 조회하는 무료 웹앱.
-회원가입·로그인 없이, 상단 탭으로 14개 생활 서비스를 제공한다.
+회원가입·로그인 없이, 상단 탭으로 12개 생활 서비스를 제공한다.
 
 - **구조**: 순수 HTML + vanilla JS(빌드 없음) + **Vercel 서버리스 프록시**(API 키 은닉·CORS 우회·스크래핑)
 - **원칙**: 예매·결제·개인정보 입력은 하지 않는다. 조회만 하고 결제/예매는 공식 페이지로 링크(handoff).
-- **이력**: 공공의료 앱 → 지하철 전용 개편 → k-skill 참고해 생활서비스 확장 → data.go.kr/EX/OPINET 대량 확장.
+- **이력**: 공공의료 앱 → 지하철 전용 개편 → k-skill 참고해 생활서비스 확장 → data.go.kr/EX/OPINET 대량 확장
+  → 2026-07-10 **영화관·고속/시외버스 탭 제거**(어차피 공식 페이지에서 예매해야 해 조회만으론 가치가 낮음).
   URL·Vercel 프로젝트명(`gong-medical-app`)은 하위호환을 위해 그대로 유지.
 - **참고 소스**: NomaDamas/k-skill 문서(MCP를 그대로 쓰지 않고, 각 기능이 쓰는 **공개 API 엔드포인트만 참고**해 자체 이식).
 
 ---
 
-## 2. 현재 구현된 기능 (탭 14종, 전부 라이브)
+## 2. 현재 구현된 기능 (탭 12종, 전부 라이브)
 
 | 탭 | 기능 | 데이터 소스 | 사용 키 |
 |---|---|---|---|
 | 🚇 지하철 | 공식 노선도 → 역 검색 → 도착·위치·첫막차·최단경로·편의시설·승하차·공기질 종합 모달 | 서울 열린데이터 | SEOUL_API_KEY / SEOUL_REALTIME_KEY |
 | 👥 혼잡도 | 서울 핫스팟 120여곳 실시간 인구·혼잡도·성별/연령 | citydata_ppltn | SEOUL_API_KEY |
-| 🎬 영화관 | CGV·메가박스·롯데 영화관/상영작/시간표·잔여석 | mcp.aka.page | 불필요 |
-| 🚌 버스 | 고속(KOBUS)·시외(티머니) 터미널 시간표 + 공식 예매 링크 | 스크래핑 | 불필요 |
 | 🧳 분실물 | LOST112·서울교통공사 조회 조건 정리 + 공식 링크(안내형) | — | 불필요 |
 | 🎰 로또 | 회차별 당첨번호·등위별 당첨금·내 번호 등수 계산 | smok95 CDN 미러 | 불필요 |
 | ⛽ 주유소 | 내 위치/주소 반경 최저가 주유소(가격순)·주소·편의시설 + **전국 평균유가 바** | Opinet | OPINET_API_KEY |
@@ -52,16 +51,16 @@
 
 ```
 api/[service].js      ★ 단일 catch-all 라우터 (Vercel 함수 1개) → lib/ 위임
-lib/*.js              ★ 실제 핸들러 15개 (아래)
-  subway.js  density.js  cinema.js  bus.js    lotto.js
-  gas.js     bike.js     highway.js realestate.js air.js
-  citybus.js parking.js  lh.js      myhome.js  geocode.js
+lib/*.js              ★ 실제 핸들러 13개 (아래)
+  subway.js  density.js  lotto.js   gas.js       bike.js
+  highway.js realestate.js air.js   citybus.js   parking.js
+  lh.js      myhome.js   geocode.js
 lib/kotsa-parking.js  공단 B553881 클라이언트(비핸들러 모듈, HANDLERS에 등록 안 함)
 lib/pool.js           동시성 제한 + 재시도 유틸(전량 수집용, 비핸들러 모듈)
 data/parking-nationwide.js  전국 주차장 스냅샷 17,768곳 (4.5MB, 자동생성)
 data/parking-kotsa.js       공단 시설+운영 스냅샷 (현재 빈 배열 — 백엔드 장애)
 scripts/build-parking-snapshot.mjs  위 두 스냅샷 빌더 (`npm run build:parking`)
-index.html            14개 탭 + 패널 + 헤더 미세먼지 배지
+index.html            12개 탭 + 패널 + 헤더 미세먼지 배지
 js/app.js             지하철 전용 로직(노선도·역 종합 모달)
 js/services.js        나머지 13개 탭 로직 + 탭 전환 + 공용 getLocation(주소/GPS)
 css/style.css         전체 스타일(.toptabs/.panel/.dust-badge/.lotto-ball 등)
@@ -148,7 +147,7 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 | 증상 | 원인 | 해결 |
 |---|---|---|
 | 배포 `Error`, 신규 `/api/*` 전부 **404 NOT_FOUND** | **Vercel Hobby 함수 12개 초과**(api/에 13개) | 핸들러를 `lib/`로 옮기고 `api/[service].js` catch-all 1개로 통합 |
-| 고속버스(KOBUS) `fetch failed` → `connect ETIMEDOUT` | KOBUS가 **Vercel 데이터센터 IP 차단**(TLS 아님). `node:https`로 바꾸니 진짜 원인이 드러남 | 해결 불가 → 도달 실패 감지 시 `{blocked:true}` 반환, 프론트는 **공식 예매 링크 카드**로 폴백 |
+| 고속버스(KOBUS) `fetch failed` → `connect ETIMEDOUT` *(탭 제거됨, 교훈 보존)* | KOBUS가 **Vercel 데이터센터 IP 차단**(TLS 아님). `node:https`로 바꾸니 진짜 원인이 드러남 | 해결 불가 → 도달 실패 감지 시 `{blocked:true}` 반환, 프론트는 **공식 예매 링크 카드**로 폴백 |
 | 로또 dhlottery 302 → 홈으로 | dhlottery가 해외/데이터센터 IP 차단 | **공개 CDN 미러**(smok95.github.io/lotto) 프록시로 우회 |
 | vworld 지오코딩 프로덕션 `fetch failed` | vworld도 Vercel IP 차단(로컬은 정상) | **Nominatim(OSM) 폴백** 추가. vworld 실패 시 자동 전환 |
 | 고속도로 EX API `400 Request Blocked` | EX 포털 **봇 차단** | **User-Agent + Referer** 헤더 추가하면 정상(Vercel IP는 허용됨) |
@@ -161,7 +160,7 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 | 주차장 "남대문 화물"이 4번 중복 | **노상주차장은 구획(1면)마다 행이 하나** (2,206행 / 고유 PKLT_CD 852) | `PKLT_CD`로 묶어 **TPKCT 합산**. 실측으로 다중행 그룹 65개가 전부 `TPKCT=1`, 큰값 중복 0임을 확인 후 적용 |
 | 주차장 잔여면수가 엉뚱하게 표시 | 실시간 123행 중 **14행은 갱신시각이 빈 값** | `NOW_PRK_VHCL_UPDT_TM`이 있는 **109곳만 실시간으로 신뢰** |
 | 마이홈 `code 30` / `fetch failed` | 키 미전파 + 마이홈이 Vercel IP 차단 | `{pending:true}` 안내로 degrade(화면 깨짐 방지). 전파 후 재확인 |
-| 티머니 `errorCont` 오류 페이지 | `bef_Aft_Dvs=D`, `req_Rec_Num=10` 누락(사이트 JS가 붙임) | 두 파라미터 필수 포함 |
+| 티머니 `errorCont` 오류 페이지 *(탭 제거됨)* | `bef_Aft_Dvs=D`, `req_Rec_Num=10` 누락(사이트 JS가 붙임) | 두 파라미터 필수 포함 |
 | 실거래가 "전월세"가 한 덩어리 | API가 전세/월세를 `kind`로만 구분 | UI를 **매매/전세/월세/분양권**으로 분리, `kind`로 클라 필터 |
 | 실거래가·LH가 100건만 나옴 | 첫 페이지만 호출했다(`pageNo=1`, `PG_SZ=100`) | `totalCount`(RTMS) / 행의 `ALL_CNT`(LH)로 총 페이지를 계산해 **전량 수집** |
 | LH 전량 수집 시 7,590건 중 2,700건만 도착 | 40페이지를 `Promise.all`로 한 번에 던지면 **13페이지가 무응답**. `.catch(()=>[])`가 조용히 삼켜 데이터가 말없이 사라짐 | `lib/pool.js`(동시성 4 + 재시도 1회). 실패 페이지는 응답의 `failedPages`로 **드러낸다** |
@@ -182,8 +181,6 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 |---|---|---|
 | `/api/subway` | `kind=mapData\|arrival\|position\|firstlast\|accessibility\|elevatorLift\|stats\|timeStats\|airquality\|closure\|shortestPath` | 서울 열린데이터(정보 8088 / 실시간 swopenapi) |
 | `/api/density` | `area=강남역` | `citydata_ppltn` |
-| `/api/cinema` | `chain=cgv\|megabox\|lottecinema&op=theaters\|movies\|timetable\|seats&keyword&playDate` | mcp.aka.page |
-| `/api/bus` | `type=express\|intercity&op=terminals\|schedule&dep&arr&date` | KOBUS / 티머니 (express는 IP차단→`blocked`) |
 | `/api/lotto` | `round=latest\|1231` | smok95.github.io/lotto |
 | `/api/gas` | `op=avg` \| `lat&lon&prodcd=B027&radius` | Opinet `avgAllPrice` / `aroundAll`+`detailById` (certkey, KATEC) |
 | `/api/bike` | `lat&lon` | 서울 `bikeList` 3페이지 + haversine |

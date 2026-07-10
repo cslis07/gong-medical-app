@@ -287,13 +287,13 @@ kbd{
   <div class="hero-inner">
     <span class="hero-badge">📖 이용가이드 · 무료 · 회원가입 불필요</span>
     <h1>공공데이터로 만나는 서울 교통·생활 정보</h1>
-    <p>지하철 노선도·실시간 도착부터 고속·시외버스 시간표, 실시간 인구 혼잡도, 영화관 상영정보, 지하철 분실물까지 — 흩어져 있던 서울 생활 공공/공식 API를 한 화면에 모았습니다.</p>
+    <p>지하철 노선도·실시간 도착부터 실시간 인구 혼잡도, 전국 주차장·주유소, 아파트 실거래가, 미세먼지까지 — 흩어져 있던 생활 공공/공식 API를 한 화면에 모았습니다.</p>
     <div class="hero-chips">
       <span>🚇 지하철 종합정보</span>
       <span>👥 실시간 혼잡도</span>
-      <span>🚌 고속·시외버스</span>
-      <span>🎬 영화관 상영정보</span>
-      <span>🧳 지하철 분실물</span>
+      <span>🅿️ 전국 주차장</span>
+      <span>🏠 아파트 실거래가</span>
+      <span>😷 미세먼지</span>
       <span>📱 모바일 최적화</span>
     </div>
   </div>
@@ -333,8 +333,6 @@ kbd{
       </a>
       <div class="sidebar-sub">
         <a href="#feat-density">실시간 혼잡도</a>
-        <a href="#feat-cinema">영화관</a>
-        <a href="#feat-bus">고속·시외버스</a>
         <a href="#feat-lost">지하철 분실물</a>
       </div>
     </div>
@@ -374,8 +372,21 @@ kbd{
 
           <div class="update-card new">
             <div class="update-head">
-              <span class="update-date">2026.07.07</span>
+              <span class="update-date">2026.07.10</span>
               <span class="update-badge">NEW</span>
+            </div>
+            <div class="update-title">🅿️ 주차장 전국 확대 · 페이지네이션 · 영화관/버스 탭 정리</div>
+            <div class="update-body">
+              <strong>🅿️ 주차장</strong>이 서울 공영에서 <strong>전국 17,700여 곳</strong>으로 넓어졌습니다(서울 일부는 실시간 잔여면수 제공).
+              <strong>🏠 실거래가</strong>·<strong>🏘️ LH청약</strong>·주차장은 이제 <strong>전체 데이터를 불러와 페이지로 나눠</strong> 보여줍니다.
+              실거래가 지역 목록은 행정구역 개편(부천·화성·인천 서구)에 맞춰 코드를 갱신했습니다.
+              한편 <strong>🎬 영화관</strong>·<strong>🚌 고속·시외버스</strong> 탭은 결국 각 공식 페이지에서 예매해야 해 제거했습니다.
+            </div>
+          </div>
+
+          <div class="update-card">
+            <div class="update-head">
+              <span class="update-date">2026.07.07</span>
             </div>
             <div class="update-title">🌆 생활서비스 4종 추가 — 혼잡도·영화관·버스·분실물</div>
             <div class="update-body">
@@ -456,13 +467,13 @@ kbd{
           <tbody>
             <tr><td><strong>🚇 지하철</strong></td><td>공식 노선도 → 역 종합 정보(도착·경로·편의시설·통계)</td><td>역 정보·도착시간·경로 한 번에</td></tr>
             <tr><td><strong>👥 혼잡도</strong></td><td>서울 주요 핫스팟 실시간 인구 혼잡도</td><td>지금 그곳이 얼마나 붐비는지</td></tr>
-            <tr><td><strong>🎬 영화관</strong></td><td>CGV·메가박스·롯데시네마 영화관·상영작·시간표/잔여석</td><td>가까운 영화관, 오늘 상영작</td></tr>
-            <tr><td><strong>🚌 버스</strong></td><td>고속(KOBUS)·시외(티머니) 시간표·잔여석 조회</td><td>시외 이동 시간표 확인·예매 진입</td></tr>
+            <tr><td><strong>🅿️ 주차장</strong></td><td>전국 주차장 거리순 · 요금·운영시간 (서울 일부 실시간 잔여면수)</td><td>지금 차 댈 곳 찾기</td></tr>
+            <tr><td><strong>🏠 실거래가</strong></td><td>아파트 매매·전세·월세·분양권 실거래 신고 내역</td><td>그 동네 시세 확인</td></tr>
             <tr><td><strong>🧳 분실물</strong></td><td>LOST112·서울교통공사 유실물 공식 조회 안내</td><td>지하철에서 물건을 잃어버렸을 때</td></tr>
           </tbody>
         </table>
 
-        <div class="tip">💡 데이터 출처는 서울 열린데이터광장·서울교통공사·KOBUS·티머니 시외버스·LOST112·영화관 공개 API입니다. 버스·영화 예매/결제는 각 공식 페이지에서 진행합니다.</div>
+        <div class="tip">💡 데이터 출처는 서울 열린데이터광장·서울교통공사·공공데이터포털(국토부·에어코리아·LH)·한국도로공사·Opinet·LOST112입니다.</div>
       </div>
     </section>
 
@@ -515,13 +526,13 @@ kbd{
       </div>
     </section>
 
-    <!-- 5.5 생활서비스 (혼잡도·영화관·버스·분실물) -->
+    <!-- 5.5 생활서비스 (혼잡도·분실물) -->
     <section class="guide-section" id="sec-life">
       <div class="section-header sh-overview">
         <span class="section-icon">🌆</span>
         <div>
           <div class="section-title">생활서비스</div>
-          <div class="section-subtitle">혼잡도 · 영화관 · 버스 · 분실물</div>
+          <div class="section-subtitle">혼잡도 · 분실물</div>
         </div>
       </div>
       <div class="section-body">
@@ -530,22 +541,6 @@ kbd{
           <h3>👥 실시간 혼잡도</h3>
           <p>서울 주요 <strong>120여 개 핫스팟</strong>(강남역·홍대 관광특구·여의도한강공원 등)의 실시간 혼잡도 단계(여유 / 보통 / 약간 붐빔 / 붐빔)와 추정 인구, 성별·연령 분포를 보여줍니다. 입력창에 장소명을 넣으면 자동완성됩니다.</p>
           <div class="tip tip-warn">⚠️ 인구 수치는 KT·SKT 통신 신호 기반 <strong>추계치</strong>이며, 조회 시점 약 15분 전 값(5분 주기 갱신)입니다. 새벽 01~05시는 제공되지 않을 수 있습니다.</div>
-        </div>
-
-        <div class="feature" id="feat-cinema">
-          <h3>🎬 영화관</h3>
-          <p><strong>CGV·메가박스·롯데시네마</strong>의 영화관 검색, 상영작, 시간표(CGV)·잔여석(메가박스·롯데)을 조회합니다. 지역/지점 키워드로 찾고, 날짜를 지정해 상영정보를 확인합니다.</p>
-          <div class="tip">💡 잔여석·시간표는 조회 시점 참고값입니다. 예매·결제는 각 영화관 공식 앱/웹에서 진행하세요.</div>
-        </div>
-
-        <div class="feature" id="feat-bus">
-          <h3>🚌 고속·시외버스</h3>
-          <p><strong>고속버스(KOBUS)</strong>와 <strong>시외버스(티머니)</strong>의 출발·도착 터미널을 자동완성으로 선택하고 날짜별 시간표를 조회합니다. 시외버스는 운수사·등급·잔여/총좌석까지, 고속버스는 출발시각·등급 위주로 제공됩니다.</p>
-          <ul class="func-list">
-            <li><span class="fi">🕐</span><div><span class="ft">시간표 조회</span><span class="fd">출발시각·등급, (시외) 운수사·잔여석</span></div></li>
-            <li><span class="fi">🎫</span><div><span class="ft">공식 예매 링크</span><span class="fd">예매·결제는 KOBUS·티머니 공식 페이지에서</span></div></li>
-          </ul>
-          <div class="tip tip-warn">⚠️ 시간표는 공식 사이트 조회 결과이며 좌석 상황은 실시간으로 바뀝니다. <strong>예매/결제는 자동화하지 않으며</strong> 공식 페이지에서 직접 진행합니다.</div>
         </div>
 
         <div class="feature" id="feat-lost">
@@ -706,7 +701,7 @@ kbd{
     <div class="footer-grid">
       <div>
         <h4>서울 교통·생활 정보</h4>
-        <p>지하철·버스·혼잡도·영화관·분실물을 한 화면에 모은 공공데이터 기반 무료 웹앱.</p>
+        <p>지하철·혼잡도·주차장·실거래가·미세먼지를 한 화면에 모은 공공데이터 기반 무료 웹앱.</p>
       </div>
       <div>
         <h4>바로가기</h4>
