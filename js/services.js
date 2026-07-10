@@ -771,6 +771,52 @@ byId("lhMode").addEventListener("change", syncLhMode);
 byId("lhBtn").addEventListener("click", () => byId("lhMode").value === "rental" ? searchRental() : searchLH());
 byId("lhName").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLH(); });
 
+// ==================== 🅿️ 주차장 ====================
+const wonNum = (v) => (v != null ? Number(v).toLocaleString() : "");
+async function searchParking() {
+  try {
+    const { lat, lon } = await getLocation("pkStatus", "pkAddr");
+    const f = byId("pkFilter").value;
+    setBox("pkStatus", "주차장 조회 중…", "loading"); byId("pkResults").innerHTML = "";
+    const qs = new URLSearchParams({ lat, lon, limit: "12" });
+    if (f === "live") qs.set("live", "1");
+    if (f === "free") qs.set("free", "1");
+    const d = await (await fetch(`/api/parking?${qs}`)).json();
+    if (d.needKey) return setBox("pkStatus", "⚠️ 주차장 기능은 SEOUL_API_KEY 설정 후 이용 가능합니다.", "warn");
+    if (!d.ok) return setBox("pkStatus", d.error || d.message || "조회 실패", "warn");
+    const rows = d.rows || [];
+    if (!rows.length) return setBox("pkStatus", f ? "조건에 맞는 주차장이 없습니다." : "주변 공영주차장이 없습니다.", "warn");
+    setBox("pkStatus", `가까운 ${rows.length}곳 · 실시간 제공 ${d.liveCount}곳`, "ok");
+    byId("pkResults").innerHTML = rows.map(renderParking).join("");
+  } catch (e) { setBox("pkStatus", `오류: ${e.message}`, "error"); }
+}
+function renderParking(p) {
+  // 잔여 비율로 혼잡 표시
+  let badge = `<span class="bed warn">총 ${p.capacity ?? "-"}면</span>`;
+  if (p.available != null && p.capacity) {
+    const ratio = p.available / p.capacity;
+    const c = p.available === 0 ? "full" : ratio < 0.15 ? "busy" : "ok";
+    badge = `<span class="bed ${c}">잔여 ${p.available} / ${p.capacity}</span>`;
+  }
+  const fee = p.free ? "무료"
+    : p.rate != null && p.rateMin ? `${wonNum(p.rate)}원 / ${p.rateMin}분` + (p.addRate ? ` · 추가 ${wonNum(p.addRate)}원/${p.addMin}분` : "") : "요금 정보 없음";
+  const hours = [p.wd ? `평일 ${p.wd}` : "", p.we ? `주말 ${p.we}` : ""].filter(Boolean).join(" · ");
+  const tel = p.tel ? `<a class="btn tel" href="tel:${E(p.tel).replace(/[^0-9]/g, "")}">📞 ${E(p.tel)}</a>` : "";
+  const map = `<a class="btn map" href="https://map.kakao.com/link/map/${encodeURIComponent(p.name)},${p.lat},${p.lon}" target="_blank" rel="noopener">🗺️ 지도</a>`;
+  return `<article class="card">
+    <div class="card-top"><h3>🅿️ ${E(p.name)}</h3>${badge}</div>
+    <p class="addr">📍 ${E(p.addr)} · ${p.distance.toLocaleString()}m</p>
+    <p class="meta">${[p.kind, p.oper].filter(Boolean).map(E).join(" · ")}</p>
+    <p class="meta">💰 ${E(fee)}${p.dailyMax ? ` · 일 최대 ${wonNum(p.dailyMax)}원` : ""}</p>
+    ${hours ? `<p class="meta">🕒 ${E(hours)}</p>` : ""}
+    ${p.available != null ? `<p class="meta">🔄 실시간 · ${E(p.updatedAt)} 기준</p>` : ""}
+    <div class="card-actions">${tel}${map}</div>
+  </article>`;
+}
+byId("pkBtn").addEventListener("click", searchParking);
+byId("pkFilter").addEventListener("change", () => { if (byId("pkResults").innerHTML) searchParking(); });
+byId("pkAddr").addEventListener("keydown", (e) => { if (e.key === "Enter") searchParking(); });
+
 // ---------- 초기값 ----------
 (function initServices() {
   syncHwMode();

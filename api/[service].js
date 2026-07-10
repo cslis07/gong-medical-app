@@ -16,8 +16,9 @@ import citybus from "../lib/citybus.js";
 import lh from "../lib/lh.js";
 import geocode from "../lib/geocode.js";
 import myhome from "../lib/myhome.js";
+import parking from "../lib/parking.js";
 
-const HANDLERS = { subway, density, cinema, bus, lotto, gas, bike, highway, realestate, air, citybus, lh, geocode, myhome };
+const HANDLERS = { subway, density, cinema, bus, lotto, gas, bike, highway, realestate, air, citybus, lh, geocode, myhome, parking };
 
 export default async function handler(req, res) {
   const svc = String(req.query.service || "");

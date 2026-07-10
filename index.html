@@ -38,6 +38,7 @@
     <button class="toptab" data-panel="realestate" role="tab">🏠 실거래가</button>
     <button class="toptab" data-panel="air" role="tab">😷 미세먼지</button>
     <button class="toptab" data-panel="citybus" role="tab">🚏 시내버스</button>
+    <button class="toptab" data-panel="parking" role="tab">🅿️ 주차장</button>
     <button class="toptab" data-panel="lh" role="tab">🏘️ LH청약</button>
   </nav>
 
@@ -426,6 +427,28 @@
       <p class="hint">LH 분양·임대 공고, 그리고 LH·SH·지방공사 <strong>공공임대주택 단지</strong>를 조회합니다. (마이홈포털)</p>
       <div id="lhStatus" class="status"></div>
       <div id="lhResults" class="results"></div>
+    </section>
+
+    <!-- ============ 🅿️ 주차장 ============ -->
+    <section class="panel" id="panel-parking">
+      <section class="controls">
+        <div class="field grow">
+          <label for="pkAddr">주소 <span class="opt">(선택 — 비우면 내 위치)</span></label>
+          <input type="text" id="pkAddr" placeholder="예: 서울 중구 세종대로 110" />
+        </div>
+        <div class="field">
+          <label for="pkFilter">필터</label>
+          <select id="pkFilter">
+            <option value="">전체</option>
+            <option value="live">실시간 잔여면수 제공</option>
+            <option value="free">무료</option>
+          </select>
+        </div>
+        <button id="pkBtn" class="search-btn">📍 주변 공영주차장</button>
+      </section>
+      <p class="hint">서울시 공영주차장을 가까운 순으로 보여줍니다. 일부 주차장은 <strong>실시간 잔여면수</strong>를 제공합니다. 요금·운영시간은 변동될 수 있으니 현장 안내를 확인하세요.</p>
+      <div id="pkStatus" class="status"></div>
+      <div id="pkResults" class="results"></div>
     </section>
 
   </main>
