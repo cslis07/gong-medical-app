@@ -18,6 +18,7 @@
         <p class="sub">지하철 · 고속/시외버스 · 실시간 혼잡도 · 영화관 · 분실물</p>
       </div>
       <div class="header-links">
+        <button id="dustBadge" class="dust-badge" title="수도권(서울·경기·인천) 실시간 평균 미세먼지 — 클릭하면 미세먼지 탭" style="display:none"></button>
         <a class="guide-link" href="guide.html">📖 이용가이드</a>
       </div>
     </div>
@@ -302,7 +303,8 @@
           <label for="reType">거래유형</label>
           <select id="reType">
             <option value="trade">매매</option>
-            <option value="rent">전월세</option>
+            <option value="jeonse">전세</option>
+            <option value="wolse">월세</option>
             <option value="silv">분양권전매</option>
           </select>
         </div>
@@ -316,7 +318,30 @@
         </div>
         <button id="reBtn" class="search-btn">실거래가 조회</button>
       </section>
-      <p class="hint">국토교통부 실거래가 공개자료입니다. 지역·연월 기준 신고된 아파트 거래를 최신순으로 보여줍니다.</p>
+      <section class="controls re-filter" style="margin-top:8px">
+        <div class="field">
+          <label for="reMin">최저가 <span class="opt" id="rePriceUnit">(억)</span></label>
+          <input type="number" id="reMin" placeholder="예: 10" step="0.1" min="0" />
+        </div>
+        <div class="field">
+          <label for="reMax">최고가 <span class="opt">(억)</span></label>
+          <input type="number" id="reMax" placeholder="예: 25" step="0.1" min="0" />
+        </div>
+        <div class="field wolse-only" style="display:none">
+          <label for="reMonMax">월세 최대 <span class="opt">(만원)</span></label>
+          <input type="number" id="reMonMax" placeholder="예: 200" step="10" min="0" />
+        </div>
+        <div class="field">
+          <label for="reSort">정렬</label>
+          <select id="reSort">
+            <option value="date">최신순</option>
+            <option value="high">가격 높은순</option>
+            <option value="low">가격 낮은순</option>
+          </select>
+        </div>
+        <button id="reApply" class="search-btn">필터 적용</button>
+      </section>
+      <p class="hint">국토교통부 실거래가 공개자료입니다. 가격 필터는 <strong>매매가·전세보증금·월세보증금</strong> 기준(억원)입니다. 카드의 🗺️ 지도로 위치를 확인하세요.</p>
       <div id="reStatus" class="status"></div>
       <div id="reResults" class="results"></div>
     </section>
@@ -324,13 +349,27 @@
     <!-- ============ 😷 미세먼지 ============ -->
     <section class="panel" id="panel-air">
       <section class="controls">
-        <div class="field grow">
+        <div class="field">
           <label for="airSido">지역(시·도)</label>
           <select id="airSido"></select>
         </div>
+        <div class="field grow">
+          <label for="airQ">측정소/지역 필터 <span class="opt">(선택)</span></label>
+          <input type="text" id="airQ" placeholder="예: 강남, 종로, 수원" />
+        </div>
+        <div class="field">
+          <label for="airGrade">등급</label>
+          <select id="airGrade">
+            <option value="">전체</option>
+            <option value="ok">좋음</option>
+            <option value="warn">보통</option>
+            <option value="busy">나쁨</option>
+            <option value="full">매우나쁨</option>
+          </select>
+        </div>
         <button id="airBtn" class="search-btn">대기질 조회</button>
       </section>
-      <p class="hint">에어코리아 실시간 측정정보입니다. 측정소별 미세먼지(PM10)·초미세먼지(PM2.5)와 오늘 예보를 보여줍니다.</p>
+      <p class="hint">에어코리아 실시간 측정정보입니다. 측정소별 미세먼지(PM10)·초미세먼지(PM2.5)와 오늘 예보를 보여줍니다. 측정소명으로 좁히거나 등급으로 필터할 수 있습니다.</p>
       <div id="airStatus" class="status"></div>
       <div id="airResults" class="results"></div>
     </section>
@@ -362,6 +401,14 @@
         <div class="field grow lh-notice">
           <label for="lhName">공고명 검색 <span class="opt">(선택)</span></label>
           <input type="text" id="lhName" placeholder="예: 행복주택, 신혼희망, 국민임대" />
+        </div>
+        <div class="field lh-notice">
+          <label for="lhRegion">지역</label>
+          <select id="lhRegion"><option value="">전체</option></select>
+        </div>
+        <div class="field lh-notice">
+          <label for="lhStatusF">공고상태</label>
+          <select id="lhStatusF"><option value="">전체</option></select>
         </div>
         <div class="field lh-rental" style="display:none">
           <label for="lhSido">지역(시·도)</label>

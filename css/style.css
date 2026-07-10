@@ -456,3 +456,27 @@ input, button, select, textarea { font-family: inherit; }
 .cb-arrivals { margin-top: 4px; }
 a.card.lh-card { display: block; text-decoration: none; color: inherit; }
 a.card.lh-card:hover { border-color: var(--primary); }
+
+/* ===== 헤더 수도권 미세먼지 배지 ===== */
+.dust-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.35);
+  background: rgba(255,255,255,.16); color: #fff; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: .15s; white-space: nowrap;
+}
+.dust-badge:hover { background: rgba(255,255,255,.28); }
+.dust-badge b { font-size: 15px; font-weight: 800; }
+.dust-badge span { opacity: .9; font-size: 12px; }
+.dust-badge.ok   { background: rgba(24,121,78,.85);  border-color: rgba(255,255,255,.4); }
+.dust-badge.warn { background: rgba(180,83,9,.85);   border-color: rgba(255,255,255,.4); }
+.dust-badge.busy { background: rgba(200,80,20,.9);   border-color: rgba(255,255,255,.4); }
+.dust-badge.full { background: rgba(192,57,43,.92);  border-color: rgba(255,255,255,.4); }
+
+/* 실거래가 필터 바 */
+.re-filter { background: var(--card); }
+.re-filter input[type="number"] { height: 40px; }
+
+@media (max-width: 620px) {
+  .dust-badge { padding: 6px 10px; font-size: 12px; }
+  .header-links { flex-wrap: wrap; gap: 6px; }
+}

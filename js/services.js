@@ -494,29 +494,76 @@ function initRealEstate() {
   const d = new Date(Date.now() + 9 * 3600e3); d.setUTCMonth(d.getUTCMonth() - 1); // 지난달
   byId("reYm").value = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
+// UI 유형(매매/전세/월세/분양권) → API 유형(trade/rent/silv) + 임대 종류
+const RE_UI = { trade: { api: "trade" }, jeonse: { api: "rent", kind: "전세" }, wolse: { api: "rent", kind: "월세" }, silv: { api: "silv" } };
+let reCache = { rows: [], uiType: "trade", regionName: "" };
+
+function syncReType() {
+  const t = byId("reType").value;
+  byId("panel-realestate").querySelector(".wolse-only").style.display = t === "wolse" ? "" : "none";
+  byId("rePriceUnit").textContent = t === "trade" || t === "silv" ? "(억·매매가)" : "(억·보증금)";
+}
+byId("reType").addEventListener("change", syncReType);
+
 async function searchRealEstate() {
-  const type = byId("reType").value, lawd = byId("reRegion").value, ym = (byId("reYm").value || "").replace("-", "");
+  const uiType = byId("reType").value, lawd = byId("reRegion").value, ym = (byId("reYm").value || "").replace("-", "");
   if (!/^\d{6}$/.test(ym)) return setBox("reStatus", "거래연월을 선택하세요.", "warn");
   setBox("reStatus", "조회 중…", "loading"); byId("reResults").innerHTML = "";
   try {
-    const d = await (await fetch(`/api/realestate?type=${type}&lawd=${lawd}&ym=${ym}`)).json();
+    const d = await (await fetch(`/api/realestate?type=${RE_UI[uiType].api}&lawd=${lawd}&ym=${ym}`)).json();
     if (d.needKey) return setBox("reStatus", "⚠️ 실거래가 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
     if (!d.ok) return setBox("reStatus", d.error || "조회 실패", "warn");
-    const rows = d.rows || [];
-    if (!rows.length) return setBox("reStatus", "해당 지역·연월에 신고된 거래가 없습니다.", "warn");
-    setBox("reStatus", `${rows.length}건 (최신순)`, "ok");
-    byId("reResults").innerHTML = rows.map((r) => renderRealEstate(type, r)).join("");
+    const sel = byId("reRegion");
+    reCache = { rows: d.rows || [], uiType, regionName: sel.options[sel.selectedIndex]?.text || "" };
+    if (!reCache.rows.length) return setBox("reStatus", "해당 지역·연월에 신고된 거래가 없습니다.", "warn");
+    applyReFilter();
   } catch (e) { setBox("reStatus", `오류: ${e.message}`, "error"); retryBox("reResults", e.message, searchRealEstate); }
 }
+
+// 카드 정렬·필터용 대표 금액(만원): 매매/분양권=거래액, 전세/월세=보증금
+const rePrice = (uiType, r) => (uiType === "trade" || uiType === "silv" ? r.amount : r.deposit) || 0;
+
+function applyReFilter() {
+  const { rows, uiType } = reCache;
+  if (!rows.length) return;
+  const kind = RE_UI[uiType].kind;
+  const min = parseFloat(byId("reMin").value), max = parseFloat(byId("reMax").value);
+  const monMax = parseFloat(byId("reMonMax").value);
+  const sort = byId("reSort").value;
+
+  let out = rows.slice();
+  if (kind) out = out.filter((r) => r.kind === kind);                        // 전세 / 월세 분리
+  if (Number.isFinite(min)) out = out.filter((r) => rePrice(uiType, r) >= min * 10000);
+  if (Number.isFinite(max)) out = out.filter((r) => rePrice(uiType, r) <= max * 10000);
+  if (uiType === "wolse" && Number.isFinite(monMax)) out = out.filter((r) => (r.monthly || 0) <= monMax);
+
+  if (sort === "high") out.sort((a, b) => rePrice(uiType, b) - rePrice(uiType, a));
+  else if (sort === "low") out.sort((a, b) => rePrice(uiType, a) - rePrice(uiType, b));
+  else out.sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0));
+
+  if (!out.length) return setBox("reStatus", `조건에 맞는 거래가 없습니다. (전체 ${rows.length}건)`, "warn");
+  setBox("reStatus", `${out.length}건 표시 · 전체 ${rows.length}건`, "ok");
+  byId("reResults").innerHTML = out.map((r) => renderRealEstate(uiType, r)).join("");
+}
+byId("reApply").addEventListener("click", applyReFilter);
+["reMin", "reMax", "reMonMax"].forEach((id) => byId(id).addEventListener("keydown", (e) => { if (e.key === "Enter") applyReFilter(); }));
+byId("reSort").addEventListener("change", applyReFilter);
+
 const eok = (manwon) => manwon >= 10000 ? `${(manwon / 10000).toFixed(manwon % 10000 ? 1 : 0)}억` + (manwon % 10000 ? ` ${(manwon % 10000).toLocaleString()}만` : "") : `${manwon.toLocaleString()}만`;
-function renderRealEstate(type, r) {
+function renderRealEstate(uiType, r) {
   let price;
-  if (type === "rent") price = r.kind === "월세" ? `보증 ${eok(r.deposit)} / 월 ${r.monthly.toLocaleString()}만` : `전세 ${eok(r.deposit)}`;
+  if (uiType === "wolse") price = `보증 ${eok(r.deposit)} / 월 ${(r.monthly || 0).toLocaleString()}만`;
+  else if (uiType === "jeonse") price = `전세 ${eok(r.deposit)}`;
   else price = eok(r.amount) + "원";
+  // RTMS는 좌표를 주지 않아 '시군구 + 법정동 + 아파트명'으로 카카오맵 검색 링크 생성
+  const sido = (reCache.regionName || "").split(" ")[0] || "";
+  const q = [sido, r.dong, r.apt].filter(Boolean).join(" ");
+  const map = `<a class="btn map" href="https://map.kakao.com/link/search/${encodeURIComponent(q)}" target="_blank" rel="noopener">🗺️ 지도</a>`;
   return `<article class="card">
     <div class="card-top"><h3>${E(r.apt)}</h3><span class="bed ok">${E(price)}</span></div>
     <p class="meta">${E(r.dong)}${r.area ? ` · ${r.area}㎡(${(r.area / 3.3058).toFixed(0)}평)` : ""}${r.floor ? ` · ${E(r.floor)}층` : ""}${r.buildYear ? ` · ${E(r.buildYear)}년준공` : ""}</p>
-    <p class="meta">📅 ${E(r.date)} 신고${type === "rent" && r.kind ? ` · ${E(r.kind)}` : ""}</p>
+    <p class="meta">📅 ${E(r.date)} 신고${r.kind ? ` · ${E(r.kind)}` : ""}</p>
+    <div class="card-actions">${map}</div>
   </article>`;
 }
 byId("reBtn").addEventListener("click", searchRealEstate);
@@ -524,6 +571,7 @@ byId("reBtn").addEventListener("click", searchRealEstate);
 // ==================== 😷 미세먼지 ====================
 const SIDOS = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
 function initAir() { byId("airSido").innerHTML = SIDOS.map((s) => `<option value="${s}">${s}</option>`).join(""); }
+let airCache = null; // {sido, summary, forecast, stations}
 async function searchAir() {
   const sido = byId("airSido").value;
   setBox("airStatus", "조회 중…", "loading"); byId("airResults").innerHTML = "";
@@ -531,24 +579,56 @@ async function searchAir() {
     const d = await (await fetch(`/api/air?sido=${encodeURIComponent(sido)}`)).json();
     if (d.needKey) return setBox("airStatus", "⚠️ 미세먼지 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
     if (!d.ok) return setBox("airStatus", d.error || "조회 실패", "warn");
-    const st = d.stations || [];
-    if (!st.length) return setBox("airStatus", "측정 데이터가 없습니다.", "warn");
-    setBox("airStatus", `${sido} · 측정소 ${st.length}곳`, "ok");
-    const g10 = airGradeOf(d.summary.pm10, "pm10"), g25 = airGradeOf(d.summary.pm25, "pm25");
-    const head = `<article class="card">
-      <div class="card-top"><h3>${E(sido)} 평균</h3></div>
-      <div class="dust-summary">
-        <div class="dust-box ${g10.c}"><span>미세먼지 PM10</span><b>${d.summary.pm10 ?? "-"}</b><em>${g10.t}</em></div>
-        <div class="dust-box ${g25.c}"><span>초미세 PM2.5</span><b>${d.summary.pm25 ?? "-"}</b><em>${g25.t}</em></div>
-      </div>
-      ${d.forecast && d.forecast.overall ? `<p class="meta">📢 ${E(d.forecast.overall)}</p>` : ""}
-    </article>`;
-    byId("airResults").innerHTML = head + st.map((s) => `
-      <article class="card">
-        <div class="card-top"><h3>${E(s.station)}</h3><span class="bed ${s.pm10Grade.c}">PM10 ${s.pm10 ?? "-"} · ${E(s.pm10Grade.t)}</span></div>
-        <p class="meta">초미세(PM2.5) ${s.pm25 ?? "-"} · ${E(s.pm25Grade.t)}${s.o3 != null ? ` · 오존 ${s.o3}` : ""}${s.time ? ` · ${E(s.time)}` : ""}</p>
-      </article>`).join("");
+    if (!(d.stations || []).length) return setBox("airStatus", "측정 데이터가 없습니다.", "warn");
+    airCache = d;
+    applyAirFilter();
   } catch (e) { setBox("airStatus", `오류: ${e.message}`, "error"); retryBox("airResults", e.message, searchAir); }
+}
+function applyAirFilter() {
+  if (!airCache) return;
+  const d = airCache, sido = d.sido;
+  const q = byId("airQ").value.trim(), g = byId("airGrade").value;
+  let st = d.stations || [];
+  if (q) st = st.filter((s) => String(s.station || "").includes(q));
+  if (g) st = st.filter((s) => s.pm10Grade.c === g);
+
+  const g10 = airGradeOf(d.summary.pm10, "pm10"), g25 = airGradeOf(d.summary.pm25, "pm25");
+  const head = `<article class="card">
+    <div class="card-top"><h3>${E(sido)} 평균</h3></div>
+    <div class="dust-summary">
+      <div class="dust-box ${g10.c}"><span>미세먼지 PM10</span><b>${d.summary.pm10 ?? "-"}</b><em>${g10.t}</em></div>
+      <div class="dust-box ${g25.c}"><span>초미세 PM2.5</span><b>${d.summary.pm25 ?? "-"}</b><em>${g25.t}</em></div>
+    </div>
+    ${d.forecast && d.forecast.overall ? `<p class="meta">📢 ${E(d.forecast.overall)}</p>` : ""}
+  </article>`;
+
+  if (!st.length) {
+    setBox("airStatus", `조건에 맞는 측정소가 없습니다. (전체 ${d.stations.length}곳)`, "warn");
+    byId("airResults").innerHTML = head; return;
+  }
+  setBox("airStatus", `${sido} · 측정소 ${st.length}곳${st.length !== d.stations.length ? ` / 전체 ${d.stations.length}` : ""}`, "ok");
+  byId("airResults").innerHTML = head + st.map((s) => `
+    <article class="card">
+      <div class="card-top"><h3>${E(s.station)}</h3><span class="bed ${s.pm10Grade.c}">PM10 ${s.pm10 ?? "-"} · ${E(s.pm10Grade.t)}</span></div>
+      <p class="meta">초미세(PM2.5) ${s.pm25 ?? "-"} · ${E(s.pm25Grade.t)}${s.o3 != null ? ` · 오존 ${s.o3}` : ""}${s.time ? ` · ${E(s.time)}` : ""}</p>
+    </article>`).join("");
+}
+byId("airQ").addEventListener("input", () => { if (airCache) applyAirFilter(); });
+byId("airGrade").addEventListener("change", () => { if (airCache) applyAirFilter(); });
+
+// 헤더: 수도권 평균 미세먼지 배지
+async function loadDustBadge() {
+  try {
+    const d = await (await fetch("/api/air?op=metro")).json();
+    if (!d.ok || d.pm10 == null) return;
+    const g = airGradeOf(d.pm10, "pm10");
+    const el = byId("dustBadge");
+    el.className = `dust-badge ${g.c}`;
+    el.innerHTML = `😷 <b>${d.pm10}</b> <span>${g.t}</span>`;
+    el.title = `수도권 평균 · 미세먼지 ${d.pm10}㎍/㎥ (${g.t}) · 초미세 ${d.pm25 ?? "-"} · 측정소 ${d.stations}곳`;
+    el.style.display = "";
+    el.addEventListener("click", () => switchPanel("air"));
+  } catch { /* 배지는 실패해도 무시 */ }
 }
 // PM 수치 → 등급(환경부 기준)
 function airGradeOf(v, kind) {
@@ -599,35 +679,69 @@ byId("cbResults").addEventListener("click", (e) => {
 });
 
 // ==================== 🏘️ LH 청약 ====================
+let lhCache = [];
+// 상태 우선순위(열린 공고 먼저) + 배지색
+const LH_OPEN = ["공고중", "접수중", "상담요청"];
+function lhBadge(status) {
+  const s = String(status || "");
+  if (s.includes("접수중")) return "ok";
+  if (s.includes("공고중")) return "ok";
+  if (s.includes("상담요청")) return "warn";
+  if (s.includes("마감") || s.includes("종료")) return "full";
+  return "warn";
+}
+function fillLhFilters(rows) {
+  const fill = (id, vals, label) => {
+    const sel = byId(id), cur = sel.value;
+    sel.innerHTML = `<option value="">${label}</option>` + vals.map((v) => `<option value="${E(v)}">${E(v)}</option>`).join("");
+    if (vals.includes(cur)) sel.value = cur;
+  };
+  fill("lhRegion", [...new Set(rows.map((r) => r.region).filter(Boolean))].sort(), "전체 지역");
+  const statuses = [...new Set(rows.map((r) => r.status).filter(Boolean))];
+  // 요청 순서(공고중·상담요청·접수중·마감) 우선 정렬
+  const order = ["공고중", "접수중", "상담요청"];
+  statuses.sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99) || a.localeCompare(b, "ko"));
+  fill("lhStatusF", statuses, "전체 상태");
+}
 async function searchLH() {
-  const name = byId("lhName").value.trim();
   setBox("lhStatus", "공고 조회 중…", "loading"); byId("lhResults").innerHTML = "";
   try {
-    const qs = new URLSearchParams({ size: "40" });
-    if (name) qs.set("name", name);
-    const d = await (await fetch(`/api/lh?${qs}`)).json();
+    // 필터는 클라이언트에서 적용하므로 넉넉히 받아온다
+    const d = await (await fetch(`/api/lh?size=100`)).json();
     if (d.needKey) return setBox("lhStatus", "⚠️ LH 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
     if (!d.ok) return setBox("lhStatus", d.message || "조회 실패", "warn");
-    let rows = d.rows || [];
-    if (name && rows.length === 0) {
-      // 서버 필터 미지원 대비: 전체에서 클라 필터
-      const d2 = await (await fetch(`/api/lh?size=100`)).json();
-      rows = (d2.rows || []).filter((r) => r.name.includes(name));
-    }
-    if (!rows.length) return setBox("lhStatus", "공고가 없습니다.", "warn");
-    setBox("lhStatus", `공고 ${rows.length}건`, "ok");
-    byId("lhResults").innerHTML = rows.map((r) => {
-      const open = r.status.includes("공고중");
-      const inner = `
-        <div class="card-top"><h3>${E(r.name)}</h3><span class="bed ${open ? "ok" : "warn"}">${E(r.status || "-")}</span></div>
-        <p class="meta">${[r.type, r.region].filter(Boolean).map(E).join(" · ")}</p>
-        <p class="meta">📅 게시 ${E(r.postDate || "-")}${r.closeDate ? ` · 마감 ${E(r.closeDate)}` : ""}${r.url ? ' · <span class="opt">클릭하면 상세공고 ↗</span>' : ""}</p>`;
-      return r.url
-        ? `<a class="card lh-card" href="${E(r.url)}" target="_blank" rel="noopener">${inner}</a>`
-        : `<article class="card">${inner}</article>`;
-    }).join("");
+    lhCache = d.rows || [];
+    if (!lhCache.length) return setBox("lhStatus", "공고가 없습니다.", "warn");
+    fillLhFilters(lhCache);
+    applyLhFilter();
   } catch (e) { setBox("lhStatus", `오류: ${e.message}`, "error"); retryBox("lhResults", e.message, searchLH); }
 }
+function applyLhFilter() {
+  if (!lhCache.length) return;
+  const name = byId("lhName").value.trim();
+  const region = byId("lhRegion").value, status = byId("lhStatusF").value;
+  let rows = lhCache;
+  if (name) rows = rows.filter((r) => r.name.includes(name));
+  if (region) rows = rows.filter((r) => r.region === region);
+  if (status) rows = rows.filter((r) => r.status === status);
+  // 열린 공고 먼저
+  rows = rows.slice().sort((a, b) => (LH_OPEN.some((s) => b.status.includes(s)) ? 1 : 0) - (LH_OPEN.some((s) => a.status.includes(s)) ? 1 : 0));
+
+  if (!rows.length) return setBox("lhStatus", `조건에 맞는 공고가 없습니다. (전체 ${lhCache.length}건)`, "warn");
+  setBox("lhStatus", `공고 ${rows.length}건${rows.length !== lhCache.length ? ` / 전체 ${lhCache.length}` : ""}`, "ok");
+  byId("lhResults").innerHTML = rows.map((r) => {
+    const inner = `
+      <div class="card-top"><h3>${E(r.name)}</h3><span class="bed ${lhBadge(r.status)}">${E(r.status || "-")}</span></div>
+      <p class="meta">${[r.type, r.region].filter(Boolean).map(E).join(" · ")}</p>
+      <p class="meta">📅 게시 ${E(r.postDate || "-")}${r.closeDate ? ` · 마감 ${E(r.closeDate)}` : ""}${r.url ? ' · <span class="opt">클릭하면 상세공고 ↗</span>' : ""}</p>`;
+    return r.url
+      ? `<a class="card lh-card" href="${E(r.url)}" target="_blank" rel="noopener">${inner}</a>`
+      : `<article class="card">${inner}</article>`;
+  }).join("");
+}
+byId("lhRegion").addEventListener("change", () => { if (lhCache.length) applyLhFilter(); });
+byId("lhStatusF").addEventListener("change", () => { if (lhCache.length) applyLhFilter(); });
+byId("lhName").addEventListener("input", () => { if (lhCache.length) applyLhFilter(); });
 // 공공임대 단지 (마이홈, LH·SH·지방)
 async function searchRental() {
   const brtc = byId("lhSido").value;
@@ -662,7 +776,9 @@ byId("lhName").addEventListener("keydown", (e) => { if (e.key === "Enter") searc
   syncHwMode();
   syncLhMode();
   initRealEstate();
+  syncReType();
   initAir();
+  loadDustBadge();
   const today = kstTodayISO();
   ["cineDate", "busDate"].forEach((id) => { const el = byId(id); if (el && !el.value) el.value = today; });
   syncCineDate();
