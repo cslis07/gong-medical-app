@@ -35,7 +35,7 @@
 | 🏠 실거래가 | 아파트 **매매/전세/월세/분양권** · 가격·월세 필터 · 정렬 · 카드별 🗺️지도 | 국토부 RTMS | DATA_API_KEY |
 | 😷 미세먼지 | 시도별 측정소 PM10/PM2.5·등급·예보 + **측정소/등급 필터** + **헤더 수도권 평균 배지** | 에어코리아 | DATA_API_KEY |
 | 🚏 시내버스 | 주변 정류소 → 정류소별 **실시간 도착**(노선·남은 정류장) | 국토부 TAGO | DATA_API_KEY |
-| 🅿️ 주차장 | 서울 공영주차장 가까운 순 + **실시간 잔여면수**·요금·운영시간 / 실시간·무료 필터 | 서울 GetParkInfo + GetParkingInfo | SEOUL_API_KEY |
+| 🅿️ 주차장 | **전국 17,700여곳** 가까운 순 + 서울 일부 **실시간 잔여면수**·요금·운영시간 / 실시간·무료 필터 | 서울 GetParkInfo+GetParkingInfo · 전국주차장정보표준데이터(스냅샷) | SEOUL_API_KEY / DATA_API_KEY |
 | 🏘️ 청약·임대 | LH 분양·임대 공고(**지역·상태 필터**, 상세링크) / 공공임대 단지(LH·SH·지방) | LH · 마이홈 | DATA_API_KEY |
 
 ### 공통 기능
@@ -53,6 +53,10 @@ lib/*.js              ★ 실제 핸들러 15개 (아래)
   subway.js  density.js  cinema.js  bus.js    lotto.js
   gas.js     bike.js     highway.js realestate.js air.js
   citybus.js parking.js  lh.js      myhome.js  geocode.js
+lib/kotsa-parking.js  공단 B553881 클라이언트(비핸들러 모듈, HANDLERS에 등록 안 함)
+data/parking-nationwide.js  전국 주차장 스냅샷 17,768곳 (4.5MB, 자동생성)
+data/parking-kotsa.js       공단 시설+운영 스냅샷 (현재 빈 배열 — 백엔드 장애)
+scripts/build-parking-snapshot.mjs  위 두 스냅샷 빌더 (`npm run build:parking`)
 index.html            14개 탭 + 패널 + 헤더 미세먼지 배지
 js/app.js             지하철 전용 로직(노선도·역 종합 모달)
 js/services.js        나머지 13개 탭 로직 + 탭 전환 + 공용 getLocation(주소/GPS)
@@ -69,7 +73,8 @@ package.json          deps: fast-xml-parser, proj4
 
 ## 4. 남은 작업
 
-- [ ] **주차장 전국 확대** — 한국교통안전공단 `B553881/Parking`(PrkSttusInfo/PrkOprInfo/PrkRealtimeInfo)가 **심의 승인 대기 중**. 승인되면 `lib/parking.js`에 소스만 추가하면 됨. (현재는 서울시 소스로 동작)
+- [x] **주차장 전국 확대** (2026-07-10) — 전국주차장정보표준데이터로 17,768곳 커버. 스냅샷 방식(§9).
+- [ ] **공단 실시간 주차면수** — 한국교통안전공단 `B553881/Parking`은 **활용신청 승인됨(2026-07-08)에도 제공기관 백엔드가 죽어 있다**(`Error forwarding request to backend server`). 코드·스냅샷 빌드는 이미 붙어 있으니(`lib/kotsa-parking.js`, `data/parking-kotsa.js`) 백엔드가 살아나면 `npm run build:parking` + `KOTSA_PARKING=1` 재배포만 하면 켜진다. 회복 확인: `/api/parking?diag=1`
 - [ ] **공공임대 단지(SH 포함)** — `data.myhome.go.kr/rentalHouseList` 구현 완료했으나 ① 키가 마이홈 엔드포인트에 미전파(code 30) ② 마이홈이 Vercel IP 차단(fetch failed). 현재 "pending" 안내로 degrade. 전파 후 재확인 필요. `signguCode`(시군구, 마이홈 자체 코드) 필수 여부도 함께 확인.
 - [ ] **브라우저 육안 검증** — Chrome 확장이 끊겨 최근 3개 개선(실거래가 필터/지도, 미세먼지 필터·배지, LH 필터)과 주차장 탭은 **API·배포파일 레벨로만 검증**됨.
 - [ ] (보류) **공연 잔여석** — 인터파크가 NOL로 개편되며 이름검색이 SPA HTML만 반환, 유효 goodsCode 확보 불가.
@@ -87,6 +92,9 @@ cd C:\Users\GB\Documents\gong-medical-app
 # 로컬 개발 서버 (기본 3005, PORT로 변경 가능)
 node dev-server.mjs                 # → http://localhost:3005
 PORT=3010 node dev-server.mjs
+
+# 주차장 스냅샷 재생성 (표준데이터 38페이지 + 공단 시도) → data/*.js 갱신 후 재배포 필요
+npm run build:parking
 
 # 배포 (cslis07 계정, CLI 직접)
 vercel --prod --yes
@@ -107,7 +115,8 @@ curl -s "https://gong-medical-app.vercel.app/api/parking?lat=37.5663&lon=126.977
 ```
 SEOUL_API_KEY        # 지하철·혼잡도·따릉이·주차장 (서울 열린데이터 계정키)
 SEOUL_REALTIME_KEY   # 지하철 실시간 도착/위치 (별도 키)
-DATA_API_KEY         # 실거래가·미세먼지·시내버스·LH·myhome (data.go.kr 계정키, 9ae13365…)
+DATA_API_KEY         # 실거래가·미세먼지·시내버스·LH·myhome·주차장 표준데이터/공단 (data.go.kr 계정키, 9ae13365…)
+KOTSA_PARKING        # 선택. "1"이면 공단 실시간 주차면수 조회 시도. 기본 off(백엔드 장애 중)
 OPINET_API_KEY       # 주유소 (파라미터명 certkey)
 EX_API_KEY           # 고속도로 (한국도로공사 data.ex.co.kr)
 VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
@@ -123,8 +132,9 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 2. **cslis07 계정 전용** — GitHub·Vercel 모두 cslis07. push 전 `gh auth status --active` 확인.
 3. **env는 재배포해야 적용** — `vercel env add` 후 `vercel --prod --yes` 필수.
 4. **외부 API의 데이터센터 IP 차단**이 흔하다. 아래 §7 참고. 신규 소스 붙일 때 **반드시 프로덕션에서도 호출 검증**할 것(로컬만 되는 경우가 많음).
-5. `img/subway-map.png`(4.2MB)는 커밋 대상, `node_modules`는 gitignore. Vercel이 `package.json`으로 deps(proj4, fast-xml-parser) 설치.
+5. `img/subway-map.png`(4.2MB)와 `data/parking-nationwide.js`(4.5MB)는 **커밋 대상**, `node_modules`는 gitignore. Vercel이 `package.json`으로 deps(proj4, fast-xml-parser) 설치.
 6. Deployment Protection이 켜지면 외부 접속 401. 현재 공개(200).
+7. **`api/`에 새 파일 금지**(1번)이므로 주차장 보조 모듈은 `lib/kotsa-parking.js`에 둔다. `api/[service].js`의 `HANDLERS`는 명시적 맵이라 lib에 파일을 더해도 함수 수는 그대로다.
 
 ---
 
@@ -138,7 +148,11 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 | vworld 지오코딩 프로덕션 `fetch failed` | vworld도 Vercel IP 차단(로컬은 정상) | **Nominatim(OSM) 폴백** 추가. vworld 실패 시 자동 전환 |
 | 고속도로 EX API `400 Request Blocked` | EX 포털 **봇 차단** | **User-Agent + Referer** 헤더 추가하면 정상(Vercel IP는 허용됨) |
 | OPINET `aroundAll` 빈 결과 | 파라미터명이 `code`가 아니라 **`certkey`** | `certkey`로 수정. KATEC 좌표는 **proj4 + Opinet 공식 def**로 변환 |
-| 주차장 `Error forwarding request to backend server` | 교통안전공단 API **심의 승인 전**(위조키는 `Unauthorized`가 나오는 것과 대비해 확인) | 서울 열린데이터 소스(GetParkInfo+GetParkingInfo)로 대체 구현 |
+| 공단 주차 API `Error forwarding request to backend server` | ~~심의 승인 전~~ → **오진이었다.** 2026-07-08 승인 후에도 동일. 위조키는 `Unauthorized`, 정상키는 이 메시지 ⇒ 게이트웨이 인증은 통과하고 **제공기관 백엔드가 죽은 것** | 회복 대기. `lib/kotsa-parking.js`가 실패를 정상 경로로 취급(빈 스냅샷 + 실시간 null). `/api/parking?diag=1`로 회복 확인 |
+| 표준데이터 전량 수집이 `NODATA_ERROR`로 중단 | 좌표 없는 행(762건)을 버려서 `rows.length`가 `totalCount`에 영원히 도달 못 함 → 마지막 페이지를 넘어감 | 종료 조건을 **수신 건수**로 세고, `resultCode=03`은 정상 종료로 처리 |
+| 표준데이터 `numOfRows=1000` 페이지 타임아웃 | 응답이 30초를 넘김 | `PER_PAGE=500` + 3회 재시도(백오프) |
+| 서울 주차장이 118곳뿐 | 2,206행 중 **LAT/LOT가 0인 행이 대부분**. 좌표 보유 고유 PKLT_CD는 118곳 (문서의 "고유 852"는 좌표 없는 것 포함) | 정상. 나머지 서울 공영은 표준데이터가 좌표를 갖고 있어 병합으로 메움 |
+| (설계 함정) 서울 공영을 뭉텅이로 중복 제거하면 663곳 증발 | 표준데이터 서울 공영 762곳 중 서울 소스와 실제 충돌은 **99곳뿐** | "주소=서울 & 공영이면 버림" 규칙 폐기 → **이름(괄호·공백·접미어 제거) 일치 + 200m 이내**만 중복 처리 |
 | 주차장 "남대문 화물"이 4번 중복 | **노상주차장은 구획(1면)마다 행이 하나** (2,206행 / 고유 PKLT_CD 852) | `PKLT_CD`로 묶어 **TPKCT 합산**. 실측으로 다중행 그룹 65개가 전부 `TPKCT=1`, 큰값 중복 0임을 확인 후 적용 |
 | 주차장 잔여면수가 엉뚱하게 표시 | 실시간 123행 중 **14행은 갱신시각이 빈 값** | `NOW_PRK_VHCL_UPDT_TM`이 있는 **109곳만 실시간으로 신뢰** |
 | 마이홈 `code 30` / `fetch failed` | 키 미전파 + 마이홈이 Vercel IP 차단 | `{pending:true}` 안내로 degrade(화면 깨짐 방지). 전파 후 재확인 |
@@ -166,7 +180,7 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 | `/api/realestate` | `type=trade\|rent\|silv&lawd=11680&ym=202606` | 국토부 RTMS (rent는 `kind`로 전세/월세 구분) |
 | `/api/air` | `sido=서울` \| `op=metro` | 에어코리아 `getCtprvnRltmMesureDnsty` + `getMinuDustFrcstDspth` (metro=서울·경기·인천 평균) |
 | `/api/citybus` | `op=near&lat&lon` \| `op=arrival&city&node` | TAGO `getCrdntPrxmtSttnList` / `getSttnAcctoArvlPrearngeInfoList` |
-| `/api/parking` | `lat&lon&live=1&free=1&limit` | 서울 `GetParkInfo`(좌표·요금) + `GetParkingInfo`(실시간) — PKLT_CD로 병합·합산 |
+| `/api/parking` | `lat&lon&live=1&free=1&limit` \| `diag=1` | 서울 `GetParkInfo`+`GetParkingInfo`(실시간) + 전국 스냅샷 + 공단 스냅샷(현재 빈값) — 이름+200m로 중복 제거 후 거리순 |
 | `/api/lh` | `size&page&name&region&status` | LH `B552555/lhLeaseNoticeInfo1` (응답이 배열/dsList 중첩 → 방어적 탐색) |
 | `/api/myhome` | `brtc=11&signgu&size` | 마이홈 `rentalHouseList` (LH+SH+지방) — **현재 pending** |
 | `/api/geocode` | `q=서울 강남구 테헤란로 152` | vworld `getcoord`(도로명→지번) → 실패 시 **Nominatim** |
@@ -175,5 +189,7 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 - **KATEC 변환(주유소)**: `proj4('WGS84', '+proj=tmerc +lat_0=38 +lon_0=128 +k=0.9999 +x_0=400000 +y_0=600000 +ellps=bessel +towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43', [lon,lat])`
 - **EX(고속도로)**: `data.ex.co.kr/openapi/...?key=&type=json` + **UA·Referer 헤더 필수**. `stdRestNm`/`serviceAreaName`은 **부분 매칭** 지원.
 - **주차장 집계**: 노상은 구획별 행 → `PKLT_CD` 그룹, `capacity = Σ TPKCT`, 좌표는 가장 가까운 구획 것 사용. 실시간은 `NOW_PRK_VHCL_UPDT_TM` 있는 행만.
+- **주차장 스냅샷**: 표준데이터·공단 API 모두 **위치 필터가 없어 전량 페이징만 가능**한데 일일 트래픽이 1,000회다(전량 1회 = 38페이지). 런타임 호출 시 콜드스타트 스물몇 번에 한도 소진 ⇒ 빌드 타임에 굽는다. 갱신은 `npm run build:parking` 후 재배포. 원본 갱신주기도 일 1회.
+- **공단 API 조인 불가**: 표준데이터 `prkplceNo`와 공단 `prk_center_id`는 **다른 체계**라 ID 조인이 안 된다. 공단 실시간(`PrkRealtimeInfo`)을 쓰려면 좌표를 가진 공단 시설정보(`PrkSttusInfo`)를 함께 스냅샷해야 한다.
 - **TAGO 시내버스**: `arrtime`(초)→분, `arrprevstationcnt`=남은 정류장. `cityCode`+`nodeId`로 도착 조회.
 - **subwayId 코드**: 1001~1009=1~9호선, 1063 경의중앙, 1065 공항, 1067 경춘, 1075 수인분당, 1077 신분당, 1092 우이신설, 1093 서해, 1032 GTX-A
