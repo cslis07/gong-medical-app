@@ -41,6 +41,43 @@ function retryBox(resultsId, msg, retryFn) {
   if (btn && retryFn) btn.addEventListener("click", retryFn);
 }
 
+// ---------- 공통 페이지네이션 ----------
+// 현재 페이지 주변 ±2와 처음·끝을 보여주고 사이는 …으로 접는다.
+function pageWindow(page, totalPages) {
+  const keep = new Set([1, totalPages, page - 2, page - 1, page, page + 1, page + 2]);
+  const nums = [...keep].filter((n) => n >= 1 && n <= totalPages).sort((a, b) => a - b);
+  const out = [];
+  nums.forEach((n, i) => { if (i && n - nums[i - 1] > 1) out.push("…"); out.push(n); });
+  return out;
+}
+/**
+ * pagerId 컨테이너에 페이지 버튼을 그린다.
+ * onGo(page)는 페이지 이동 시 호출. total은 전체 건수(표시용, 선택).
+ */
+function renderPager(pagerId, page, totalPages, onGo, total) {
+  const el = byId(pagerId);
+  if (!el) return;
+  if (totalPages <= 1) { el.innerHTML = ""; return; }
+  const btn = (label, target, opts = {}) =>
+    `<button type="button" data-page="${target}"${opts.disabled ? " disabled" : ""}${opts.current ? ' aria-current="page"' : ""}${opts.label ? ` aria-label="${opts.label}"` : ""}>${label}</button>`;
+
+  el.innerHTML =
+    btn("‹", page - 1, { disabled: page <= 1, label: "이전 페이지" }) +
+    pageWindow(page, totalPages).map((n) =>
+      n === "…" ? '<span class="pager-gap">…</span>' : btn(String(n), n, { current: n === page })).join("") +
+    btn("›", page + 1, { disabled: page >= totalPages, label: "다음 페이지" }) +
+    `<span class="pager-info">${page} / ${totalPages} 페이지${total != null ? ` · 전체 ${total.toLocaleString()}건` : ""}</span>`;
+
+  el.querySelectorAll("button[data-page]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const p = Number(b.dataset.page);
+      if (p >= 1 && p <= totalPages && p !== page) onGo(p);
+    }));
+}
+// 페이지 이동 후 결과 목록 상단으로 (모바일에서 하단 페이저를 누르면 화면이 어긋난다)
+const scrollToResults = (resultsId) => byId(resultsId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+const clearPager = (pagerId) => { const el = byId(pagerId); if (el) el.innerHTML = ""; };
+
 // ==================== 👥 실시간 혼잡도 ====================
 const DENSITY_AREAS = ["경복궁","광화문·덕수궁","보신각","창덕궁·종묘","동대문 관광특구","명동 관광특구","이태원 관광특구","잠실 관광특구","종로·청계 관광특구","홍대 관광특구","강서한강공원","고척돔","광나루한강공원","광화문광장","국립중앙박물관·용산가족공원","난지한강공원","남산공원","노들섬","뚝섬한강공원","망원한강공원","반포한강공원","보라매공원","북서울꿈의숲","서대문독립공원","서리풀공원·몽마르뜨공원","서울대공원","서울숲공원","송현녹지광장","아차산","안양천","양화한강공원","어린이대공원","여의도한강공원","여의서로","올림픽공원","월드컵공원","응봉산","이촌한강공원","잠실종합운동장","잠실한강공원","잠원한강공원","청계산","홍제폭포","가락시장","가로수길","광장(전통)시장","김포공항","남대문시장","노량진","덕수궁길·정동길","북창동 먹자골목","북촌한옥마을","서촌","성수카페거리","송리단길·호수단길","신촌 스타광장","압구정로데오거리","여의도","연남동","영등포 타임스퀘어","용리단길","이태원 앤틱가구거리","익선동","인사동","잠실롯데타워·석촌호수","창동 신경제 중심지","청담동 명품거리","청량리 제기동 일대 전통시장","해방촌·경리단길","가산디지털단지역","강남역","건대입구역","고덕역","고속터미널역","교대역","구로디지털단지역","구로역","군자역","대림역","동대문역","뚝섬역","미아사거리역","발산역","사당역","삼각지역","서울대입구역","서울식물원·마곡나루역","서울역","성신여대입구역","선릉역","수유역","신논현역·논현역","신도림역","신림역","신촌·이대역","쌍문역","신정네거리역","역삼역","연신내역","양재역","왕십리역","용산역","오목교역·목동운동장","잠실새내역","잠실역","장지역","장한평역","천호역","총신대입구(이수)역","충정로역","합정역","혜화역","홍대입구역(2호선)","회기역"];
 const DENSITY_LEVEL = { "여유": "ok", "보통": "warn", "약간 붐빔": "busy", "붐빔": "full" };
@@ -479,12 +516,21 @@ byId("hwQ").addEventListener("keydown", (e) => { if (e.key === "Enter") searchHi
 
 // ==================== 🏠 아파트 실거래가 ====================
 // 시군구 법정동코드(LAWD_CD, 5자리) — 서울 25구 + 주요 광역/경기
+//
+// ⚠️ 행정구역 개편으로 코드가 바뀐다. RTMS는 과거 거래까지 새 코드로 재색인하므로
+//    옛 코드를 쓰면 resultCode=000 / totalCount=0 (오류가 아니라 "거래 없음"처럼 보인다).
+//    아래 코드는 전부 RTMS에 직접 조회해 응답 건수를 확인한 값이다.
+//      · 부천시 41190 → 원미/소사/오정구 (구 부활)
+//      · 화성시 41590 → 만세/효행/병점/동탄구 (2026-02-01 4개 구 신설)
+//      · 인천 서구 28260 → 서해구 28275 · 검단구 28290 (2026-07-01 분구)
+//    광주 5개 구(29110·29140·29155·29170·29200)는 전남광주통합특별시 출범(2026-07-01) 이후
+//    전부 0건이고 새 코드를 아직 찾지 못해 목록에서 뺐다. 코드 확인되면 되살릴 것.
 const LAWD = {
   "서울": { "종로구": "11110", "중구": "11140", "용산구": "11170", "성동구": "11200", "광진구": "11215", "동대문구": "11230", "중랑구": "11260", "성북구": "11290", "강북구": "11305", "도봉구": "11320", "노원구": "11350", "은평구": "11380", "서대문구": "11410", "마포구": "11440", "양천구": "11470", "강서구": "11500", "구로구": "11530", "금천구": "11545", "영등포구": "11560", "동작구": "11590", "관악구": "11620", "서초구": "11650", "강남구": "11680", "송파구": "11710", "강동구": "11740" },
-  "경기": { "수원 영통구": "41117", "수원 팔달구": "41115", "성남 분당구": "41135", "성남 수정구": "41131", "용인 수지구": "41465", "용인 기흥구": "41463", "고양 일산동구": "41285", "부천시": "41190", "안양 동안구": "41173", "화성시": "41590", "김포시": "41570", "하남시": "41450", "남양주시": "41360", "광명시": "41210", "의정부시": "41150" },
-  "인천": { "연수구": "28185", "남동구": "28200", "서구": "28260", "부평구": "28237" },
+  "경기": { "수원 영통구": "41117", "수원 팔달구": "41115", "성남 분당구": "41135", "성남 수정구": "41131", "용인 수지구": "41465", "용인 기흥구": "41463", "고양 일산동구": "41285", "부천 원미구": "41192", "부천 소사구": "41194", "부천 오정구": "41196", "안양 동안구": "41173", "화성 만세구": "41591", "화성 효행구": "41593", "화성 병점구": "41595", "화성 동탄구": "41597", "김포시": "41570", "하남시": "41450", "남양주시": "41360", "광명시": "41210", "의정부시": "41150" },
+  "인천": { "연수구": "28185", "남동구": "28200", "서해구": "28275", "검단구": "28290", "계양구": "28245", "부평구": "28237" },
   "부산": { "해운대구": "26350", "수영구": "26500", "동래구": "26260", "부산진구": "26230" },
-  "대구": { "수성구": "27260", "달서구": "27290" }, "대전": { "유성구": "30200", "서구": "30170" }, "광주": { "서구": "29140", "남구": "29155" },
+  "대구": { "수성구": "27260", "달서구": "27290" }, "대전": { "유성구": "30200", "서구": "30170" },
 };
 function initRealEstate() {
   const sel = byId("reRegion");
@@ -497,6 +543,9 @@ function initRealEstate() {
 // UI 유형(매매/전세/월세/분양권) → API 유형(trade/rent/silv) + 임대 종류
 const RE_UI = { trade: { api: "trade" }, jeonse: { api: "rent", kind: "전세" }, wolse: { api: "rent", kind: "월세" }, silv: { api: "silv" } };
 let reCache = { rows: [], uiType: "trade", regionName: "" };
+// 서버가 전량(전 페이지)을 주므로 필터·정렬·페이지네이션은 전체 집합 위에서 클라이언트가 처리한다.
+const RE_PAGE_SIZE = 20;
+let rePage = 1;
 
 function syncReType() {
   const t = byId("reType").value;
@@ -508,16 +557,24 @@ byId("reType").addEventListener("change", syncReType);
 async function searchRealEstate() {
   const uiType = byId("reType").value, lawd = byId("reRegion").value, ym = (byId("reYm").value || "").replace("-", "");
   if (!/^\d{6}$/.test(ym)) return setBox("reStatus", "거래연월을 선택하세요.", "warn");
-  setBox("reStatus", "조회 중…", "loading"); byId("reResults").innerHTML = "";
+  setBox("reStatus", "조회 중…", "loading"); byId("reResults").innerHTML = ""; clearPager("rePager");
   try {
     const d = await (await fetch(`/api/realestate?type=${RE_UI[uiType].api}&lawd=${lawd}&ym=${ym}`)).json();
     if (d.needKey) return setBox("reStatus", "⚠️ 실거래가 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
     if (!d.ok) return setBox("reStatus", d.error || "조회 실패", "warn");
     const sel = byId("reRegion");
-    reCache = { rows: d.rows || [], uiType, regionName: sel.options[sel.selectedIndex]?.text || "" };
+    reCache = { rows: d.rows || [], uiType, regionName: sel.options[sel.selectedIndex]?.text || "", truncated: d.truncated, failedPages: d.failedPages };
     if (!reCache.rows.length) return setBox("reStatus", "해당 지역·연월에 신고된 거래가 없습니다.", "warn");
+    rePage = 1;
     applyReFilter();
   } catch (e) { setBox("reStatus", `오류: ${e.message}`, "error"); retryBox("reResults", e.message, searchRealEstate); }
+}
+// 수집 누락·절단을 조용히 넘기지 않는다.
+function collectWarning(d) {
+  const parts = [];
+  if (d.truncated) parts.push("상한 초과로 일부만 수집");
+  if (d.failedPages?.length) parts.push(`페이지 ${d.failedPages.join(",")} 수집 실패`);
+  return parts.length ? ` ⚠️ ${parts.join(" · ")}` : "";
 }
 
 // 카드 정렬·필터용 대표 금액(만원): 매매/분양권=거래액, 전세/월세=보증금
@@ -541,13 +598,21 @@ function applyReFilter() {
   else if (sort === "low") out.sort((a, b) => rePrice(uiType, a) - rePrice(uiType, b));
   else out.sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0));
 
-  if (!out.length) return setBox("reStatus", `조건에 맞는 거래가 없습니다. (전체 ${rows.length}건)`, "warn");
-  setBox("reStatus", `${out.length}건 표시 · 전체 ${rows.length}건`, "ok");
-  byId("reResults").innerHTML = out.map((r) => renderRealEstate(uiType, r)).join("");
+  if (!out.length) { clearPager("rePager"); return setBox("reStatus", `조건에 맞는 거래가 없습니다. (전체 ${rows.length}건)`, "warn"); }
+
+  const totalPages = Math.max(Math.ceil(out.length / RE_PAGE_SIZE), 1);
+  if (rePage > totalPages) rePage = totalPages;   // 필터가 좁아져 현재 페이지가 사라진 경우
+  const slice = out.slice((rePage - 1) * RE_PAGE_SIZE, rePage * RE_PAGE_SIZE);
+
+  setBox("reStatus", `${out.length.toLocaleString()}건 중 ${slice.length}건 표시 · 전체 ${rows.length.toLocaleString()}건${collectWarning(reCache)}`, "ok");
+  byId("reResults").innerHTML = slice.map((r) => renderRealEstate(uiType, r)).join("");
+  renderPager("rePager", rePage, totalPages, (p) => { rePage = p; applyReFilter(); scrollToResults("reResults"); }, out.length);
 }
-byId("reApply").addEventListener("click", applyReFilter);
-["reMin", "reMax", "reMonMax"].forEach((id) => byId(id).addEventListener("keydown", (e) => { if (e.key === "Enter") applyReFilter(); }));
-byId("reSort").addEventListener("change", applyReFilter);
+// 필터·정렬을 바꾸면 1페이지로 되돌린다.
+const applyReFilterReset = () => { rePage = 1; applyReFilter(); };
+byId("reApply").addEventListener("click", applyReFilterReset);
+["reMin", "reMax", "reMonMax"].forEach((id) => byId(id).addEventListener("keydown", (e) => { if (e.key === "Enter") applyReFilterReset(); }));
+byId("reSort").addEventListener("change", applyReFilterReset);
 
 const eok = (manwon) => manwon >= 10000 ? `${(manwon / 10000).toFixed(manwon % 10000 ? 1 : 0)}억` + (manwon % 10000 ? ` ${(manwon % 10000).toLocaleString()}만` : "") : `${manwon.toLocaleString()}만`;
 function renderRealEstate(uiType, r) {
@@ -680,6 +745,9 @@ byId("cbResults").addEventListener("click", (e) => {
 
 // ==================== 🏘️ LH 청약 ====================
 let lhCache = [];
+let lhMeta = {};            // truncated / failedPages
+const LH_PAGE_SIZE = 20;
+let lhPage = 1;
 // 상태 우선순위(열린 공고 먼저) + 배지색
 const LH_OPEN = ["공고중", "접수중", "상담요청"];
 function lhBadge(status) {
@@ -704,14 +772,16 @@ function fillLhFilters(rows) {
   fill("lhStatusF", statuses, "전체 상태");
 }
 async function searchLH() {
-  setBox("lhStatus", "공고 조회 중…", "loading"); byId("lhResults").innerHTML = "";
+  setBox("lhStatus", "공고 조회 중…", "loading"); byId("lhResults").innerHTML = ""; clearPager("lhPager");
   try {
-    // 필터는 클라이언트에서 적용하므로 넉넉히 받아온다
-    const d = await (await fetch(`/api/lh?size=100`)).json();
+    // 서버가 전 페이지를 모아 주므로(API 기본창 = 최근 2개월) 필터·페이지네이션은 클라이언트에서 처리한다.
+    const d = await (await fetch(`/api/lh`)).json();
     if (d.needKey) return setBox("lhStatus", "⚠️ LH 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
     if (!d.ok) return setBox("lhStatus", d.message || "조회 실패", "warn");
     lhCache = d.rows || [];
+    lhMeta = { truncated: d.truncated, failedPages: d.failedPages };
     if (!lhCache.length) return setBox("lhStatus", "공고가 없습니다.", "warn");
+    lhPage = 1;
     fillLhFilters(lhCache);
     applyLhFilter();
   } catch (e) { setBox("lhStatus", `오류: ${e.message}`, "error"); retryBox("lhResults", e.message, searchLH); }
@@ -727,9 +797,14 @@ function applyLhFilter() {
   // 열린 공고 먼저
   rows = rows.slice().sort((a, b) => (LH_OPEN.some((s) => b.status.includes(s)) ? 1 : 0) - (LH_OPEN.some((s) => a.status.includes(s)) ? 1 : 0));
 
-  if (!rows.length) return setBox("lhStatus", `조건에 맞는 공고가 없습니다. (전체 ${lhCache.length}건)`, "warn");
-  setBox("lhStatus", `공고 ${rows.length}건${rows.length !== lhCache.length ? ` / 전체 ${lhCache.length}` : ""}`, "ok");
-  byId("lhResults").innerHTML = rows.map((r) => {
+  if (!rows.length) { clearPager("lhPager"); return setBox("lhStatus", `조건에 맞는 공고가 없습니다. (전체 ${lhCache.length}건)`, "warn"); }
+
+  const totalPages = Math.max(Math.ceil(rows.length / LH_PAGE_SIZE), 1);
+  if (lhPage > totalPages) lhPage = totalPages;
+  const slice = rows.slice((lhPage - 1) * LH_PAGE_SIZE, lhPage * LH_PAGE_SIZE);
+
+  setBox("lhStatus", `공고 ${rows.length.toLocaleString()}건${rows.length !== lhCache.length ? ` / 전체 ${lhCache.length.toLocaleString()}` : ""}${collectWarning(lhMeta)}`, "ok");
+  byId("lhResults").innerHTML = slice.map((r) => {
     const inner = `
       <div class="card-top"><h3>${E(r.name)}</h3><span class="bed ${lhBadge(r.status)}">${E(r.status || "-")}</span></div>
       <p class="meta">${[r.type, r.region].filter(Boolean).map(E).join(" · ")}</p>
@@ -738,10 +813,13 @@ function applyLhFilter() {
       ? `<a class="card lh-card" href="${E(r.url)}" target="_blank" rel="noopener">${inner}</a>`
       : `<article class="card">${inner}</article>`;
   }).join("");
+  renderPager("lhPager", lhPage, totalPages, (p) => { lhPage = p; applyLhFilter(); scrollToResults("lhResults"); }, rows.length);
 }
-byId("lhRegion").addEventListener("change", () => { if (lhCache.length) applyLhFilter(); });
-byId("lhStatusF").addEventListener("change", () => { if (lhCache.length) applyLhFilter(); });
-byId("lhName").addEventListener("input", () => { if (lhCache.length) applyLhFilter(); });
+// 필터를 바꾸면 1페이지로 되돌린다.
+const applyLhFilterReset = () => { lhPage = 1; applyLhFilter(); };
+byId("lhRegion").addEventListener("change", () => { if (lhCache.length) applyLhFilterReset(); });
+byId("lhStatusF").addEventListener("change", () => { if (lhCache.length) applyLhFilterReset(); });
+byId("lhName").addEventListener("input", () => { if (lhCache.length) applyLhFilterReset(); });
 // 공공임대 단지 (마이홈, LH·SH·지방)
 async function searchRental() {
   const brtc = byId("lhSido").value;
@@ -772,22 +850,30 @@ byId("lhBtn").addEventListener("click", () => byId("lhMode").value === "rental" 
 byId("lhName").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLH(); });
 
 // ==================== 🅿️ 주차장 ====================
+// 전국 17,000여곳이 대상이라 서버가 페이지를 잘라 준다(거리순 정렬·필터 적용 후).
+// 페이지 이동 때마다 위치를 다시 묻지 않도록 좌표를 캐시한다.
 const wonNum = (v) => (v != null ? Number(v).toLocaleString() : "");
-async function searchParking() {
+const PK_PAGE_SIZE = 12;
+let pkCoords = null;
+
+async function searchParking(page = 1) {
   try {
-    const { lat, lon } = await getLocation("pkStatus", "pkAddr");
+    // 새 검색이면 위치를 다시 확인하고, 페이지 이동이면 캐시된 좌표를 쓴다.
+    const { lat, lon } = page === 1 || !pkCoords ? await getLocation("pkStatus", "pkAddr") : pkCoords;
+    pkCoords = { lat, lon };
     const f = byId("pkFilter").value;
     setBox("pkStatus", "주차장 조회 중…", "loading"); byId("pkResults").innerHTML = "";
-    const qs = new URLSearchParams({ lat, lon, limit: "12" });
+    const qs = new URLSearchParams({ lat, lon, page: String(page), size: String(PK_PAGE_SIZE) });
     if (f === "live") qs.set("live", "1");
     if (f === "free") qs.set("free", "1");
     const d = await (await fetch(`/api/parking?${qs}`)).json();
     if (d.needKey) return setBox("pkStatus", "⚠️ 주차장 기능은 SEOUL_API_KEY 설정 후 이용 가능합니다.", "warn");
     if (!d.ok) return setBox("pkStatus", d.error || d.message || "조회 실패", "warn");
     const rows = d.rows || [];
-    if (!rows.length) return setBox("pkStatus", f ? "조건에 맞는 주차장이 없습니다." : "주변 공영주차장이 없습니다.", "warn");
-    setBox("pkStatus", `가까운 ${rows.length}곳 · 실시간 제공 ${d.liveCount}곳`, "ok");
+    if (!rows.length) { clearPager("pkPager"); return setBox("pkStatus", f ? "조건에 맞는 주차장이 없습니다." : "주변 주차장이 없습니다.", "warn"); }
+    setBox("pkStatus", `조건에 맞는 ${d.matched.toLocaleString()}곳 · 실시간 제공 ${d.liveCount}곳`, "ok");
     byId("pkResults").innerHTML = rows.map(renderParking).join("");
+    renderPager("pkPager", d.page, d.totalPages, (p) => { searchParking(p).then(() => scrollToResults("pkResults")); }, d.matched);
   } catch (e) { setBox("pkStatus", `오류: ${e.message}`, "error"); }
 }
 function renderParking(p) {

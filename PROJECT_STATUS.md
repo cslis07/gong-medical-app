@@ -32,13 +32,16 @@
 | ⛽ 주유소 | 내 위치/주소 반경 최저가 주유소(가격순)·주소·편의시설 + **전국 평균유가 바** | Opinet | OPINET_API_KEY |
 | 🚲 따릉이 | 주변 대여소 실시간 자전거·거치대 수 | 서울 bikeList | SEOUL_API_KEY |
 | 🛣️ 고속도로 | 휴게소(편의시설·대표메뉴·유가) / 실시간 정체·서행 구간 | 한국도로공사 EX | EX_API_KEY |
-| 🏠 실거래가 | 아파트 **매매/전세/월세/분양권** · 가격·월세 필터 · 정렬 · 카드별 🗺️지도 | 국토부 RTMS | DATA_API_KEY |
+| 🏠 실거래가 | 아파트 **매매/전세/월세/분양권** · 가격·월세 필터 · 정렬 · 카드별 🗺️지도 · **전량 수집 + 페이지네이션** | 국토부 RTMS | DATA_API_KEY |
 | 😷 미세먼지 | 시도별 측정소 PM10/PM2.5·등급·예보 + **측정소/등급 필터** + **헤더 수도권 평균 배지** | 에어코리아 | DATA_API_KEY |
 | 🚏 시내버스 | 주변 정류소 → 정류소별 **실시간 도착**(노선·남은 정류장) | 국토부 TAGO | DATA_API_KEY |
-| 🅿️ 주차장 | **전국 17,700여곳** 가까운 순 + 서울 일부 **실시간 잔여면수**·요금·운영시간 / 실시간·무료 필터 | 서울 GetParkInfo+GetParkingInfo · 전국주차장정보표준데이터(스냅샷) | SEOUL_API_KEY / DATA_API_KEY |
-| 🏘️ 청약·임대 | LH 분양·임대 공고(**지역·상태 필터**, 상세링크) / 공공임대 단지(LH·SH·지방) | LH · 마이홈 | DATA_API_KEY |
+| 🅿️ 주차장 | **전국 17,700여곳** 가까운 순 + 서울 일부 **실시간 잔여면수**·요금·운영시간 / 실시간·무료 필터 · **서버 페이지네이션** | 서울 GetParkInfo+GetParkingInfo · 전국주차장정보표준데이터(스냅샷) | SEOUL_API_KEY / DATA_API_KEY |
+| 🏘️ 청약·임대 | LH 분양·임대 공고(**지역·상태 필터**, 상세링크, **전량 수집 + 페이지네이션**) / 공공임대 단지(LH·SH·지방) | LH · 마이홈 | DATA_API_KEY |
 
 ### 공통 기능
+- **페이지네이션**(실거래가·주차장·LH): `renderPager()`(js/services.js) 공용 컴포넌트. `‹ 1 … 4 5 6 … 20 ›` 형태.
+  - 실거래가·LH는 서버가 **전 페이지를 모아 주고** 클라이언트가 필터·정렬·페이징(20건/쪽). 필터를 바꾸면 1페이지로 복귀.
+  - 주차장은 전국 17,000여곳이라 **서버가 `page`/`size`로 잘라 준다**(12건/쪽). 페이지 이동 시 좌표를 캐시해 위치를 다시 묻지 않는다.
 - **위치 입력**: 브라우저 geolocation **또는 주소 입력**(`/api/geocode`). 주유소·따릉이·시내버스·주차장에 적용.
 - **헤더 배지**: 수도권(서울·경기·인천) 183개 측정소 평균 PM10을 숫자+등급+색상으로 상시 표시(클릭 시 미세먼지 탭).
 - 오류 시 🔄 다시 시도 박스, 모바일 최적화(바텀시트·탭 가로스크롤·44px 터치), 📖 `guide.html`.
@@ -54,6 +57,7 @@ lib/*.js              ★ 실제 핸들러 15개 (아래)
   gas.js     bike.js     highway.js realestate.js air.js
   citybus.js parking.js  lh.js      myhome.js  geocode.js
 lib/kotsa-parking.js  공단 B553881 클라이언트(비핸들러 모듈, HANDLERS에 등록 안 함)
+lib/pool.js           동시성 제한 + 재시도 유틸(전량 수집용, 비핸들러 모듈)
 data/parking-nationwide.js  전국 주차장 스냅샷 17,768곳 (4.5MB, 자동생성)
 data/parking-kotsa.js       공단 시설+운영 스냅샷 (현재 빈 배열 — 백엔드 장애)
 scripts/build-parking-snapshot.mjs  위 두 스냅샷 빌더 (`npm run build:parking`)
@@ -76,7 +80,8 @@ package.json          deps: fast-xml-parser, proj4
 - [x] **주차장 전국 확대** (2026-07-10) — 전국주차장정보표준데이터로 17,768곳 커버. 스냅샷 방식(§9).
 - [ ] **공단 실시간 주차면수** — 한국교통안전공단 `B553881/Parking`은 **활용신청 승인됨(2026-07-08)에도 제공기관 백엔드가 죽어 있다**(`Error forwarding request to backend server`). 코드·스냅샷 빌드는 이미 붙어 있으니(`lib/kotsa-parking.js`, `data/parking-kotsa.js`) 백엔드가 살아나면 `npm run build:parking` + `KOTSA_PARKING=1` 재배포만 하면 켜진다. 회복 확인: `/api/parking?diag=1`
 - [ ] **공공임대 단지(SH 포함)** — `data.myhome.go.kr/rentalHouseList` 구현 완료했으나 ① 키가 마이홈 엔드포인트에 미전파(code 30) ② 마이홈이 Vercel IP 차단(fetch failed). 현재 "pending" 안내로 degrade. 전파 후 재확인 필요. `signguCode`(시군구, 마이홈 자체 코드) 필수 여부도 함께 확인.
-- [ ] **브라우저 육안 검증** — Chrome 확장이 끊겨 최근 3개 개선(실거래가 필터/지도, 미세먼지 필터·배지, LH 필터)과 주차장 탭은 **API·배포파일 레벨로만 검증**됨.
+- [ ] **광주 지역코드 복구** — 전남광주통합특별시 출범으로 5개 구 LAWD_CD가 전부 무효(전부 0건). 새 코드를 못 찾아 실거래가 지역 목록에서 제외한 상태. [행안부 행정구역 코드 변경 안내](https://business.juso.go.kr/jsi/jsiAreaCode)에서 확인 후 `LAWD`(js/services.js)에 되살릴 것.
+- [ ] **브라우저 육안 검증** — Chrome 확장이 끊겨 최근 개선(실거래가 필터/지도·페이지네이션, 미세먼지 필터·배지, LH 필터, 주차장 탭)은 **API·배포파일 레벨로만 검증**됨.
 - [ ] (보류) **공연 잔여석** — 인터파크가 NOL로 개편되며 이름검색이 SPA HTML만 반환, 유효 goodsCode 확보 불가.
 - [ ] (보류) **대중교통 길찾기(ODsay)** — 키 발급 + 호출 IP 화이트리스트 필요(Vercel IP 유동).
 - [ ] (선택) 택배 조회(CJ 무응답), 공공와이파이, 관광 TourAPI, 날씨(기상청 단기예보) — 활용신청 시 추가 가능.
@@ -158,6 +163,12 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 | 마이홈 `code 30` / `fetch failed` | 키 미전파 + 마이홈이 Vercel IP 차단 | `{pending:true}` 안내로 degrade(화면 깨짐 방지). 전파 후 재확인 |
 | 티머니 `errorCont` 오류 페이지 | `bef_Aft_Dvs=D`, `req_Rec_Num=10` 누락(사이트 JS가 붙임) | 두 파라미터 필수 포함 |
 | 실거래가 "전월세"가 한 덩어리 | API가 전세/월세를 `kind`로만 구분 | UI를 **매매/전세/월세/분양권**으로 분리, `kind`로 클라 필터 |
+| 실거래가·LH가 100건만 나옴 | 첫 페이지만 호출했다(`pageNo=1`, `PG_SZ=100`) | `totalCount`(RTMS) / 행의 `ALL_CNT`(LH)로 총 페이지를 계산해 **전량 수집** |
+| LH 전량 수집 시 7,590건 중 2,700건만 도착 | 40페이지를 `Promise.all`로 한 번에 던지면 **13페이지가 무응답**. `.catch(()=>[])`가 조용히 삼켜 데이터가 말없이 사라짐 | `lib/pool.js`(동시성 4 + 재시도 1회). 실패 페이지는 응답의 `failedPages`로 **드러낸다** |
+| 실거래가 응답이 10초 초과 | RTMS는 호출 1건이 5~9초. 17페이지면 기본 동시성으론 17초 | RTMS는 병렬에 강하므로 동시성 20. 더해 `vercel.json`에 `maxDuration: 60`(Hobby 기본 10초) |
+| 부천·화성·인천 서구가 **거래 0건** (오류 아님, `resultCode=000`) | **행정구역 개편으로 LAWD_CD가 바뀜.** RTMS는 과거 거래도 새 코드로 재색인한다 | 부천→41192/41194/41196, 화성→41591·41593·41595·41597(만세·효행·병점·동탄), 인천 서구→28275(서해구)·28290(검단구). 전부 실제 조회로 검증 |
+| 광주 5개 구 전부 0건 | 전남광주통합특별시 출범(2026-07-01)으로 시도코드 변경 추정. 46/53~57 접두어 스캔에도 안 잡힘 | **미해결.** 지역 목록에서 제외. 행안부 코드표 확인 필요 |
+| 코드 스캔 중 `API tok…` 응답 | 60개를 동시에 던져 data.go.kr **트래픽 제한** 발동 | 프로브는 소량·순차로 |
 
 ---
 
@@ -177,11 +188,11 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 | `/api/gas` | `op=avg` \| `lat&lon&prodcd=B027&radius` | Opinet `avgAllPrice` / `aroundAll`+`detailById` (certkey, KATEC) |
 | `/api/bike` | `lat&lon` | 서울 `bikeList` 3페이지 + haversine |
 | `/api/highway` | `op=rest&q=죽전` \| `op=congest` | EX `restConvList`+`restBestfoodList`+`curStateStation` / `trafficAmountByCongest` (UA+Referer 필수) |
-| `/api/realestate` | `type=trade\|rent\|silv&lawd=11680&ym=202606` | 국토부 RTMS (rent는 `kind`로 전세/월세 구분) |
+| `/api/realestate` | `type=trade\|rent\|silv&lawd=11680&ym=202606` | 국토부 RTMS (rent는 `kind`로 전세/월세 구분) — **전량 수집**(동시성 20, 상한 30p=3,000건) |
 | `/api/air` | `sido=서울` \| `op=metro` | 에어코리아 `getCtprvnRltmMesureDnsty` + `getMinuDustFrcstDspth` (metro=서울·경기·인천 평균) |
 | `/api/citybus` | `op=near&lat&lon` \| `op=arrival&city&node` | TAGO `getCrdntPrxmtSttnList` / `getSttnAcctoArvlPrearngeInfoList` |
 | `/api/parking` | `lat&lon&live=1&free=1&limit` \| `diag=1` | 서울 `GetParkInfo`+`GetParkingInfo`(실시간) + 전국 스냅샷 + 공단 스냅샷(현재 빈값) — 이름+200m로 중복 제거 후 거리순 |
-| `/api/lh` | `size&page&name&region&status` | LH `B552555/lhLeaseNoticeInfo1` (응답이 배열/dsList 중첩 → 방어적 탐색) |
+| `/api/lh` | `name&region&status&type&from&to` | LH `B552555/lhLeaseNoticeInfo1` (응답이 배열/dsList 중첩 → 방어적 탐색) — **전량 수집**(동시성 4, 상한 40p) |
 | `/api/myhome` | `brtc=11&signgu&size` | 마이홈 `rentalHouseList` (LH+SH+지방) — **현재 pending** |
 | `/api/geocode` | `q=서울 강남구 테헤란로 152` | vworld `getcoord`(도로명→지번) → 실패 시 **Nominatim** |
 
@@ -191,5 +202,7 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 - **주차장 집계**: 노상은 구획별 행 → `PKLT_CD` 그룹, `capacity = Σ TPKCT`, 좌표는 가장 가까운 구획 것 사용. 실시간은 `NOW_PRK_VHCL_UPDT_TM` 있는 행만.
 - **주차장 스냅샷**: 표준데이터·공단 API 모두 **위치 필터가 없어 전량 페이징만 가능**한데 일일 트래픽이 1,000회다(전량 1회 = 38페이지). 런타임 호출 시 콜드스타트 스물몇 번에 한도 소진 ⇒ 빌드 타임에 굽는다. 갱신은 `npm run build:parking` 후 재배포. 원본 갱신주기도 일 1회.
 - **공단 API 조인 불가**: 표준데이터 `prkplceNo`와 공단 `prk_center_id`는 **다른 체계**라 ID 조인이 안 된다. 공단 실시간(`PrkRealtimeInfo`)을 쓰려면 좌표를 가진 공단 시설정보(`PrkSttusInfo`)를 함께 스냅샷해야 한다.
+- **LH 기본 조회창은 최근 2개월**이다. 날짜를 안 주면 응답의 `dsSch`에 `PAN_ST_DT`/`PAN_ED_DT`가 2개월치로 찍혀 나온다(≈745건). `from`/`to`로 넓히면 2024-01-01부터 7,590건이지만 40페이지 상한에서 잘린다.
+- **전량 수집 동시성**: RTMS는 병렬에 강하고(20 동시) LH는 약하다(4 동시). 같은 data.go.kr이어도 제공기관 서버마다 다르다. 새 소스에 `pool()`을 붙일 땐 반드시 **누락 없는지 총 건수와 대조**할 것.
 - **TAGO 시내버스**: `arrtime`(초)→분, `arrprevstationcnt`=남은 정류장. `cityCode`+`nodeId`로 도착 조회.
 - **subwayId 코드**: 1001~1009=1~9호선, 1063 경의중앙, 1065 공항, 1067 경춘, 1075 수인분당, 1077 신분당, 1092 우이신설, 1093 서해, 1032 GTX-A

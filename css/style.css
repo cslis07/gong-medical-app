@@ -480,3 +480,27 @@ a.card.lh-card:hover { border-color: var(--primary); }
   .dust-badge { padding: 6px 10px; font-size: 12px; }
   .header-links { flex-wrap: wrap; gap: 6px; }
 }
+
+/* ===== 공통 페이지네이션 ===== */
+.pager {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: 6px; margin: 4px 0 32px;
+}
+.pager:empty { display: none; }
+.pager button {
+  min-width: 38px; height: 38px; padding: 0 10px;
+  background: var(--card); color: var(--text); border: 1px solid var(--border);
+  border-radius: 9px; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.pager button:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-dark); }
+.pager button[aria-current="page"] {
+  background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 800;
+}
+.pager button:disabled { opacity: .4; cursor: default; }
+.pager .pager-gap { color: var(--muted); padding: 0 2px; user-select: none; }
+.pager .pager-info { margin-left: 8px; color: var(--muted); font-size: 13px; font-weight: 600; }
+
+@media (max-width: 620px) {
+  .pager button { min-width: 34px; height: 34px; font-size: 13px; }
+  .pager .pager-info { flex-basis: 100%; text-align: center; margin: 6px 0 0; }
+}
