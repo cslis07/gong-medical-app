@@ -1,123 +1,179 @@
 # PROJECT_STATUS — 서울 교통·생활 정보 앱
 
-> 최종 갱신: 2026-07-09 · 위치: `C:\Users\GB\Documents\gong-medical-app`
+> 최종 갱신: 2026-07-10 · 위치: `C:\Users\GB\Documents\gong-medical-app`
 > 배포: cslis07/Vercel · 공개 URL: https://gong-medical-app.vercel.app
-
-## ★ 현재 라이브 서비스 (탭 13종 + 1 대기)
-지하철 · 혼잡도 · 영화관 · 버스(고속/시외) · 분실물 · 로또 · 주유소 · 따릉이 · 고속도로(휴게소/소통) · **아파트 실거래가** · **미세먼지** · **시내버스(TAGO)** · **청약·임대(LH공고+공공임대단지)**. 공공임대단지(myhome)만 키 전파+IP 제한으로 대기.
-
-### ⚙️ 아키텍처 주의 (2026-07-09)
-- **Vercel Hobby 함수 12개 제한** → `api/[service].js` **단일 catch-all 라우터**가 `lib/*.js` 핸들러(14개)에 위임. 프론트는 `/api/{service}?...` 그대로 호출. 신규 기능은 `lib/`에 핸들러 추가 + `api/[service].js`의 HANDLERS에 등록.
-- **env 키**: SEOUL_API_KEY(지하철·혼잡도·따릉이), SEOUL_REALTIME_KEY, OPINET_API_KEY(주유소), EX_API_KEY(고속도로, UA+Referer 필수), DATA_API_KEY(실거래가·미세먼지·시내버스·LH·myhome — data.go.kr 계정키 9ae13365…), VWORLD_API_KEY(지오코딩, Vercel서 IP차단→Nominatim 폴백).
-- **위치 기능**: 브라우저 geolocation 또는 주소입력→`/api/geocode`(vworld→Nominatim 폴백). gas·bike·citybus 지원.
+> GitHub: cslis07/gong-medical-app (main)
 
 ---
 
 ## 1. 프로젝트 목적
 
-공공/공식 데이터로 **서울 교통·생활 정보**를 한 화면에서 조회하는 무료 웹앱.
-상단 **5개 서비스 탭**: 🚇 지하철 · 👥 혼잡도 · 🎬 영화관 · 🚌 버스 · 🧳 분실물.
+공공/공식 데이터로 **서울(수도권) 교통·생활 정보**를 한 화면에서 조회하는 무료 웹앱.
+회원가입·로그인 없이, 상단 탭으로 14개 생활 서비스를 제공한다.
 
-- **구조**: 순수 HTML + vanilla JS + Vercel 서버리스 프록시(키 은닉·CORS·스크래핑)
-- **회원가입/로그인 없음**
-- **이력**: 공공의료 앱 → (2026-07-07) 지하철 전용 개편 → (2026-07-07) k-skill 문서 참고해 생활서비스 4종 추가(혼잡도·영화관·버스·분실물). URL·Vercel 프로젝트(gong-medical-app) 유지.
-- **참고 소스**: NomaDamas/k-skill 문서(`C:\Users\GB\Downloads\Compressed\k-skill-main.zip`). MCP/스킬을 그대로 쓰지 않고, 각 기능이 쓰는 공개 API·엔드포인트만 참고해 기존 Vercel 방식으로 자체 이식.
+- **구조**: 순수 HTML + vanilla JS(빌드 없음) + **Vercel 서버리스 프록시**(API 키 은닉·CORS 우회·스크래핑)
+- **원칙**: 예매·결제·개인정보 입력은 하지 않는다. 조회만 하고 결제/예매는 공식 페이지로 링크(handoff).
+- **이력**: 공공의료 앱 → 지하철 전용 개편 → k-skill 참고해 생활서비스 확장 → data.go.kr/EX/OPINET 대량 확장.
+  URL·Vercel 프로젝트명(`gong-medical-app`)은 하위호환을 위해 그대로 유지.
+- **참고 소스**: NomaDamas/k-skill 문서(MCP를 그대로 쓰지 않고, 각 기능이 쓰는 **공개 API 엔드포인트만 참고**해 자체 이식).
 
 ---
 
-## 2. 서비스별 상태
+## 2. 현재 구현된 기능 (탭 14종, 전부 라이브)
 
-| 탭 | 데이터 소스 | 서버리스 | 상태 |
+| 탭 | 기능 | 데이터 소스 | 사용 키 |
 |---|---|---|---|
-| 🚇 지하철 | 서울 열린데이터·서울교통공사 | `api/subway.js` | ✅ 라이브 (노선도+역 종합 모달) |
-| 👥 혼잡도 | 서울 citydata_ppltn (SEOUL_API_KEY 재사용) | `api/density.js` | ✅ 라이브 (핫스팟 120여곳, 추정인구·성별·연령) |
-| 🎬 영화관 | mcp.aka.page (CGV·메가박스·롯데, 키 불필요) | `api/cinema.js` | ✅ 라이브 (영화관/상영작/시간표·잔여석) |
-| 🚌 시외버스 | 티머니 intercitybus (스크래핑) | `api/bus.js` type=intercity | ✅ 라이브 (터미널409·시간표·운수사·등급·잔여석) |
-| 🚌 고속버스 | KOBUS (스크래핑) | `api/bus.js` type=express | ⚠️ **Vercel IP 차단** → 공식 링크 폴백 |
-| 🧳 분실물 | LOST112·서울교통공사 | (프론트 전용) | ✅ 안내형 (조건 정리 + 공식 조회 링크) |
-| 🎰 로또 | dhlottery(IP차단)→smok95 CDN 미러 | `api/lotto.js` | ✅ 라이브 (당첨번호·등위별 당첨금·내번호 등수계산) |
+| 🚇 지하철 | 공식 노선도 → 역 검색 → 도착·위치·첫막차·최단경로·편의시설·승하차·공기질 종합 모달 | 서울 열린데이터 | SEOUL_API_KEY / SEOUL_REALTIME_KEY |
+| 👥 혼잡도 | 서울 핫스팟 120여곳 실시간 인구·혼잡도·성별/연령 | citydata_ppltn | SEOUL_API_KEY |
+| 🎬 영화관 | CGV·메가박스·롯데 영화관/상영작/시간표·잔여석 | mcp.aka.page | 불필요 |
+| 🚌 버스 | 고속(KOBUS)·시외(티머니) 터미널 시간표 + 공식 예매 링크 | 스크래핑 | 불필요 |
+| 🧳 분실물 | LOST112·서울교통공사 조회 조건 정리 + 공식 링크(안내형) | — | 불필요 |
+| 🎰 로또 | 회차별 당첨번호·등위별 당첨금·내 번호 등수 계산 | smok95 CDN 미러 | 불필요 |
+| ⛽ 주유소 | 내 위치/주소 반경 최저가 주유소(가격순)·주소·편의시설 + **전국 평균유가 바** | Opinet | OPINET_API_KEY |
+| 🚲 따릉이 | 주변 대여소 실시간 자전거·거치대 수 | 서울 bikeList | SEOUL_API_KEY |
+| 🛣️ 고속도로 | 휴게소(편의시설·대표메뉴·유가) / 실시간 정체·서행 구간 | 한국도로공사 EX | EX_API_KEY |
+| 🏠 실거래가 | 아파트 **매매/전세/월세/분양권** · 가격·월세 필터 · 정렬 · 카드별 🗺️지도 | 국토부 RTMS | DATA_API_KEY |
+| 😷 미세먼지 | 시도별 측정소 PM10/PM2.5·등급·예보 + **측정소/등급 필터** + **헤더 수도권 평균 배지** | 에어코리아 | DATA_API_KEY |
+| 🚏 시내버스 | 주변 정류소 → 정류소별 **실시간 도착**(노선·남은 정류장) | 국토부 TAGO | DATA_API_KEY |
+| 🅿️ 주차장 | 서울 공영주차장 가까운 순 + **실시간 잔여면수**·요금·운영시간 / 실시간·무료 필터 | 서울 GetParkInfo + GetParkingInfo | SEOUL_API_KEY |
+| 🏘️ 청약·임대 | LH 분양·임대 공고(**지역·상태 필터**, 상세링크) / 공공임대 단지(LH·SH·지방) | LH · 마이홈 | DATA_API_KEY |
 
-### 📋 2차 요청(생활서비스.txt 확장) 진행상황 — 2026-07-07
-추가 요청 6종 중:
-- ✅ **로또** 완료(dhlottery IP차단 → 공개 CDN 미러 smok95.github.io/lotto 프록시. 키 불요) · `api/lotto.js`
-- ✅ **주유소(OPINET)** 완료·배포·검증(2026-07-07). `api/gas.js`: 브라우저 geolocation(WGS84)→proj4 KATEC(Opinet 공식 def `+towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43`)→aroundAll.do(가격순)+detailById.do(주소·편의시설). 키 param=`certkey`. **OPINET은 Vercel IP 차단 안 함(KOBUS와 달리 정상)**. 검증: 강남역 3km→서초/강남 실제 주유소 가격순. env `OPINET_API_KEY`(Production 등록완료 + 로컬 .env). 무료 1,500호출/일. proj4 의존성 추가.
-- ⏳ **주차장** — 사용자가 활용신청함(2026-07-07). **한국교통안전공단 주차정보 API(B553881), 처리상태 "신청"·심의여부 "심의" = 승인 대기 중**(자동승인 아님). End Point `https://apis.data.go.kr/B553881/Parking`, 기능 `/PrkSttusInfo`(시설·주소·위치)·`/PrkOprInfo`·`/PrkRealtimeInfo`(실시간 주차면). 참고문서 `주차정보시스템_기술문서_수정본_20240702.docx`. 승인 후 구현. (기존 tn_pubr API가 아니라 이 API로 진행)
-- ⏳ **화장실(data.go.kr)** — localdata CSV 다운로드 깨짐(error.html) → data.go.kr 공중화장실 표준 API 활용신청 후 구현
-- ❌ **공연 잔여석** — 인터파크가 NOL로 개편, 이름검색 API가 SPA HTML만 반환·유효 goodsCode 확인 불가. YES24 axPerf도 리다이렉트. 신뢰성 구현 보류(참고: k-skill 스크립트 엔드포인트는 api-ticketfront.interpark.com/v1/goods/{id}/playSeq + .../PlaySeq/{seq}/REMAINSEAT)
-- ⏸️ **대중교통 길찾기(ODsay)** — 1차에서 제외 유지(ODsay 키+IP화이트리스트)
-- ✅ **따릉이** 완료(2026-07-07) — `api/bike.js`, 서울 bikeList 3페이지 병렬+haversine, 기존 SEOUL_API_KEY 재사용. 검증: 강남역 주변 2732개
-- ✅ **주유소 전국 평균유가** 추가 — gas.js `?op=avg`(avgAllPrice), 주유소 탭 상단 표시
-
-### 📋 3차 확장 요청(2026-07-07) — 키 제공자별 대기목록
-사용자 요청: 제안기능 전부 + 휴게소폴더(EX·OPINET) + 아파트실거래가/LH/SH. 키별 분류:
-- **OPINET(키 보유)**: ✅평균유가 추가. 추가가능=지역별최저가top20(lowTop20.do)·고속도로 주유소가격 등
-- ✅ **고속도로(EX) 완료**(2026-07-07) — `api/highway.js`, 🛣️ 고속도로 탭. EX키 `EX_API_KEY`=1936242194(Vercel Production+.env). **EX는 봇차단 있어 UA+Referer 필수**, **Vercel IP 허용 확인**. 통합 4종: 휴게소 편의시설(`restinfo/restConvList`)+음식(`restinfo/restBestfoodList`)+유가(`business/curStateStation`)를 휴게소명(부분매칭 stdRestNm/serviceAreaName)으로 병합한 카드 + 실시간 소통(`odtraffic/trafficAmountByCongest`=현재 정체/서행 구간만, grade 2서행/3정체). 검증: 죽전·행담도 휴게소, 정체 36구간(브라우저 OK)
-- **data.go.kr 활용신청 필요(기존 DATA_API_KEY 재사용, 대부분 자동승인)**: 날씨(기상청 단기예보)·미세먼지(에어코리아)·시내버스(TAGO 버스도착)·아파트실거래가(국토부)·LH청약·공공와이파이·관광TourAPI·화장실. 주차장=심의 대기중
-- **SH**: i-sh.co.kr 또는 data.seoul.go.kr SH임대 확인 필요(SEOUL키 재사용 가능성)
-- **미해결**: 택배(CJ 응답없음), 공연(NOL개편), KTX/SRT(코레일 로그인—TAGO 열차정보로 시간표만 가능)
-
-> 키 확보 시 추가 예정 env: `OPINET_API_KEY`(주유소). 주차장·화장실은 기존 `DATA_API_KEY`에 API 활용신청만 추가하면 재사용. '근처' 기능은 브라우저 geolocation(navigator.geolocation, WGS84) 사용 예정.
-
-### ⚠️ 고속버스(KOBUS) Vercel 차단 — 중요
-- KOBUS(www.kobus.co.kr, 211.205.100.209)가 **Vercel 데이터센터 IP를 차단**(`connect ETIMEDOUT`). 로컬 Node에서는 정상.
-- 처음엔 `fetch failed`(전역 fetch가 KOBUS 레거시 TLS에서 실패로 보였음) → `node:https`+완화 cipher(`DEFAULT@SECLEVEL=0`)로 바꾸니 진짜 원인이 **IP 타임아웃**으로 드러남. TLS 문제 아님, IP 차단이라 서버리스에서 해결 불가.
-- 대응: `api/bus.js`가 도달 실패(`isUnreachable`) 시 `{blocked:true}` 반환 → 프론트가 **공식 KOBUS 예매 링크 카드**로 우아하게 폴백. (시외버스 티머니는 차단 없이 정상.)
-- 향후 KOBUS 라이브가 꼭 필요하면: 별도 프록시(차단 안 되는 호스트) 경유 또는 공공데이터포털 대체 API 검토.
+### 공통 기능
+- **위치 입력**: 브라우저 geolocation **또는 주소 입력**(`/api/geocode`). 주유소·따릉이·시내버스·주차장에 적용.
+- **헤더 배지**: 수도권(서울·경기·인천) 183개 측정소 평균 PM10을 숫자+등급+색상으로 상시 표시(클릭 시 미세먼지 탭).
+- 오류 시 🔄 다시 시도 박스, 모바일 최적화(바텀시트·탭 가로스크롤·44px 터치), 📖 `guide.html`.
 
 ---
 
-## 3. 수정/추가 파일
+## 3. 수정한 주요 파일
 
-| 파일 | 역할 |
-|---|---|
-| `index.html` | 상단 5개 서비스 탭 + 5개 패널(지하철·혼잡도·영화관·버스·분실물) |
-| `js/app.js` | 지하철 로직(기존) — 노선도·역 종합 모달 |
-| `js/services.js` | **신규** — 탭 전환 + 혼잡도·영화관·버스·분실물 프론트. helper는 app.js와 이름 충돌 피해 `byId`/`E` 사용 |
-| `api/subway.js` | 지하철 프록시(기존) |
-| `api/density.js` | **신규** — citydata_ppltn 혼잡도 |
-| `api/cinema.js` | **신규** — mcp.aka.page 영화관 프록시(chain/op) |
-| `api/bus.js` | **신규** — KOBUS·티머니 터미널+시간표. KOBUS는 node:https(레거시 TLS)+차단 폴백 |
-| `css/style.css` | `.toptabs/.panel/.field.grow/.bed.busy/.busrow/.lost-table` 등 추가 |
-| `guide.html` | 생활서비스 섹션(#sec-life)·TOC·변경이력 추가 |
-| `dev-server.mjs` | `/api/density`,`/api/cinema`,`/api/bus` 라우팅 추가 |
+```
+api/[service].js      ★ 단일 catch-all 라우터 (Vercel 함수 1개) → lib/ 위임
+lib/*.js              ★ 실제 핸들러 15개 (아래)
+  subway.js  density.js  cinema.js  bus.js    lotto.js
+  gas.js     bike.js     highway.js realestate.js air.js
+  citybus.js parking.js  lh.js      myhome.js  geocode.js
+index.html            14개 탭 + 패널 + 헤더 미세먼지 배지
+js/app.js             지하철 전용 로직(노선도·역 종합 모달)
+js/services.js        나머지 13개 탭 로직 + 탭 전환 + 공용 getLocation(주소/GPS)
+css/style.css         전체 스타일(.toptabs/.panel/.dust-badge/.lotto-ball 등)
+dev-server.mjs        로컬 서버(동일 catch-all 라우터 경유)
+guide.html            이용가이드
+package.json          deps: fast-xml-parser, proj4
+.env                  API 키 6종 (gitignore)
+```
+
+> **신규 기능 추가 절차**: `lib/xxx.js`에 핸들러 작성 → `api/[service].js`의 `HANDLERS`에 등록 → 프론트에서 `/api/xxx?...` 호출. (dev-server는 자동으로 라우팅됨)
 
 ---
 
-## 4. 실행/배포
+## 4. 남은 작업
+
+- [ ] **주차장 전국 확대** — 한국교통안전공단 `B553881/Parking`(PrkSttusInfo/PrkOprInfo/PrkRealtimeInfo)가 **심의 승인 대기 중**. 승인되면 `lib/parking.js`에 소스만 추가하면 됨. (현재는 서울시 소스로 동작)
+- [ ] **공공임대 단지(SH 포함)** — `data.myhome.go.kr/rentalHouseList` 구현 완료했으나 ① 키가 마이홈 엔드포인트에 미전파(code 30) ② 마이홈이 Vercel IP 차단(fetch failed). 현재 "pending" 안내로 degrade. 전파 후 재확인 필요. `signguCode`(시군구, 마이홈 자체 코드) 필수 여부도 함께 확인.
+- [ ] **브라우저 육안 검증** — Chrome 확장이 끊겨 최근 3개 개선(실거래가 필터/지도, 미세먼지 필터·배지, LH 필터)과 주차장 탭은 **API·배포파일 레벨로만 검증**됨.
+- [ ] (보류) **공연 잔여석** — 인터파크가 NOL로 개편되며 이름검색이 SPA HTML만 반환, 유효 goodsCode 확보 불가.
+- [ ] (보류) **대중교통 길찾기(ODsay)** — 키 발급 + 호출 IP 화이트리스트 필요(Vercel IP 유동).
+- [ ] (선택) 택배 조회(CJ 무응답), 공공와이파이, 관광 TourAPI, 날씨(기상청 단기예보) — 활용신청 시 추가 가능.
+- [ ] (선택) 미사용 dead CSS 정리, OG 이미지(1200×630).
+
+---
+
+## 5. 실행 명령어
 
 ```bash
 cd C:\Users\GB\Documents\gong-medical-app
-node dev-server.mjs          # → http://localhost:3005 (로컬은 KOBUS도 동작)
-vercel --prod --yes          # 배포 (cslis07, CLI 직접)
+
+# 로컬 개발 서버 (기본 3005, PORT로 변경 가능)
+node dev-server.mjs                 # → http://localhost:3005
+PORT=3010 node dev-server.mjs
+
+# 배포 (cslis07 계정, CLI 직접)
+vercel --prod --yes
+
+# 문법 검사
+node --check lib/parking.js
+node --check "api/[service].js"
+
+# 핸들러 단독 테스트 (dev-server 없이)
+SEOUL_API_KEY=$(grep '^SEOUL_API_KEY=' .env | cut -d= -f2) \
+  node -e "import('./lib/parking.js').then(m=>m.default({query:{lat:'37.5663',lon:'126.9779'}},{status:c=>({json:o=>console.log(JSON.stringify(o).slice(0,300))})}))"
+
+# 프로덕션 스모크
+curl -s "https://gong-medical-app.vercel.app/api/parking?lat=37.5663&lon=126.9779&limit=3"
 ```
 
-### 환경변수 (Vercel + .env)
+### 환경변수 (`.env` 로컬 + Vercel Production 양쪽 필요)
 ```
-SEOUL_API_KEY=...       # 지하철 정보/통계/시설 + 혼잡도(citydata_ppltn) 공용
-SEOUL_REALTIME_KEY=...  # 지하철 실시간 도착/위치
+SEOUL_API_KEY        # 지하철·혼잡도·따릉이·주차장 (서울 열린데이터 계정키)
+SEOUL_REALTIME_KEY   # 지하철 실시간 도착/위치 (별도 키)
+DATA_API_KEY         # 실거래가·미세먼지·시내버스·LH·myhome (data.go.kr 계정키, 9ae13365…)
+OPINET_API_KEY       # 주유소 (파라미터명 certkey)
+EX_API_KEY           # 고속도로 (한국도로공사 data.ex.co.kr)
+VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 ```
-> 영화관·버스는 키 불필요(공개 API/스크래핑). DATA_API_KEY(구 의료용)는 미사용.
+> ⚠️ 키 값은 **절대 커밋 금지**. `.env`(gitignore) + `vercel env add <KEY> production`으로만 관리.
+> env 변경 후에는 **반드시 재배포**해야 반영된다.
 
 ---
 
-## 5. 검증 (2026-07-07)
-- 로컬 dev + **실제 브라우저(Chrome MCP)**로 5개 탭 전부 확인.
-- 프로덕션 API: density✓ cinema✓ 시외버스 터미널409·시간표20편✓ / 고속버스 blocked→링크폴백✓(브라우저 확인).
-- 지하철 노선도·혼잡도 카드·영화관·분실물 안내 렌더 확인.
+## 6. 배포 관련 주의사항
+
+1. **★ Vercel Hobby 함수 12개 제한** — `api/` 아래 파일 1개 = 서버리스 함수 1개다. 13개가 되자 배포가 `Error`로 실패했다. 그래서 **`api/[service].js` 단일 catch-all**만 두고 실제 핸들러는 `lib/`에 둔다. **`api/`에 새 파일을 만들지 말 것.**
+2. **cslis07 계정 전용** — GitHub·Vercel 모두 cslis07. push 전 `gh auth status --active` 확인.
+3. **env는 재배포해야 적용** — `vercel env add` 후 `vercel --prod --yes` 필수.
+4. **외부 API의 데이터센터 IP 차단**이 흔하다. 아래 §7 참고. 신규 소스 붙일 때 **반드시 프로덕션에서도 호출 검증**할 것(로컬만 되는 경우가 많음).
+5. `img/subway-map.png`(4.2MB)는 커밋 대상, `node_modules`는 gitignore. Vercel이 `package.json`으로 deps(proj4, fast-xml-parser) 설치.
+6. Deployment Protection이 켜지면 외부 접속 401. 현재 공개(200).
 
 ---
 
-## 6. API 엔드포인트 요약
+## 7. 최근 발생한 에러와 해결 방법
 
-- `GET /api/density?area=강남역` → 혼잡도 rows(level·pplMin/Max·성별·연령)
-- `GET /api/cinema?chain=cgv|megabox|lottecinema&op=theaters|movies|timetable|seats&keyword=&playDate=YYYYMMDD`
-- `GET /api/bus?type=express|intercity&op=terminals` → {terminals[], (express)routes, blocked?}
-- `GET /api/bus?type=...&op=schedule&dep=코드&arr=코드&date=YYYYMMDD[&depName&arrName]` → {rows[], note, blocked?}
-- `GET /api/subway?kind=...` (기존, 별도 문서)
+| 증상 | 원인 | 해결 |
+|---|---|---|
+| 배포 `Error`, 신규 `/api/*` 전부 **404 NOT_FOUND** | **Vercel Hobby 함수 12개 초과**(api/에 13개) | 핸들러를 `lib/`로 옮기고 `api/[service].js` catch-all 1개로 통합 |
+| 고속버스(KOBUS) `fetch failed` → `connect ETIMEDOUT` | KOBUS가 **Vercel 데이터센터 IP 차단**(TLS 아님). `node:https`로 바꾸니 진짜 원인이 드러남 | 해결 불가 → 도달 실패 감지 시 `{blocked:true}` 반환, 프론트는 **공식 예매 링크 카드**로 폴백 |
+| 로또 dhlottery 302 → 홈으로 | dhlottery가 해외/데이터센터 IP 차단 | **공개 CDN 미러**(smok95.github.io/lotto) 프록시로 우회 |
+| vworld 지오코딩 프로덕션 `fetch failed` | vworld도 Vercel IP 차단(로컬은 정상) | **Nominatim(OSM) 폴백** 추가. vworld 실패 시 자동 전환 |
+| 고속도로 EX API `400 Request Blocked` | EX 포털 **봇 차단** | **User-Agent + Referer** 헤더 추가하면 정상(Vercel IP는 허용됨) |
+| OPINET `aroundAll` 빈 결과 | 파라미터명이 `code`가 아니라 **`certkey`** | `certkey`로 수정. KATEC 좌표는 **proj4 + Opinet 공식 def**로 변환 |
+| 주차장 `Error forwarding request to backend server` | 교통안전공단 API **심의 승인 전**(위조키는 `Unauthorized`가 나오는 것과 대비해 확인) | 서울 열린데이터 소스(GetParkInfo+GetParkingInfo)로 대체 구현 |
+| 주차장 "남대문 화물"이 4번 중복 | **노상주차장은 구획(1면)마다 행이 하나** (2,206행 / 고유 PKLT_CD 852) | `PKLT_CD`로 묶어 **TPKCT 합산**. 실측으로 다중행 그룹 65개가 전부 `TPKCT=1`, 큰값 중복 0임을 확인 후 적용 |
+| 주차장 잔여면수가 엉뚱하게 표시 | 실시간 123행 중 **14행은 갱신시각이 빈 값** | `NOW_PRK_VHCL_UPDT_TM`이 있는 **109곳만 실시간으로 신뢰** |
+| 마이홈 `code 30` / `fetch failed` | 키 미전파 + 마이홈이 Vercel IP 차단 | `{pending:true}` 안내로 degrade(화면 깨짐 방지). 전파 후 재확인 |
+| 티머니 `errorCont` 오류 페이지 | `bef_Aft_Dvs=D`, `req_Rec_Num=10` 누락(사이트 JS가 붙임) | 두 파라미터 필수 포함 |
+| 실거래가 "전월세"가 한 덩어리 | API가 전세/월세를 `kind`로만 구분 | UI를 **매매/전세/월세/분양권**으로 분리, `kind`로 클라 필터 |
 
-### 참고 — 스크래핑 상세(향후 수리용)
-- **KOBUS**: main.do로 쿠키 seed → `readRotLinInf.ajax`(rotInfList=터미널/노선) → `alcnSrch.do`(fnSatsChc 인자: date,deprTime,…,busClsCd). 서버 HTML은 첫 행만 완전 렌더(나머지 JS) → 출발시각·등급만 신뢰.
-- **티머니**: `/` seed → `readTrmlList.do`(409 터미널 JSON) → `readAlcnList.do`(**bef_Aft_Dvs=D, req_Rec_Num=10 필수**). readSasFeeInf 인자: [8]time,[11]운수사,[12]등급,[16]잔여,[17]총좌석.
-- **영화관**: `mcp.aka.page/api/{chain}/{op}` (daiso CLI가 감싸는 표면). CGV=timetable, 메가박스·롯데=seats.
-- **혼잡도**: `openapi.seoul.go.kr:8088/{KEY}/json/citydata_ppltn/1/5/{장소}` — 응답키 `SeoulRtd.citydata_ppltn`.
-- **분실물**: LOST112 `findList.do`는 POST·302(세션/토큰)라 자동조회 불가 → 안내형(공식 링크). SITE=V, DEP_PLACE, PRDT_NM, START/END_YMD.
+---
+
+## 8. API 구조
+
+모든 프론트 호출은 `/api/{service}?...` → **`api/[service].js`가 `lib/{service}.js`로 위임**.
+
+### 서비스별 엔드포인트
+
+| 경로 | 주요 파라미터 | 업스트림 |
+|---|---|---|
+| `/api/subway` | `kind=mapData\|arrival\|position\|firstlast\|accessibility\|elevatorLift\|stats\|timeStats\|airquality\|closure\|shortestPath` | 서울 열린데이터(정보 8088 / 실시간 swopenapi) |
+| `/api/density` | `area=강남역` | `citydata_ppltn` |
+| `/api/cinema` | `chain=cgv\|megabox\|lottecinema&op=theaters\|movies\|timetable\|seats&keyword&playDate` | mcp.aka.page |
+| `/api/bus` | `type=express\|intercity&op=terminals\|schedule&dep&arr&date` | KOBUS / 티머니 (express는 IP차단→`blocked`) |
+| `/api/lotto` | `round=latest\|1231` | smok95.github.io/lotto |
+| `/api/gas` | `op=avg` \| `lat&lon&prodcd=B027&radius` | Opinet `avgAllPrice` / `aroundAll`+`detailById` (certkey, KATEC) |
+| `/api/bike` | `lat&lon` | 서울 `bikeList` 3페이지 + haversine |
+| `/api/highway` | `op=rest&q=죽전` \| `op=congest` | EX `restConvList`+`restBestfoodList`+`curStateStation` / `trafficAmountByCongest` (UA+Referer 필수) |
+| `/api/realestate` | `type=trade\|rent\|silv&lawd=11680&ym=202606` | 국토부 RTMS (rent는 `kind`로 전세/월세 구분) |
+| `/api/air` | `sido=서울` \| `op=metro` | 에어코리아 `getCtprvnRltmMesureDnsty` + `getMinuDustFrcstDspth` (metro=서울·경기·인천 평균) |
+| `/api/citybus` | `op=near&lat&lon` \| `op=arrival&city&node` | TAGO `getCrdntPrxmtSttnList` / `getSttnAcctoArvlPrearngeInfoList` |
+| `/api/parking` | `lat&lon&live=1&free=1&limit` | 서울 `GetParkInfo`(좌표·요금) + `GetParkingInfo`(실시간) — PKLT_CD로 병합·합산 |
+| `/api/lh` | `size&page&name&region&status` | LH `B552555/lhLeaseNoticeInfo1` (응답이 배열/dsList 중첩 → 방어적 탐색) |
+| `/api/myhome` | `brtc=11&signgu&size` | 마이홈 `rentalHouseList` (LH+SH+지방) — **현재 pending** |
+| `/api/geocode` | `q=서울 강남구 테헤란로 152` | vworld `getcoord`(도로명→지번) → 실패 시 **Nominatim** |
+
+### 핵심 구현 노트
+- **KATEC 변환(주유소)**: `proj4('WGS84', '+proj=tmerc +lat_0=38 +lon_0=128 +k=0.9999 +x_0=400000 +y_0=600000 +ellps=bessel +towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43', [lon,lat])`
+- **EX(고속도로)**: `data.ex.co.kr/openapi/...?key=&type=json` + **UA·Referer 헤더 필수**. `stdRestNm`/`serviceAreaName`은 **부분 매칭** 지원.
+- **주차장 집계**: 노상은 구획별 행 → `PKLT_CD` 그룹, `capacity = Σ TPKCT`, 좌표는 가장 가까운 구획 것 사용. 실시간은 `NOW_PRK_VHCL_UPDT_TM` 있는 행만.
+- **TAGO 시내버스**: `arrtime`(초)→분, `arrprevstationcnt`=남은 정류장. `cityCode`+`nodeId`로 도착 조회.
+- **subwayId 코드**: 1001~1009=1~9호선, 1063 경의중앙, 1065 공항, 1067 경춘, 1075 수인분당, 1077 신분당, 1092 우이신설, 1093 서해, 1032 GTX-A
