@@ -90,12 +90,12 @@ async function searchSubway() {
       $("results").innerHTML = renderStationHub(rows, lineSel);
       return;
     }
-    // 실내공기질: 등급(좋음/보통/나쁨) 필터·정렬 + 분포 요약
+    // 실내공기질: 등급(좋음/보통/나쁨/매우나쁨) 필터·정렬 + 분포 요약
     if (m.id === "airquality") {
       rows = sortAirRows(rows);
-      const c = { ok: 0, warn: 0, full: 0 };
+      const c = { ok: 0, warn: 0, busy: 0, full: 0 };
       rows.forEach((it) => c[airLevel(airPm(it)).level]++);
-      note = `좋음 ${c.ok} · 보통 ${c.warn} · 나쁨 ${c.full}`;
+      note = `좋음 ${c.ok} · 보통 ${c.warn} · 나쁨 ${c.busy} · 매우나쁨 ${c.full}`;
       if (!rows.length) return setStatus("해당 등급의 측정 결과가 없습니다.", "warn");
     }
     setStatus(`${rows.length}건 표시${note ? " · " + note : ""}`, note && m.id !== "airquality" ? "warn" : "ok");
@@ -218,27 +218,9 @@ const fmt = (t) => (t && t.length === 4 ? `${t.slice(0, 2)}:${t.slice(2)}` : t |
 const num = (v) => (v === undefined || v === "" || v === null ? NaN : Number(v));
 const disp = (v) => (Number.isNaN(v) ? "-" : v);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-// 서울 API 응답은 HTML 엔티티(&#39; &middot; 등)로 인코딩되어 있어 디코딩 후 다시 esc 한다.
-const _decEl = document.createElement("textarea");
-const dec = (s) => { _decEl.innerHTML = String(s ?? ""); return _decEl.value; };
 const fmtDT = (s) => (s ? String(s).slice(0, 16) : "");
-// 서울예약 상세의 NOTICE/DTLCONT는 서식 있는 HTML 원문을 표시한다.
-// 신뢰 출처(서울시 공식 API)이지만 방어적으로 스크립트·이벤트핸들러·위험 태그를 제거한다.
-function sanitizeHtml(html) {
-  const tpl = document.createElement("template");
-  tpl.innerHTML = String(html ?? "");
-  tpl.content.querySelectorAll("script,iframe,object,embed,link,style,meta,form,base").forEach((el) => el.remove());
-  tpl.content.querySelectorAll("*").forEach((el) => {
-    [...el.attributes].forEach((a) => {
-      const name = a.name.toLowerCase();
-      const val = String(a.value).replace(/\s+/g, "").toLowerCase();
-      if (name.startsWith("on")) el.removeAttribute(a.name);                 // onclick 등 제거
-      else if ((name === "href" || name === "src") && val.startsWith("javascript:")) el.removeAttribute(a.name);
-      else if (name === "srcdoc") el.removeAttribute(a.name);
-    });
-  });
-  return tpl.innerHTML;
-}
+// dec()·sanitizeHtml()은 서울예약(NOTICE/DTLCONT) 렌더러와 함께 제거됐다.
+// HTML 원문을 innerHTML에 넣는 경로가 더는 없다 — 되살릴 일이 생기면 그때 함께 가져올 것.
 const telLink = (t) => (t ? `<a class="btn tel" href="tel:${esc(t).replace(/[^0-9]/g, "")}">📞 ${esc(t)}</a>` : "");
 function mapLink(name, lat, lon) {
   if (!lat || !lon) return "";
@@ -507,12 +489,15 @@ function renderClosure(it) {
     </article>`;
 }
 
-// 실내공기질 미세먼지 수치·등급 (PM2.5 기준 좋음≤15·보통≤35·나쁨>35)
+// 실내공기질 미세먼지 등급 — 환경부 PM2.5 기준 4단계 (좋음≤15 · 보통≤35 · 나쁨≤75 · 매우나쁨>75).
+// 3단계로 두면 76 이상도 "나쁨"이 되어, 같은 수치를 4단계로 표시하는
+// 미세먼지 탭·헤더 배지(services.js의 airGradeOf)와 등급이 어긋난다.
 function airPm(it) { return Number(it.PMq || it.PM || 0); }
 function airLevel(pm) {
-  if (pm <= 15) return { level: "ok",   label: "좋음", rank: 0 };
-  if (pm <= 35) return { level: "warn", label: "보통", rank: 1 };
-  return { level: "full", label: "나쁨", rank: 2 };
+  if (pm <= 15) return { level: "ok",   label: "좋음",     rank: 0 };
+  if (pm <= 35) return { level: "warn", label: "보통",     rank: 1 };
+  if (pm <= 75) return { level: "busy", label: "나쁨",     rank: 2 };
+  return { level: "full", label: "매우나쁨", rank: 3 };
 }
 // 공기질 결과 필터(좋음/보통/나쁨)·정렬(나쁜 순)
 function sortAirRows(rows) {

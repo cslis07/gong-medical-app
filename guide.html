@@ -375,6 +375,21 @@ kbd{
               <span class="update-date">2026.07.10</span>
               <span class="update-badge">NEW</span>
             </div>
+            <div class="update-title">🔒 보안 강화 · ⚡ 속도 개선 · 🔗 탭 링크 공유</div>
+            <div class="update-body">
+              보안 헤더(CSP)를 추가하고, 오류 메시지에 내부 정보가 섞여 나가지 않도록 정리했습니다.
+              자주 바뀌지 않는 조회 결과는 <strong>캐시</strong>해 응답이 빨라졌고, 주차장 데이터가
+              다른 탭 속도에 영향을 주지 않도록 분리했습니다. 이제 <strong>탭이 주소에 남아</strong>
+              (예: <code>#parking</code>) 새로고침해도 그대로이고 링크로 공유할 수 있습니다.
+              주유소·따릉이·시내버스·주차장에도 <strong>🔄 다시 시도</strong> 버튼이 생겼고,
+              지하철 실내공기질 등급을 환경부 4단계 기준으로 맞췄습니다.
+            </div>
+          </div>
+
+          <div class="update-card">
+            <div class="update-head">
+              <span class="update-date">2026.07.10</span>
+            </div>
             <div class="update-title">🅿️ 주차장 전국 확대 · 페이지네이션 · 영화관/버스 탭 정리</div>
             <div class="update-body">
               <strong>🅿️ 주차장</strong>이 서울 공영에서 <strong>전국 17,700여 곳</strong>으로 넓어졌습니다(서울 일부는 실시간 잔여면수 제공).
@@ -724,76 +739,52 @@ kbd{
 </footer>
 
 <!-- 모바일 FAB -->
-<button class="toc-fab" onclick="document.getElementById('toc-drawer').classList.add('open')" aria-label="목차 열기">📑</button>
+<button class="toc-fab" aria-label="목차 열기">📑</button>
 
 <!-- 모바일 드로어 -->
-<div class="toc-drawer" id="toc-drawer" onclick="if(event.target===this)this.classList.remove('open')">
+<div class="toc-drawer" id="toc-drawer">
   <div class="toc-drawer-panel">
-    <button class="toc-drawer-close" onclick="document.getElementById('toc-drawer').classList.remove('open')" aria-label="닫기">✕</button>
+    <button class="toc-drawer-close" aria-label="닫기">✕</button>
     <div class="sidebar-title">목차</div>
 
     <div class="sidebar-section">
-      <a class="sidebar-link" href="#sec-updates" onclick="closeDrawer()">
+      <a class="sidebar-link" href="#sec-updates">
         <span class="sidebar-dot" style="background:var(--c-update)"></span>수정된 사항
       </a>
     </div>
     <div class="sidebar-section">
-      <a class="sidebar-link" href="#sec-overview" onclick="closeDrawer()">
+      <a class="sidebar-link" href="#sec-overview">
         <span class="sidebar-dot" style="background:#94a3b8"></span>화면 구성
       </a>
     </div>
     <div class="sidebar-section">
-      <a class="sidebar-link" href="#sec-subway" onclick="closeDrawer()">
+      <a class="sidebar-link" href="#sec-subway">
         <span class="sidebar-dot" style="background:var(--c2)"></span>지하철 노선도
       </a>
     </div>
     <div class="sidebar-section">
-      <a class="sidebar-link" href="#sec-life" onclick="closeDrawer()">
+      <a class="sidebar-link" href="#sec-life">
         <span class="sidebar-dot" style="background:var(--c1)"></span>생활서비스
       </a>
     </div>
     <div class="sidebar-section">
-      <a class="sidebar-link" href="#sec-mobile" onclick="closeDrawer()">
+      <a class="sidebar-link" href="#sec-mobile">
         <span class="sidebar-dot" style="background:var(--c5)"></span>모바일·접근성
       </a>
     </div>
     <div class="sidebar-section">
-      <a class="sidebar-link" href="#sec-faq" onclick="closeDrawer()">
+      <a class="sidebar-link" href="#sec-faq">
         <span class="sidebar-dot" style="background:#7c3aed"></span>자주 묻는 질문
       </a>
     </div>
     <div class="sidebar-section">
-      <a class="sidebar-link" href="#sec-data" onclick="closeDrawer()">
+      <a class="sidebar-link" href="#sec-data">
         <span class="sidebar-dot" style="background:var(--c6)"></span>데이터 출처
       </a>
     </div>
   </div>
 </div>
 
-<script>
-function closeDrawer(){ document.getElementById('toc-drawer').classList.remove('open'); }
-
-// 스크롤-스파이
-(() => {
-  const links = document.querySelectorAll('.sidebar-link[href^="#sec-"]');
-  const sections = [...links]
-    .map(a => document.querySelector(a.getAttribute('href')))
-    .filter(Boolean);
-  function update(){
-    const y = window.scrollY + 110;
-    let cur = sections[0];
-    for(const s of sections){ if(s.offsetTop <= y) cur = s; }
-    if(!cur) return;
-    links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + cur.id));
-  }
-  window.addEventListener('scroll', update, {passive:true});
-  update();
-})();
-
-// 모바일 드로어 닫기 (앵커 클릭 시)
-document.querySelectorAll('.toc-drawer-panel a').forEach(a => a.addEventListener('click', closeDrawer));
-// ESC 키
-document.addEventListener('keydown', e => { if(e.key === 'Escape') closeDrawer(); });
-</script>
+<script src="/js/guide.js"></script>
 </body>
 </html>

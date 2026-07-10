@@ -21,7 +21,12 @@ try {
 
 createServer(async (req, res) => {
   const u = new URL(req.url, "http://localhost");
-  const apiRes = { status: (c) => ({ json: (o) => { res.writeHead(c, {"content-type":"application/json"}); res.end(JSON.stringify(o)); } }) };
+  // Vercel의 res 모사 — setHeader는 라우터가 Cache-Control을 붙이는 데 쓴다.
+  const headers = { "content-type": "application/json" };
+  const apiRes = {
+    setHeader: (k, v) => { headers[k.toLowerCase()] = v; },
+    status: (c) => ({ json: (o) => { res.writeHead(c, headers); res.end(JSON.stringify(o)); } }),
+  };
   const m = u.pathname.match(/^\/api\/([a-z]+)$/);
   if (m) {
     return apiRouter({ query: { service: m[1], ...Object.fromEntries(u.searchParams) } }, apiRes);

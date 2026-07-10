@@ -38,6 +38,8 @@
 | 🏘️ 청약·임대 | LH 분양·임대 공고(**지역·상태 필터**, 상세링크, **전량 수집 + 페이지네이션**) / 공공임대 단지(LH·SH·지방) | LH · 마이홈 | DATA_API_KEY |
 
 ### 공통 기능
+- **탭 딥링크**: `#parking` 처럼 `location.hash`에 탭이 반영된다. 새로고침·링크 공유·뒤로가기 복원.
+- **CDN 캐시**: `api/[service].js`의 `CACHE` 표가 서비스별 `s-maxage`를 정한다. 200이 아니거나 `{ok:false}`면 자동으로 `no-store`.
 - **페이지네이션**(실거래가·주차장·LH): `renderPager()`(js/services.js) 공용 컴포넌트. `‹ 1 … 4 5 6 … 20 ›` 형태.
   - 실거래가·LH는 서버가 **전 페이지를 모아 주고** 클라이언트가 필터·정렬·페이징(20건/쪽). 필터를 바꾸면 1페이지로 복귀.
   - 주차장은 전국 17,000여곳이라 **서버가 `page`/`size`로 잘라 준다**(12건/쪽). 페이지 이동 시 좌표를 캐시해 위치를 다시 묻지 않는다.
@@ -57,6 +59,8 @@ lib/*.js              ★ 실제 핸들러 13개 (아래)
   lh.js      myhome.js   geocode.js
 lib/kotsa-parking.js  공단 B553881 클라이언트(비핸들러 모듈, HANDLERS에 등록 안 함)
 lib/pool.js           동시성 제한 + 재시도 유틸(전량 수집용, 비핸들러 모듈)
+lib/respond.js        에러 응답 정제(원문·키 유출 차단) + redact (비핸들러 모듈)
+js/guide.js           guide.html 전용 스크립트 (CSP 때문에 인라인에서 분리)
 data/parking-nationwide.js  전국 주차장 스냅샷 17,768곳 (4.5MB, 자동생성)
 data/parking-kotsa.js       공단 시설+운영 스냅샷 (현재 빈 배열 — 백엔드 장애)
 scripts/build-parking-snapshot.mjs  위 두 스냅샷 빌더 (`npm run build:parking`)
@@ -142,6 +146,23 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 
 ---
 
+## 6.5 보안 (2026-07-10 감사 후 적용)
+
+| 항목 | 조치 | 파일 |
+|---|---|---|
+| **쿼터 소진(오픈 프록시)** — `/api/realestate` 1요청 = RTMS 최대 30회, `/api/lh` 40회, `subway?kind=stats` 31회. 인증이 없어 `curl` 33회면 하루치 소진 | ① 서비스별 **CDN 캐시**(`s-maxage`)로 동일 요청이 상위로 안 나감 ② LH `from`/`to`를 `^\d{8}$` + **최대 366일** 창으로 제한 ③ subway 월통계를 `pool(…, 6)`로 묶음 | `api/[service].js` · `lib/lh.js` · `lib/subway.js` |
+| **CSP 부재** | `default-src 'self'` 기반 CSP 추가. `script-src 'self'`를 걸기 위해 guide.html의 인라인 `<script>`와 `onclick` 10개를 `js/guide.js`로 분리 | `vercel.json` · `js/guide.js` |
+| **`javascript:` 스킴** — LH `DTL_URL`을 `href`에 그대로 삽입. `E()`는 속성 탈출만 막고 스킴은 못 막는다 | `safeUrl()` — `^https?://`만 링크로 렌더, 아니면 `<article>` 폴백 | `js/services.js` |
+| **에러 원문 유출** — `String(err.message)`·상위 응답 본문(`_raw`, `t.slice()`)을 그대로 반사 | `errorMessage()`로 통일. 원문은 `console.error`(Vercel 함수 로그)로만, 사용자에겐 고정 문구 | `lib/respond.js` + 전 핸들러 |
+| **죽은 sanitizer** — `sanitizeHtml()`·`dec()`가 호출처 없이 남아 있어 되살아나면 위험 | 제거 | `js/app.js` |
+| **`.env.example` 낙후** — 실제 쓰는 키 6종 중 3종 누락 | 6종 전부 + 용도·함정 명시 | `.env.example` |
+
+> **확인된 안전 항목**: 키는 전부 `process.env`에서만 URL에 삽입되고 클라이언트 번들·에러에 없다. `git log` 전 이력에 실제 키 흔적 없음(`.env`는 미추적). SSRF 없음 — 모든 핸들러가 호스트를 상수로 고정하고 사용자 입력은 `encodeURIComponent`/`URLSearchParams`로만 넣는다.
+>
+> **미적용(후속)**: IP 단위 rate limit. 서버리스라 인메모리 카운터는 부분적이고 `@vercel/kv` 또는 Vercel WAF가 필요하다. Origin/Referer 화이트리스트는 문서화된 `curl` 스모크 테스트를 깨뜨려 보류했다.
+
+---
+
 ## 7. 최근 발생한 에러와 해결 방법
 
 | 증상 | 원인 | 해결 |
@@ -168,6 +189,9 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 | 부천·화성·인천 서구가 **거래 0건** (오류 아님, `resultCode=000`) | **행정구역 개편으로 LAWD_CD가 바뀜.** RTMS는 과거 거래도 새 코드로 재색인한다 | 부천→41192/41194/41196, 화성→41591·41593·41595·41597(만세·효행·병점·동탄), 인천 서구→28275(서해구)·28290(검단구). 전부 실제 조회로 검증 |
 | 광주 5개 구 전부 0건 | 전남광주통합특별시 출범(2026-07-01)으로 시도코드 변경 추정. 46/53~57 접두어 스캔에도 안 잡힘 | **미해결.** 지역 목록에서 제외. 행안부 코드표 확인 필요 |
 | 코드 스캔 중 `API tok…` 응답 | 60개를 동시에 던져 data.go.kr **트래픽 제한** 발동 | 프로브는 소량·순차로 |
+| 지하철 실내공기질 등급이 미세먼지 탭과 어긋남 | `app.js`의 `airLevel()`이 **3단계**(나쁨>35), 나머지는 환경부 **4단계** ⇒ PM2.5 100이 한쪽은 "나쁨", 다른 쪽은 "매우나쁨" | 4단계로 통일(≤15/≤35/≤75/초과). 분포 카운터·`airFilter` 옵션도 함께 확장 |
+| 주차장 검색 버튼이 이벤트 객체를 페이지 번호로 넘김 | `addEventListener("click", searchParking)` — `searchParking(page)`의 첫 인자로 `PointerEvent`가 들어감 | `() => searchParking(1)`로 감쌈 |
+| 4.5MB 스냅샷이 **모든 탭** 콜드스타트에서 파싱 | 라우터가 13개 핸들러를 정적 import → `parking.js`가 스냅샷을 최상위 import | 라우터를 **동적 import**로, `parking.js`도 스냅샷을 호출 시 지연 로드 |
 
 ---
 

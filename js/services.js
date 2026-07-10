@@ -2,16 +2,35 @@
 // 지하철(app.js)과 별개 <script>. 전역 충돌을 피하려 helper 이름을 app.js와 다르게 둔다.
 const byId = (id) => document.getElementById(id);
 const E = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// E()는 속성 탈출만 막고 스킴은 못 막는다. 외부 API가 준 URL을 href에 넣기 전에 반드시 통과시킬 것.
+// (javascript: / data: 스킴이 들어오면 클릭 한 번에 임의 스크립트가 실행된다)
+const safeUrl = (u) => (/^https?:\/\//i.test(String(u ?? "")) ? String(u) : "");
 function setBox(id, msg, type = "") { const el = byId(id); if (el) { el.textContent = msg; el.className = "status " + type; } }
 function kstTodayISO() { const d = new Date(Date.now() + 9 * 3600e3); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`; }
 const ymd = (iso) => String(iso || "").replace(/-/g, "");
 
 // ---------- 상단 서비스 탭 전환 ----------
-function switchPanel(name) {
-  document.querySelectorAll(".toptab").forEach((b) => b.classList.toggle("active", b.dataset.panel === name));
+// 탭을 location.hash에 반영해 새로고침 복원·링크 공유가 되게 한다(#parking 등).
+const panelNames = () => [...document.querySelectorAll(".toptab")].map((b) => b.dataset.panel);
+
+function switchPanel(name, { updateHash = true } = {}) {
+  if (!panelNames().includes(name)) return;
+  document.querySelectorAll(".toptab").forEach((b) => {
+    const on = b.dataset.panel === name;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === `panel-${name}`));
+  if (updateHash && location.hash.slice(1) !== name) history.replaceState(null, "", `#${name}`);
   if (name === "gas") loadGasAvg();
 }
+
+// 새로고침·뒤로가기·직접 링크로 들어온 경우 해당 탭을 연다.
+function applyHashPanel() {
+  const name = location.hash.slice(1);
+  if (panelNames().includes(name)) switchPanel(name, { updateHash: false });
+}
+window.addEventListener("hashchange", applyHashPanel);
 // 전국 평균유가 (1회 로드)
 let gasAvgLoaded = false;
 async function loadGasAvg() {
@@ -248,7 +267,7 @@ async function searchGas() {
     if (!rows.length) return setBox("gasStatus", d.message || "반경 내 주유소가 없습니다.", "warn");
     setBox("gasStatus", `가격순 ${rows.length}곳 (반경 ${Number(d.radius) / 1000}km)`, "ok");
     byId("gasResults").innerHTML = rows.map((s, i) => renderGas(s, i)).join("");
-  } catch (e) { setBox("gasStatus", `오류: ${e.message}`, "error"); }
+  } catch (e) { setBox("gasStatus", `오류: ${e.message}`, "error"); retryBox("gasResults", e.message, searchGas); }
 }
 function renderGas(s, i) {
   const chips = [s.selfYn ? "셀프" : "", s.carWash ? "세차장" : "", s.maint ? "경정비" : "", s.cvs ? "편의점" : "", s.kpetro ? "품질인증" : ""]
@@ -286,7 +305,7 @@ async function searchBike() {
         <div class="card-actions">${map}</div>
       </article>`;
     }).join("");
-  } catch (e) { setBox("bikeStatus", `오류: ${e.message}`, "error"); }
+  } catch (e) { setBox("bikeStatus", `오류: ${e.message}`, "error"); retryBox("bikeResults", e.message, searchBike); }
 }
 byId("bikeBtn").addEventListener("click", searchBike);
 
@@ -547,7 +566,7 @@ async function searchCitybus() {
         <p class="meta">누르면 실시간 도착정보 표시 <span class="opt">▾</span></p>
         <div class="cb-arrivals"></div>
       </article>`).join("");
-  } catch (e) { setBox("cbStatus", `오류: ${e.message}`, "error"); }
+  } catch (e) { setBox("cbStatus", `오류: ${e.message}`, "error"); retryBox("cbResults", e.message, searchCitybus); }
 }
 async function loadArrivals(cardEl) {
   const box = cardEl.querySelector(".cb-arrivals");
@@ -630,12 +649,13 @@ function applyLhFilter() {
 
   setBox("lhStatus", `공고 ${rows.length.toLocaleString()}건${rows.length !== lhCache.length ? ` / 전체 ${lhCache.length.toLocaleString()}` : ""}${collectWarning(lhMeta)}`, "ok");
   byId("lhResults").innerHTML = slice.map((r) => {
+    const url = safeUrl(r.url);   // LH가 준 DTL_URL — http(s)가 아니면 링크로 만들지 않는다
     const inner = `
       <div class="card-top"><h3>${E(r.name)}</h3><span class="bed ${lhBadge(r.status)}">${E(r.status || "-")}</span></div>
       <p class="meta">${[r.type, r.region].filter(Boolean).map(E).join(" · ")}</p>
-      <p class="meta">📅 게시 ${E(r.postDate || "-")}${r.closeDate ? ` · 마감 ${E(r.closeDate)}` : ""}${r.url ? ' · <span class="opt">클릭하면 상세공고 ↗</span>' : ""}</p>`;
-    return r.url
-      ? `<a class="card lh-card" href="${E(r.url)}" target="_blank" rel="noopener">${inner}</a>`
+      <p class="meta">📅 게시 ${E(r.postDate || "-")}${r.closeDate ? ` · 마감 ${E(r.closeDate)}` : ""}${url ? ' · <span class="opt">클릭하면 상세공고 ↗</span>' : ""}</p>`;
+    return url
+      ? `<a class="card lh-card" href="${E(url)}" target="_blank" rel="noopener noreferrer">${inner}</a>`
       : `<article class="card">${inner}</article>`;
   }).join("");
   renderPager("lhPager", lhPage, totalPages, (p) => { lhPage = p; applyLhFilter(); scrollToResults("lhResults"); }, rows.length);
@@ -699,7 +719,7 @@ async function searchParking(page = 1) {
     setBox("pkStatus", `조건에 맞는 ${d.matched.toLocaleString()}곳 · 실시간 제공 ${d.liveCount}곳`, "ok");
     byId("pkResults").innerHTML = rows.map(renderParking).join("");
     renderPager("pkPager", d.page, d.totalPages, (p) => { searchParking(p).then(() => scrollToResults("pkResults")); }, d.matched);
-  } catch (e) { setBox("pkStatus", `오류: ${e.message}`, "error"); }
+  } catch (e) { setBox("pkStatus", `오류: ${e.message}`, "error"); retryBox("pkResults", e.message, () => searchParking(1)); }
 }
 function renderParking(p) {
   // 잔여 비율로 혼잡 표시
@@ -724,9 +744,10 @@ function renderParking(p) {
     <div class="card-actions">${tel}${map}</div>
   </article>`;
 }
-byId("pkBtn").addEventListener("click", searchParking);
-byId("pkFilter").addEventListener("change", () => { if (byId("pkResults").innerHTML) searchParking(); });
-byId("pkAddr").addEventListener("keydown", (e) => { if (e.key === "Enter") searchParking(); });
+// searchParking(page)는 첫 인자가 페이지 번호다. 리스너를 그대로 넘기면 Event 객체가 page로 들어간다.
+byId("pkBtn").addEventListener("click", () => searchParking(1));
+byId("pkFilter").addEventListener("change", () => { if (byId("pkResults").innerHTML) searchParking(1); });
+byId("pkAddr").addEventListener("keydown", (e) => { if (e.key === "Enter") searchParking(1); });
 
 // ---------- 초기값 ----------
 (function initServices() {
@@ -736,4 +757,5 @@ byId("pkAddr").addEventListener("keydown", (e) => { if (e.key === "Enter") searc
   syncReType();
   initAir();
   loadDustBadge();
+  applyHashPanel();   // #parking 등으로 들어온 경우 해당 탭을 연다
 })();
