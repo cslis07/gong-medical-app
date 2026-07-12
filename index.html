@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#1a5fd0" />
+  <meta name="theme-color" content="#2f5fe0" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0f1626" media="(prefers-color-scheme: dark)" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>서울 교통·생활 정보 | 지하철·혼잡도·주차장·실거래가</title>
   <meta name="description" content="서울 지하철 노선도·실시간 도착, 실시간 인구 혼잡도, 전국 주차장·주유소, 아파트 실거래가, 미세먼지·시내버스·LH청약까지 공공데이터로 한 번에" />
+  <!-- 첫 페인트 전에 테마 적용 (FOUC 방지). CSP상 인라인 불가 → 외부 파일 -->
+  <script src="/js/theme.js"></script>
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -19,25 +22,36 @@
       </div>
       <div class="header-links">
         <button id="dustBadge" class="dust-badge" title="수도권(서울·경기·인천) 실시간 평균 미세먼지 — 클릭하면 미세먼지 탭" style="display:none"></button>
+        <button id="themeToggle" class="icon-btn" type="button" aria-label="테마 변경">🌗</button>
         <a class="guide-link" href="guide.html">📖 이용가이드</a>
       </div>
     </div>
   </header>
 
-  <!-- 상단 서비스 탭 -->
-  <nav class="toptabs wrap" role="tablist">
-    <button class="toptab active" data-panel="subway" role="tab">🚇 지하철</button>
-    <button class="toptab" data-panel="density" role="tab">👥 혼잡도</button>
-    <button class="toptab" data-panel="lost" role="tab">🧳 분실물</button>
-    <button class="toptab" data-panel="lotto" role="tab">🎰 로또</button>
-    <button class="toptab" data-panel="gas" role="tab">⛽ 주유소</button>
-    <button class="toptab" data-panel="bike" role="tab">🚲 따릉이</button>
-    <button class="toptab" data-panel="highway" role="tab">🛣️ 고속도로</button>
-    <button class="toptab" data-panel="realestate" role="tab">🏠 실거래가</button>
-    <button class="toptab" data-panel="air" role="tab">😷 미세먼지</button>
-    <button class="toptab" data-panel="citybus" role="tab">🚏 시내버스</button>
-    <button class="toptab" data-panel="parking" role="tab">🅿️ 주차장</button>
-    <button class="toptab" data-panel="lh" role="tab">🏘️ LH청약</button>
+  <!-- 상단 내비: 카테고리(교통·주거·생활) → 서브탭 -->
+  <nav class="topnav wrap" aria-label="서비스 카테고리">
+    <div class="catbar" role="tablist" aria-label="카테고리">
+      <button class="cattab active" data-cat="transit" role="tab" aria-selected="true">🚉 교통</button>
+      <button class="cattab" data-cat="home" role="tab" aria-selected="false">🏠 주거</button>
+      <button class="cattab" data-cat="life" role="tab" aria-selected="false">🌆 생활</button>
+    </div>
+    <div class="subtabs" role="tablist" aria-label="서비스">
+      <!-- 교통 -->
+      <button class="toptab active" data-panel="subway" data-cat="transit" role="tab" aria-selected="true">🚇 지하철</button>
+      <button class="toptab" data-panel="citybus" data-cat="transit" role="tab" aria-selected="false">🚏 시내버스</button>
+      <button class="toptab" data-panel="bike" data-cat="transit" role="tab" aria-selected="false">🚲 따릉이</button>
+      <button class="toptab" data-panel="highway" data-cat="transit" role="tab" aria-selected="false">🛣️ 고속도로</button>
+      <!-- 주거 -->
+      <button class="toptab" data-panel="realestate" data-cat="home" role="tab" aria-selected="false" hidden>🏠 실거래가</button>
+      <button class="toptab" data-panel="lh" data-cat="home" role="tab" aria-selected="false" hidden>🏘️ LH청약</button>
+      <button class="toptab" data-panel="parking" data-cat="home" role="tab" aria-selected="false" hidden>🅿️ 주차장</button>
+      <!-- 생활 -->
+      <button class="toptab" data-panel="air" data-cat="life" role="tab" aria-selected="false" hidden>😷 미세먼지</button>
+      <button class="toptab" data-panel="density" data-cat="life" role="tab" aria-selected="false" hidden>👥 혼잡도</button>
+      <button class="toptab" data-panel="gas" data-cat="life" role="tab" aria-selected="false" hidden>⛽ 주유소</button>
+      <button class="toptab" data-panel="lotto" data-cat="life" role="tab" aria-selected="false" hidden>🎰 로또</button>
+      <button class="toptab" data-panel="lost" data-cat="life" role="tab" aria-selected="false" hidden>🧳 분실물</button>
+    </div>
   </nav>
 
   <main class="wrap">
@@ -182,6 +196,12 @@
             <option value="2000">2km</option>
             <option value="3000" selected>3km</option>
             <option value="5000">5km</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="gasFilter">브랜드</label>
+          <select id="gasFilter">
+            <option value="">전체 브랜드</option>
           </select>
         </div>
         <div class="field grow">

@@ -37,7 +37,10 @@
 | 🅿️ 주차장 | **전국 17,700여곳** 가까운 순 + 서울 일부 **실시간 잔여면수**·요금·운영시간 / 실시간·무료 필터 · **서버 페이지네이션** | 서울 GetParkInfo+GetParkingInfo · 전국주차장정보표준데이터(스냅샷) | SEOUL_API_KEY / DATA_API_KEY |
 | 🏘️ 청약·임대 | LH 분양·임대 공고(**지역·상태 필터**, 상세링크, **전량 수집 + 페이지네이션**) / 공공임대 단지(LH·SH·지방) | LH · 마이홈 | DATA_API_KEY |
 
-### 공통 기능
+### 공통 기능 · UI
+- **디자인 시스템**(2026-07-12): `css/style.css`가 전부 토큰(`--bg/--card/--surface-2/--accent/--ok-bg…`) 기반. 라이트/다크 자동(`prefers-color-scheme`) + 헤더 토글(`js/theme.js`, `localStorage`, auto→light→dark). 하드코딩 색 30여 곳을 토큰화해 다크가 한 곳에서 뒤집힌다.
+- **카테고리 내비**: 12탭을 교통(지하철·시내버스·따릉이·고속도로)/주거(실거래가·LH·주차장)/생활(미세먼지·혼잡도·주유소·로또·분실물) 3그룹으로. `.catbar` 세그먼트 → `.subtabs`. `switchPanel(name)`이 해당 카테고리만 노출(`showCategory`).
+- **로딩 스켈레톤**(`showSkeletons`)·**빈 상태 카드**(`endEmpty`)·**포커스 링**(`:focus-visible`)·**`prefers-reduced-motion`**·상태줄 `aria-live`.
 - **탭 딥링크**: `#parking` 처럼 `location.hash`에 탭이 반영된다. 새로고침·링크 공유·뒤로가기 복원.
 - **CDN 캐시**: `api/[service].js`의 `CACHE` 표가 서비스별 `s-maxage`를 정한다. 200이 아니거나 `{ok:false}`면 자동으로 `no-store`.
 - **페이지네이션**(실거래가·주차장·LH): `renderPager()`(js/services.js) 공용 컴포넌트. `‹ 1 … 4 5 6 … 20 ›` 형태.
@@ -61,6 +64,7 @@ lib/kotsa-parking.js  공단 B553881 클라이언트(비핸들러 모듈, HANDLE
 lib/pool.js           동시성 제한 + 재시도 유틸(전량 수집용, 비핸들러 모듈)
 lib/respond.js        에러 응답 정제(원문·키 유출 차단) + redact (비핸들러 모듈)
 js/guide.js           guide.html 전용 스크립트 (CSP 때문에 인라인에서 분리)
+js/theme.js           라이트/다크 테마 부트스트랩 + 토글 (head에서 동기 로드, FOUC 방지)
 data/parking-nationwide.js  전국 주차장 스냅샷 17,768곳 (4.5MB, 자동생성)
 data/parking-kotsa.js       공단 시설+운영 스냅샷 (현재 빈 배열 — 백엔드 장애)
 scripts/build-parking-snapshot.mjs  위 두 스냅샷 빌더 (`npm run build:parking`)
@@ -192,6 +196,9 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 | 지하철 실내공기질 등급이 미세먼지 탭과 어긋남 | `app.js`의 `airLevel()`이 **3단계**(나쁨>35), 나머지는 환경부 **4단계** ⇒ PM2.5 100이 한쪽은 "나쁨", 다른 쪽은 "매우나쁨" | 4단계로 통일(≤15/≤35/≤75/초과). 분포 카운터·`airFilter` 옵션도 함께 확장 |
 | 주차장 검색 버튼이 이벤트 객체를 페이지 번호로 넘김 | `addEventListener("click", searchParking)` — `searchParking(page)`의 첫 인자로 `PointerEvent`가 들어감 | `() => searchParking(1)`로 감쌈 |
 | 4.5MB 스냅샷이 **모든 탭** 콜드스타트에서 파싱 | 라우터가 13개 핸들러를 정적 import → `parking.js`가 스냅샷을 최상위 import | 라우터를 **동적 import**로, `parking.js`도 스냅샷을 호출 시 지연 로드 |
+| 주유소 "셀프" 칩이 항상 안 뜸 | Opinet `aroundAll`·`detailById` **어디에도 셀프 여부 필드가 없다**(`SELF_YN` 부재). 과거 `selfYn`은 늘 false | 셀프 칩·필드 제거. 대신 **브랜드 필터**(POLL_DIV_CD, 실제 존재)로 대체 |
+| 미세먼지 PM2.5 예보가 PM10과 뒤섞임 | 에어코리아 `getMinuDustFrcstDspth`가 **InformCode 필터를 무시**하고 PM10·PM2.5·O3를 한 응답에 섞어 준다(items[0]가 PM10일 수 있음) | 응답에서 `informCode` 일치 항목만 골라 `informData` 최신 발표 선택. `mkFc(j, code)` |
+| 로컬 dev-server 프로세스가 좀비로 누적 | bash `kill %1`이 Windows에서 detached node를 못 죽임 → stale 서버가 옛 코드로 응답 | 검증은 매번 새 포트로. 정리는 PowerShell `Win32_Process` CommandLine 필터로 `dev-server.mjs`만 종료 |
 
 ---
 
@@ -210,7 +217,7 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 | `/api/bike` | `lat&lon` | 서울 `bikeList` 3페이지 + haversine |
 | `/api/highway` | `op=rest&q=죽전` \| `op=congest` | EX `restConvList`+`restBestfoodList`+`curStateStation` / `trafficAmountByCongest` (UA+Referer 필수) |
 | `/api/realestate` | `type=trade\|rent\|silv&lawd=11680&ym=202606` | 국토부 RTMS (rent는 `kind`로 전세/월세 구분) — **전량 수집**(동시성 20, 상한 30p=3,000건) |
-| `/api/air` | `sido=서울` \| `op=metro` | 에어코리아 `getCtprvnRltmMesureDnsty` + `getMinuDustFrcstDspth` (metro=서울·경기·인천 평균) |
+| `/api/air` | `sido=서울` \| `op=metro` | 에어코리아 `getCtprvnRltmMesureDnsty` + `getMinuDustFrcstDspth`(PM10·**PM2.5** 예보, 코드 필터링) (metro=서울·경기·인천 평균) |
 | `/api/citybus` | `op=near&lat&lon` \| `op=arrival&city&node` | TAGO `getCrdntPrxmtSttnList` / `getSttnAcctoArvlPrearngeInfoList` |
 | `/api/parking` | `lat&lon&live=1&free=1&limit` \| `diag=1` | 서울 `GetParkInfo`+`GetParkingInfo`(실시간) + 전국 스냅샷 + 공단 스냅샷(현재 빈값) — 이름+200m로 중복 제거 후 거리순 |
 | `/api/lh` | `name&region&status&type&from&to` | LH `B552555/lhLeaseNoticeInfo1` (응답이 배열/dsList 중첩 → 방어적 탐색) — **전량 수집**(동시성 4, 상한 40p) |

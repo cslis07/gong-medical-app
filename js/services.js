@@ -5,17 +5,51 @@ const E = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<":
 // E()는 속성 탈출만 막고 스킴은 못 막는다. 외부 API가 준 URL을 href에 넣기 전에 반드시 통과시킬 것.
 // (javascript: / data: 스킴이 들어오면 클릭 한 번에 임의 스크립트가 실행된다)
 const safeUrl = (u) => (/^https?:\/\//i.test(String(u ?? "")) ? String(u) : "");
-function setBox(id, msg, type = "") { const el = byId(id); if (el) { el.textContent = msg; el.className = "status " + type; } }
+function setBox(id, msg, type = "") {
+  const el = byId(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = "status " + type;
+  el.setAttribute("aria-live", "polite");   // 상태 변화를 스크린리더가 읽도록
+}
+// 로딩 중 결과 영역을 백지로 두지 않고 스켈레톤 카드를 보인다.
+function showSkeletons(resultsId, n = 6) {
+  const el = byId(resultsId);
+  if (!el) return;
+  el.innerHTML = `<div class="skeletons">${Array.from({ length: n }, () =>
+    `<div class="skel-card"><div class="skel title"></div><div class="skel line"></div><div class="skel line short"></div></div>`).join("")}</div>`;
+}
+// 결과 0건 안내 — 스켈레톤을 지우고 빈 상태 카드로 교체한 뒤 상태줄도 갱신
+const emptyState = (msg) => `<div class="empty-state"><div class="empty-ico">🔍</div><p>${E(msg)}</p></div>`;
+function endEmpty(resultsId, statusId, msg, type = "warn") {
+  const el = byId(resultsId); if (el) el.innerHTML = emptyState(msg);
+  return setBox(statusId, msg, type);
+}
 function kstTodayISO() { const d = new Date(Date.now() + 9 * 3600e3); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`; }
 const ymd = (iso) => String(iso || "").replace(/-/g, "");
 
-// ---------- 상단 서비스 탭 전환 ----------
+// ---------- 상단 내비: 카테고리(교통·주거·생활) → 서브탭 ----------
 // 탭을 location.hash에 반영해 새로고침 복원·링크 공유가 되게 한다(#parking 등).
-const panelNames = () => [...document.querySelectorAll(".toptab")].map((b) => b.dataset.panel);
+const toptabEls = () => [...document.querySelectorAll(".toptab")];
+const panelNames = () => toptabEls().map((b) => b.dataset.panel);
+const catOf = (name) => document.querySelector(`.toptab[data-panel="${name}"]`)?.dataset.cat || null;
+const firstTabOfCat = (cat) => document.querySelector(`.toptab[data-cat="${cat}"]`)?.dataset.panel || null;
+
+// 카테고리 바만 갱신하고 그 안의 서브탭만 보이게 한다(패널 전환 없이).
+function showCategory(cat) {
+  document.querySelectorAll(".cattab").forEach((c) => {
+    const on = c.dataset.cat === cat;
+    c.classList.toggle("active", on);
+    c.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  toptabEls().forEach((b) => { b.hidden = b.dataset.cat !== cat; });
+}
 
 function switchPanel(name, { updateHash = true } = {}) {
   if (!panelNames().includes(name)) return;
-  document.querySelectorAll(".toptab").forEach((b) => {
+  const cat = catOf(name);
+  if (cat) showCategory(cat);
+  toptabEls().forEach((b) => {
     const on = b.dataset.panel === name;
     b.classList.toggle("active", on);
     b.setAttribute("aria-selected", on ? "true" : "false");
@@ -24,6 +58,10 @@ function switchPanel(name, { updateHash = true } = {}) {
   if (updateHash && location.hash.slice(1) !== name) history.replaceState(null, "", `#${name}`);
   if (name === "gas") loadGasAvg();
 }
+
+// 카테고리 클릭 → 그 카테고리의 첫 서브탭으로 이동
+document.querySelectorAll(".cattab").forEach((c) =>
+  c.addEventListener("click", () => { const t = firstTabOfCat(c.dataset.cat); if (t) switchPanel(t); }));
 
 // 새로고침·뒤로가기·직접 링크로 들어온 경우 해당 탭을 연다.
 function applyHashPanel() {
@@ -104,13 +142,13 @@ byId("densList").innerHTML = DENSITY_AREAS.map((a) => `<option value="${E(a)}"><
 async function searchDensity() {
   const area = byId("densQ").value.trim();
   if (!area) return setBox("densStatus", "장소명을 입력하세요.", "warn");
-  setBox("densStatus", "조회 중…", "loading"); byId("densResults").innerHTML = "";
+  setBox("densStatus", "조회 중…", "loading"); showSkeletons("densResults", 3);
   try {
     const r = await fetch(`/api/density?area=${encodeURIComponent(area)}`);
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
     const rows = d.rows || [];
-    if (!rows.length) return setBox("densStatus", `'${area}' 실시간 데이터가 없습니다. 목록의 정확한 장소명으로 다시 시도하세요.`, "warn");
+    if (!rows.length) return endEmpty("densResults", "densStatus", `'${area}' 실시간 데이터가 없습니다. 목록의 정확한 장소명으로 다시 시도하세요.`, "warn");
     setBox("densStatus", `${rows.length}곳`, "ok");
     byId("densResults").innerHTML = rows.map(renderDensity).join("");
   } catch (e) { setBox("densStatus", `오류: ${e.message}`, "error"); retryBox("densResults", e.message, searchDensity); }
@@ -198,7 +236,7 @@ async function searchLotto() {
   const mine = parseMyNumbers(byId("lottoMine").value);
   if (byId("lottoMine").value.trim() && mine.length !== 6)
     return setBox("lottoStatus", "내 번호는 1~45 사이 서로 다른 6개를 입력하세요.", "warn");
-  setBox("lottoStatus", "조회 중…", "loading"); byId("lottoResults").innerHTML = "";
+  setBox("lottoStatus", "조회 중…", "loading"); showSkeletons("lottoResults", 2);
   try {
     const r = await fetch(`/api/lotto?round=${encodeURIComponent(round || "latest")}`);
     const d = await r.json();
@@ -254,23 +292,41 @@ async function getLocation(statusId, addrInputId) {
     );
   });
 }
+let gasCache = { rows: [], radius: 3000 };
 async function searchGas() {
   try {
     const { lat, lon } = await getLocation("gasStatus", "gasAddr");
     const prodcd = byId("gasProd").value, radius = byId("gasRadius").value;
-    setBox("gasStatus", "주유소 조회 중…", "loading"); byId("gasResults").innerHTML = "";
+    setBox("gasStatus", "주유소 조회 중…", "loading"); showSkeletons("gasResults");
     const r = await fetch(`/api/gas?lat=${lat}&lon=${lon}&prodcd=${prodcd}&radius=${radius}`);
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
     if (d.needKey) return setBox("gasStatus", "⚠️ 주유소 기능은 OPINET 인증키 설정 후 이용 가능합니다.", "warn");
     const rows = d.rows || [];
-    if (!rows.length) return setBox("gasStatus", d.message || "반경 내 주유소가 없습니다.", "warn");
-    setBox("gasStatus", `가격순 ${rows.length}곳 (반경 ${Number(d.radius) / 1000}km)`, "ok");
-    byId("gasResults").innerHTML = rows.map((s, i) => renderGas(s, i)).join("");
+    if (!rows.length) return endEmpty("gasResults", "gasStatus", d.message || "반경 내 주유소가 없습니다.", "warn");
+    gasCache = { rows, radius: Number(d.radius) || Number(radius) };
+    fillGasBrands(rows);
+    applyGasFilter();
   } catch (e) { setBox("gasStatus", `오류: ${e.message}`, "error"); retryBox("gasResults", e.message, searchGas); }
 }
+// 반경 내에 실제로 존재하는 브랜드만 필터 옵션으로 채운다.
+function fillGasBrands(rows) {
+  const sel = byId("gasFilter"), cur = sel.value;
+  const brands = [...new Set(rows.map((r) => r.brand).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
+  sel.innerHTML = `<option value="">전체 브랜드</option>` + brands.map((b) => `<option value="${E(b)}">${E(b)}</option>`).join("");
+  if (brands.includes(cur)) sel.value = cur;
+}
+function applyGasFilter() {
+  const { rows, radius } = gasCache;
+  if (!rows.length) return;
+  const brand = byId("gasFilter").value;
+  const out = brand ? rows.filter((s) => s.brand === brand) : rows;
+  if (!out.length) return endEmpty("gasResults", "gasStatus", `${brand} 주유소가 반경 내에 없습니다.`, "warn");
+  setBox("gasStatus", `가격순 ${out.length}곳${brand ? ` · ${brand}` : ""} (반경 ${radius / 1000}km)`, "ok");
+  byId("gasResults").innerHTML = out.map((s, i) => renderGas(s, i)).join("");
+}
 function renderGas(s, i) {
-  const chips = [s.selfYn ? "셀프" : "", s.carWash ? "세차장" : "", s.maint ? "경정비" : "", s.cvs ? "편의점" : "", s.kpetro ? "품질인증" : ""]
+  const chips = [s.carWash ? "세차장" : "", s.maint ? "경정비" : "", s.cvs ? "편의점" : "", s.kpetro ? "품질인증" : ""]
     .filter(Boolean).map((c) => `<span class="chip">${E(c)}</span>`).join("");
   const map = s.address ? `<a class="btn map" href="https://map.kakao.com/link/search/${encodeURIComponent(s.name)}" target="_blank" rel="noopener">🗺️ 지도</a>` : "";
   const tel = s.tel ? `<a class="btn tel" href="tel:${E(s.tel).replace(/[^0-9]/g, "")}">📞 ${E(s.tel)}</a>` : "";
@@ -284,17 +340,18 @@ function renderGas(s, i) {
   </article>`;
 }
 byId("gasBtn").addEventListener("click", searchGas);
+byId("gasFilter").addEventListener("change", () => { if (gasCache.rows.length) applyGasFilter(); });
 
 // ==================== 🚲 따릉이 ====================
 async function searchBike() {
   try {
     const { lat, lon } = await getLocation("bikeStatus", "bikeAddr");
-    setBox("bikeStatus", "대여소 조회 중…", "loading"); byId("bikeResults").innerHTML = "";
+    setBox("bikeStatus", "대여소 조회 중…", "loading"); showSkeletons("bikeResults");
     const r = await fetch(`/api/bike?lat=${lat}&lon=${lon}`);
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
     const rows = d.rows || [];
-    if (!rows.length) return setBox("bikeStatus", d.message || "주변 대여소가 없습니다.", "warn");
+    if (!rows.length) return endEmpty("bikeResults", "bikeStatus", d.message || "주변 대여소가 없습니다.", "warn");
     setBox("bikeStatus", `가까운 대여소 ${rows.length}곳`, "ok");
     byId("bikeResults").innerHTML = rows.map((s) => {
       const lvl = s.bikes === 0 ? "full" : s.bikes <= 2 ? "busy" : "ok";
@@ -317,14 +374,14 @@ byId("hwMode").addEventListener("change", syncHwMode);
 async function searchHighway() {
   const mode = byId("hwMode").value;
   if (mode === "rest" && !byId("hwQ").value.trim()) return setBox("hwStatus", "휴게소명을 입력하세요.", "warn");
-  setBox("hwStatus", "조회 중…", "loading"); byId("hwResults").innerHTML = "";
+  setBox("hwStatus", "조회 중…", "loading"); showSkeletons("hwResults");
   try {
     const url = mode === "congest" ? "/api/highway?op=congest" : `/api/highway?op=rest&q=${encodeURIComponent(byId("hwQ").value.trim())}`;
     const d = await (await fetch(url)).json();
     if (d.needKey) return setBox("hwStatus", "⚠️ 고속도로 기능은 EX 인증키 설정 후 이용 가능합니다.", "warn");
     if (!d.ok) return setBox("hwStatus", d.message || "조회 실패", "warn");
     const rows = d.rows || [];
-    if (!rows.length) return setBox("hwStatus", mode === "congest" ? "현재 정체/서행 구간이 없습니다. 원활합니다 🎉" : "일치하는 휴게소가 없습니다.", mode === "congest" ? "ok" : "warn");
+    if (!rows.length) return endEmpty("hwResults", "hwStatus", mode === "congest" ? "현재 정체/서행 구간이 없습니다. 원활합니다 🎉" : "일치하는 휴게소가 없습니다.", mode === "congest" ? "ok" : "warn");
     if (mode === "congest") {
       setBox("hwStatus", `현재 정체/서행 ${rows.length}구간`, "warn");
       byId("hwResults").innerHTML = rows.map(renderCongest).join("");
@@ -401,14 +458,14 @@ byId("reType").addEventListener("change", syncReType);
 async function searchRealEstate() {
   const uiType = byId("reType").value, lawd = byId("reRegion").value, ym = (byId("reYm").value || "").replace("-", "");
   if (!/^\d{6}$/.test(ym)) return setBox("reStatus", "거래연월을 선택하세요.", "warn");
-  setBox("reStatus", "조회 중…", "loading"); byId("reResults").innerHTML = ""; clearPager("rePager");
+  setBox("reStatus", "조회 중…", "loading"); showSkeletons("reResults"); clearPager("rePager");
   try {
     const d = await (await fetch(`/api/realestate?type=${RE_UI[uiType].api}&lawd=${lawd}&ym=${ym}`)).json();
     if (d.needKey) return setBox("reStatus", "⚠️ 실거래가 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
     if (!d.ok) return setBox("reStatus", d.error || "조회 실패", "warn");
     const sel = byId("reRegion");
     reCache = { rows: d.rows || [], uiType, regionName: sel.options[sel.selectedIndex]?.text || "", truncated: d.truncated, failedPages: d.failedPages };
-    if (!reCache.rows.length) return setBox("reStatus", "해당 지역·연월에 신고된 거래가 없습니다.", "warn");
+    if (!reCache.rows.length) return endEmpty("reResults", "reStatus", "해당 지역·연월에 신고된 거래가 없습니다.", "warn");
     rePage = 1;
     applyReFilter();
   } catch (e) { setBox("reStatus", `오류: ${e.message}`, "error"); retryBox("reResults", e.message, searchRealEstate); }
@@ -442,7 +499,7 @@ function applyReFilter() {
   else if (sort === "low") out.sort((a, b) => rePrice(uiType, a) - rePrice(uiType, b));
   else out.sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0));
 
-  if (!out.length) { clearPager("rePager"); return setBox("reStatus", `조건에 맞는 거래가 없습니다. (전체 ${rows.length}건)`, "warn"); }
+  if (!out.length) { clearPager("rePager"); return endEmpty("reResults", "reStatus", `조건에 맞는 거래가 없습니다. (전체 ${rows.length}건)`, "warn"); }
 
   const totalPages = Math.max(Math.ceil(out.length / RE_PAGE_SIZE), 1);
   if (rePage > totalPages) rePage = totalPages;   // 필터가 좁아져 현재 페이지가 사라진 경우
@@ -483,12 +540,12 @@ function initAir() { byId("airSido").innerHTML = SIDOS.map((s) => `<option value
 let airCache = null; // {sido, summary, forecast, stations}
 async function searchAir() {
   const sido = byId("airSido").value;
-  setBox("airStatus", "조회 중…", "loading"); byId("airResults").innerHTML = "";
+  setBox("airStatus", "조회 중…", "loading"); showSkeletons("airResults");
   try {
     const d = await (await fetch(`/api/air?sido=${encodeURIComponent(sido)}`)).json();
     if (d.needKey) return setBox("airStatus", "⚠️ 미세먼지 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
     if (!d.ok) return setBox("airStatus", d.error || "조회 실패", "warn");
-    if (!(d.stations || []).length) return setBox("airStatus", "측정 데이터가 없습니다.", "warn");
+    if (!(d.stations || []).length) return endEmpty("airResults", "airStatus", "측정 데이터가 없습니다.", "warn");
     airCache = d;
     applyAirFilter();
   } catch (e) { setBox("airStatus", `오류: ${e.message}`, "error"); retryBox("airResults", e.message, searchAir); }
@@ -508,7 +565,10 @@ function applyAirFilter() {
       <div class="dust-box ${g10.c}"><span>미세먼지 PM10</span><b>${d.summary.pm10 ?? "-"}</b><em>${g10.t}</em></div>
       <div class="dust-box ${g25.c}"><span>초미세 PM2.5</span><b>${d.summary.pm25 ?? "-"}</b><em>${g25.t}</em></div>
     </div>
-    ${d.forecast && d.forecast.overall ? `<p class="meta">📢 ${E(d.forecast.overall)}</p>` : ""}
+    ${d.forecast && d.forecast.overall ? `<div class="forecast">
+      <div class="fc-row"><span class="fc-day">PM10</span>📢 ${E(d.forecast.overall)}${d.forecast.sidoGrade ? ` <b>· ${E(sido)} ${E(d.forecast.sidoGrade)}</b>` : ""}</div>
+      ${d.forecastPm25 && d.forecastPm25.overall ? `<div class="fc-row"><span class="fc-day">PM2.5</span>📢 ${E(d.forecastPm25.overall)}${d.forecastPm25.sidoGrade ? ` <b>· ${E(sido)} ${E(d.forecastPm25.sidoGrade)}</b>` : ""}</div>` : ""}
+    </div>` : ""}
   </article>`;
 
   if (!st.length) {
@@ -553,11 +613,11 @@ byId("airBtn").addEventListener("click", searchAir);
 async function searchCitybus() {
   try {
     const { lat, lon } = await getLocation("cbStatus", "cbAddr");
-    setBox("cbStatus", "정류소 조회 중…", "loading"); byId("cbResults").innerHTML = "";
+    setBox("cbStatus", "정류소 조회 중…", "loading"); showSkeletons("cbResults");
     const d = await (await fetch(`/api/citybus?op=near&lat=${lat}&lon=${lon}`)).json();
     if (d.needKey) return setBox("cbStatus", "⚠️ 시내버스 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
     const stops = d.stops || [];
-    if (!stops.length) return setBox("cbStatus", "주변 정류소가 없습니다.", "warn");
+    if (!stops.length) return endEmpty("cbResults", "cbStatus", "주변 정류소가 없습니다.", "warn");
     setBox("cbStatus", `가까운 정류소 ${stops.length}곳 · 정류소를 누르면 도착정보`, "ok");
     byId("cbResults").innerHTML = stops.map((s) => `
       <article class="card cb-stop" data-city="${E(s.city)}" data-node="${E(s.node)}" data-name="${E(s.name)}" style="cursor:pointer">
@@ -616,7 +676,7 @@ function fillLhFilters(rows) {
   fill("lhStatusF", statuses, "전체 상태");
 }
 async function searchLH() {
-  setBox("lhStatus", "공고 조회 중…", "loading"); byId("lhResults").innerHTML = ""; clearPager("lhPager");
+  setBox("lhStatus", "공고 조회 중…", "loading"); showSkeletons("lhResults"); clearPager("lhPager");
   try {
     // 서버가 전 페이지를 모아 주므로(API 기본창 = 최근 2개월) 필터·페이지네이션은 클라이언트에서 처리한다.
     const d = await (await fetch(`/api/lh`)).json();
@@ -624,7 +684,7 @@ async function searchLH() {
     if (!d.ok) return setBox("lhStatus", d.message || "조회 실패", "warn");
     lhCache = d.rows || [];
     lhMeta = { truncated: d.truncated, failedPages: d.failedPages };
-    if (!lhCache.length) return setBox("lhStatus", "공고가 없습니다.", "warn");
+    if (!lhCache.length) return endEmpty("lhResults", "lhStatus", "공고가 없습니다.", "warn");
     lhPage = 1;
     fillLhFilters(lhCache);
     applyLhFilter();
@@ -641,7 +701,7 @@ function applyLhFilter() {
   // 열린 공고 먼저
   rows = rows.slice().sort((a, b) => (LH_OPEN.some((s) => b.status.includes(s)) ? 1 : 0) - (LH_OPEN.some((s) => a.status.includes(s)) ? 1 : 0));
 
-  if (!rows.length) { clearPager("lhPager"); return setBox("lhStatus", `조건에 맞는 공고가 없습니다. (전체 ${lhCache.length}건)`, "warn"); }
+  if (!rows.length) { clearPager("lhPager"); return endEmpty("lhResults", "lhStatus", `조건에 맞는 공고가 없습니다. (전체 ${lhCache.length}건)`, "warn"); }
 
   const totalPages = Math.max(Math.ceil(rows.length / LH_PAGE_SIZE), 1);
   if (lhPage > totalPages) lhPage = totalPages;
@@ -668,14 +728,14 @@ byId("lhName").addEventListener("input", () => { if (lhCache.length) applyLhFilt
 // 공공임대 단지 (마이홈, LH·SH·지방)
 async function searchRental() {
   const brtc = byId("lhSido").value;
-  setBox("lhStatus", "공공임대 단지 조회 중…", "loading"); byId("lhResults").innerHTML = "";
+  setBox("lhStatus", "공공임대 단지 조회 중…", "loading"); showSkeletons("lhResults");
   try {
     const d = await (await fetch(`/api/myhome?brtc=${brtc}&size=60`)).json();
     if (d.needKey) return setBox("lhStatus", "⚠️ DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
     if (d.pending) return setBox("lhStatus", "ℹ️ " + d.message, "warn");
     if (!d.ok) return setBox("lhStatus", d.message || "조회 실패", "warn");
     const rows = d.rows || [];
-    if (!rows.length) return setBox("lhStatus", "단지 정보가 없습니다.", "warn");
+    if (!rows.length) return endEmpty("lhResults", "lhStatus", "단지 정보가 없습니다.", "warn");
     setBox("lhStatus", `공공임대 단지 ${rows.length}곳`, "ok");
     byId("lhResults").innerHTML = rows.map((r) => `
       <article class="card">
@@ -707,7 +767,7 @@ async function searchParking(page = 1) {
     const { lat, lon } = page === 1 || !pkCoords ? await getLocation("pkStatus", "pkAddr") : pkCoords;
     pkCoords = { lat, lon };
     const f = byId("pkFilter").value;
-    setBox("pkStatus", "주차장 조회 중…", "loading"); byId("pkResults").innerHTML = "";
+    setBox("pkStatus", "주차장 조회 중…", "loading"); showSkeletons("pkResults");
     const qs = new URLSearchParams({ lat, lon, page: String(page), size: String(PK_PAGE_SIZE) });
     if (f === "live") qs.set("live", "1");
     if (f === "free") qs.set("free", "1");
@@ -715,7 +775,7 @@ async function searchParking(page = 1) {
     if (d.needKey) return setBox("pkStatus", "⚠️ 주차장 기능은 SEOUL_API_KEY 설정 후 이용 가능합니다.", "warn");
     if (!d.ok) return setBox("pkStatus", d.error || d.message || "조회 실패", "warn");
     const rows = d.rows || [];
-    if (!rows.length) { clearPager("pkPager"); return setBox("pkStatus", f ? "조건에 맞는 주차장이 없습니다." : "주변 주차장이 없습니다.", "warn"); }
+    if (!rows.length) { clearPager("pkPager"); return endEmpty("pkResults", "pkStatus", f ? "조건에 맞는 주차장이 없습니다." : "주변 주차장이 없습니다.", "warn"); }
     setBox("pkStatus", `조건에 맞는 ${d.matched.toLocaleString()}곳 · 실시간 제공 ${d.liveCount}곳`, "ok");
     byId("pkResults").innerHTML = rows.map(renderParking).join("");
     renderPager("pkPager", d.page, d.totalPages, (p) => { searchParking(p).then(() => scrollToResults("pkResults")); }, d.matched);
