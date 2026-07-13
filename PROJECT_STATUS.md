@@ -1,8 +1,31 @@
 # PROJECT_STATUS — 서울 교통·생활 정보 앱
 
-> 최종 갱신: 2026-07-10 · 위치: `C:\Users\GB\Documents\gong-medical-app`
+> 최종 갱신: 2026-07-12 · 위치: `C:\Users\GB\Documents\gong-medical-app`
 > 배포: cslis07/Vercel · 공개 URL: https://gong-medical-app.vercel.app
 > GitHub: cslis07/gong-medical-app (main)
+
+---
+
+## 0. 지금 하던 일 (WIP)
+
+> 이어서 작업할 때 여기부터 본다. 상세는 §4(남은 작업)·§7(에러/해결).
+
+- **공단 실시간 주차면수** — 활용신청 승인(2026-07-08)됐으나 **제공기관 백엔드가 죽어 있음**. 코드·스냅샷은 이미 붙어 있어(`lib/kotsa-parking.js`, `data/parking-kotsa.js`) 백엔드 회복 시 `npm run build:parking` + `KOTSA_PARKING=1` 재배포만 하면 켜진다. 회복 확인: `/api/parking?diag=1`
+- **공공임대 단지(SH 포함)** — 마이홈 API 키 미전파(code 30) + 마이홈이 Vercel IP 차단(fetch failed). 현재 `{pending:true}` degrade. 키 전파 후 재확인, `signguCode` 필수 여부 확인.
+- **광주 지역코드 복구** — 전남광주통합특별시 출범(2026-07-01)으로 5개 구 LAWD_CD 전부 무효(전부 0건). 실거래가 지역 목록에서 제외 중. [행안부 코드표](https://business.juso.go.kr/jsi/jsiAreaCode)에서 새 코드 확인 후 `LAWD`(js/services.js)에 복구.
+- **브라우저 육안 검증** — Chrome 확장 끊김으로 최근 개선(실거래가 필터/지도·페이지네이션, 미세먼지 필터·배지, LH 필터, 주차장 탭, 전면 리디자인)이 **API·배포파일 레벨로만 검증**됨.
+
+---
+
+## ⛔ 하지 말 것
+
+> 반복해서 사고가 났던 지점. 손대기 전에 반드시 확인.
+
+1. **`api/` 폴더에 새 파일을 만들지 말 것.** Vercel Hobby 함수 12개 제한 — `api/`의 파일 1개 = 함수 1개다. 신규 핸들러는 `lib/xxx.js`에 두고 `api/[service].js`의 `HANDLERS`에만 등록한다. (§6-1, §7)
+2. **API 키를 절대 커밋하지 말 것.** `.env`(gitignore) + `vercel env add <KEY> production`으로만 관리. env 변경 후에는 **반드시 재배포**(`vercel --prod --yes`)해야 반영된다. (§5, §6-3)
+3. **cslis07 계정 외로 push하지 말 것.** GitHub·Vercel 모두 cslis07. push 전 `gh auth status --active` 확인. (§6-2)
+4. **로컬만 검증하고 배포하지 말 것.** 외부 API가 데이터센터(Vercel) IP를 차단하는 경우가 흔하다(KOBUS·dhlottery·vworld·마이홈 등). 신규 소스는 **반드시 프로덕션에서도 호출 검증**. (§6-4, §7)
+5. **에러 원문·상위 응답 본문을 사용자에게 그대로 반사하지 말 것.** 키 유출 위험. `lib/respond.js`의 `errorMessage()`로 통일하고 원문은 `console.error`로만. (§6.5)
 
 ---
 
