@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="서울 교통·생활 정보">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b6ef5"/>
+      <stop offset="1" stop-color="#2b56d4"/>
+    </linearGradient>
+  </defs>
+  <!-- maskable safe-zone: 중요 요소를 중앙 80% 안에 둔다 -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- 지하철 차량 실루엣 -->
+  <g fill="#ffffff">
+    <rect x="146" y="120" width="220" height="230" rx="46"/>
+    <rect x="176" y="158" width="160" height="70" rx="18" fill="#2b56d4"/>
+    <circle cx="196" cy="292" r="20" fill="#2b56d4"/>
+    <circle cx="316" cy="292" r="20" fill="#2b56d4"/>
+    <!-- 레일 다리 -->
+    <rect x="176" y="356" width="30" height="44" rx="8"/>
+    <rect x="306" y="356" width="30" height="44" rx="8"/>
+  </g>
+  <!-- 레일 -->
+  <g stroke="#ffffff" stroke-width="14" stroke-linecap="round">
+    <line x1="120" y1="408" x2="392" y2="408"/>
+  </g>
+</svg>

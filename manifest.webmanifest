@@ -1,0 +1,25 @@
+{
+  "name": "서울 교통·생활 정보",
+  "short_name": "교통·생활",
+  "description": "서울 지하철·실시간 혼잡도·전국 주차장·주유소·아파트 실거래가·미세먼지·시내버스·LH청약을 공공데이터로 한 번에",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#0f1216",
+  "theme_color": "#2f5fe0",
+  "lang": "ko",
+  "dir": "ltr",
+  "orientation": "portrait-primary",
+  "categories": ["travel", "utilities", "navigation"],
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "지하철", "short_name": "지하철", "url": "/#subway" },
+    { "name": "주차장", "short_name": "주차장", "url": "/#parking" },
+    { "name": "실거래가", "short_name": "실거래가", "url": "/#realestate" },
+    { "name": "미세먼지", "short_name": "미세먼지", "url": "/#air" }
+  ]
+}
