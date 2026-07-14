@@ -23,6 +23,7 @@ function showSkeletons(resultsId, n = 6) {
 const emptyState = (msg) => `<div class="empty-state"><div class="empty-ico">🔍</div><p>${E(msg)}</p></div>`;
 function endEmpty(resultsId, statusId, msg, type = "warn") {
   const el = byId(resultsId); if (el) el.innerHTML = emptyState(msg);
+  if (window.GongMap) GongMap.clearByResults(resultsId);   // 이전 지도 핀/토글 제거
   return setBox(statusId, msg, type);
 }
 function kstTodayISO() { const d = new Date(Date.now() + 9 * 3600e3); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`; }
@@ -87,6 +88,7 @@ document.querySelectorAll(".toptab").forEach((b) => b.addEventListener("click", 
 
 // 오류 재시도 박스 (app.js showError와 동일 톤)
 function retryBox(resultsId, msg, retryFn) {
+  if (window.GongMap) GongMap.clearByResults(resultsId);   // 오류 시 이전 지도 핀/토글 제거
   const timeout = /시간 초과|timeout|Failed to fetch|network/i.test(msg);
   byId(resultsId).innerHTML =
     `<div class="retry-box"><div class="retry-ico">${timeout ? "⏱️" : "⚠️"}</div>

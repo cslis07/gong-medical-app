@@ -115,5 +115,14 @@
       if (st.points.length === 0 && st.open) toggle(panel);
       else if (st.open) render(panel);
     },
+    // 결과 영역 id로 지도를 비운다 (검색 0건·오류 시 이전 핀/토글이 남지 않게).
+    clearByResults(resultsId) {
+      const panel = Object.keys(PANELS).find((p) => PANELS[p] === resultsId);
+      if (!panel) return;
+      const btn = byId("maptoggle-" + panel);
+      if (btn) btn.hidden = true;
+      const st = state[panel];
+      if (st) { st.points = []; if (st.open) toggle(panel); }
+    },
   };
 })();
