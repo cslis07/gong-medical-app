@@ -123,9 +123,21 @@
     const favKeys = new Set(pf.map((f) => f.key));
     const pr = recents.filter((r) => r.panel === panel && !favKeys.has(r.key)).slice(0, REC_SHOW);
     const chips = pf.map((e) => chip(e, "fav")).join("") + pr.map((e) => chip(e, "rec")).join("");
+    const saved = isFav(panel, snapshot(panel));
     bar.innerHTML =
-      `<button class="fav-save" type="button" title="현재 조건을 즐겨찾기에 저장">⭐ 이 조건 저장</button>` +
+      `<button class="fav-save${saved ? " saved" : ""}" type="button" title="현재 조건을 즐겨찾기에 ${saved ? "해제" : "저장"}">${saved ? "⭐ 저장됨" : "⭐ 이 조건 저장"}</button>` +
       (chips ? `<div class="fav-chips">${chips}</div>` : `<span class="fav-hint">자주 찾는 조건을 저장해두면 여기서 바로 불러와요</span>`);
+  }
+
+  // 입력값이 바뀌면 저장 버튼 상태만 갱신(칩은 그대로 둬 포커스·스크롤 유지)
+  function refreshSaveBtn(panel) {
+    const bar = byId("favbar-" + panel);
+    const btn = bar && bar.querySelector(".fav-save");
+    if (!btn) return;
+    const saved = isFav(panel, snapshot(panel));
+    btn.classList.toggle("saved", saved);
+    btn.textContent = saved ? "⭐ 저장됨" : "⭐ 이 조건 저장";
+    btn.title = "현재 조건을 즐겨찾기에 " + (saved ? "해제" : "저장");
   }
 
   // 바 하나에 이벤트 위임 (저장 버튼 + 칩)
@@ -168,5 +180,10 @@
     wireBar(panel);
     wireRecord(panel);
     renderBar(panel);
+    // 입력을 바꾸면 저장 버튼이 "저장됨/저장"을 정확히 반영하도록
+    PANELS[panel].fields.forEach((id) => {
+      const el = byId(id);
+      if (el) { el.addEventListener("input", () => refreshSaveBtn(panel)); el.addEventListener("change", () => refreshSaveBtn(panel)); }
+    });
   });
 })();

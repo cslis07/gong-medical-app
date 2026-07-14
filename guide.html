@@ -369,6 +369,17 @@ kbd{
     </div>
 
     <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-personal">
+        <span class="sidebar-dot" style="background:#f59e0b"></span>편의 기능
+      </a>
+      <div class="sidebar-sub">
+        <a href="#feat-favorites">즐겨찾기·최근 조회</a>
+        <a href="#feat-servicemap">지도 보기</a>
+        <a href="#feat-install">앱으로 설치</a>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
       <a class="sidebar-link" href="#sec-mobile">
         <span class="sidebar-dot" style="background:var(--c5)"></span>모바일·접근성
       </a>
@@ -403,8 +414,21 @@ kbd{
 
           <div class="update-card new">
             <div class="update-head">
-              <span class="update-date">2026.07.12</span>
+              <span class="update-date">2026.07.14</span>
               <span class="update-badge">NEW</span>
+            </div>
+            <div class="update-title">⭐ 즐겨찾기 · 🗺️ 지도 보기 · ⬇️ 앱 설치</div>
+            <div class="update-body">
+              자주 찾는 조건을 <strong>즐겨찾기</strong>로 저장하고 한 번에 다시 조회할 수 있습니다(주유소·따릉이·주차장·실거래가 등).
+              위치 기반 결과는 <strong>“🗺️ 지도 보기”</strong>로 실제 지도에 핀으로 확인하고,
+              홈 화면에 <strong>앱으로 설치</strong>(PWA)해 아이콘으로 바로 열 수 있어요. 자세한 사용법은
+              <a href="#sec-personal">편의 기능</a>을 참고하세요.
+            </div>
+          </div>
+
+          <div class="update-card">
+            <div class="update-head">
+              <span class="update-date">2026.07.12</span>
             </div>
             <div class="update-title">🎨 새 디자인 · 🌙 다크 모드 · 📂 카테고리 메뉴</div>
             <div class="update-body">
@@ -612,6 +636,47 @@ kbd{
       </div>
     </section>
 
+    <!-- 5.5 편의 기능 -->
+    <section class="guide-section" id="sec-personal">
+      <div class="section-header sh-overview">
+        <span class="section-icon">⭐</span>
+        <div>
+          <div class="section-title">편의 기능</div>
+          <div class="section-subtitle">즐겨찾기 · 지도 보기 · 앱 설치</div>
+        </div>
+      </div>
+      <div class="section-body">
+
+        <div class="feature" id="feat-favorites">
+          <h3>⭐ 즐겨찾기 · 최근 조회</h3>
+          <p>회원가입 없이도 자주 찾는 조건을 저장할 수 있습니다. 주유소·따릉이·시내버스·주차장·실거래가·미세먼지·혼잡도·고속도로·LH청약 탭의 검색창 아래에 <strong>즐겨찾기 바</strong>가 있습니다.</p>
+          <ul>
+            <li>조회하면 그 조건(위치·지역·필터)이 <strong>🕘 최근 조회</strong>로 자동 기록됩니다.</li>
+            <li><strong>⭐ 이 조건 저장</strong>을 누르면 즐겨찾기로 고정됩니다(저장되면 "⭐ 저장됨"으로 표시).</li>
+            <li>칩을 누르면 입력창이 그 조건으로 채워지고 바로 다시 조회합니다. ✕로 삭제, 최근 칩의 ☆로 즐겨찾기 승격.</li>
+          </ul>
+          <div class="tip">💡 모든 기록은 <strong>이 브라우저 안에만</strong> 저장됩니다(localStorage). 서버로 전송되지 않으며, 다른 기기와 동기화되지 않습니다.</div>
+        </div>
+
+        <div class="feature" id="feat-servicemap">
+          <h3>🗺️ 지도 보기</h3>
+          <p>위치 기반 탭(주유소·따릉이·시내버스·주차장)의 결과 위 <strong>“🗺️ 지도 보기”</strong> 버튼을 누르면, 검색 결과를 실제 지도에 핀으로 표시합니다. 초록 핀은 내 위치, 번호 핀은 결과 순서이며 핀을 누르면 이름·요약이 뜹니다.</p>
+          <div class="tip">💡 지도는 <strong>처음 열 때만</strong> 불러오며, 지도 타일은 OpenStreetMap에서 받아옵니다. 다크 모드에서는 지도도 어둡게 표시됩니다.</div>
+        </div>
+
+        <div class="feature" id="feat-install">
+          <h3>⬇️ 앱으로 설치 (PWA)</h3>
+          <p>홈 화면에 앱처럼 설치해 아이콘으로 바로 열 수 있습니다. 설치가 가능하면 상단에 <strong>“⬇️ 앱 설치”</strong> 버튼이 나타납니다.</p>
+          <ul>
+            <li><strong>안드로이드·데스크톱(Chrome·Edge)</strong>: “앱 설치” 버튼 또는 주소창의 설치 아이콘.</li>
+            <li><strong>iOS(Safari)</strong>: 공유 → “홈 화면에 추가”.</li>
+          </ul>
+          <div class="tip">💡 설치하면 기본 화면·디자인이 캐시되어 <strong>다음 실행이 빨라지고</strong>, 네트워크가 잠깐 끊겨도 화면 뼈대는 뜹니다. 단, 실시간 데이터는 항상 인터넷이 필요합니다.</div>
+        </div>
+
+      </div>
+    </section>
+
     <!-- 6. 모바일 -->
     <section class="guide-section" id="sec-mobile">
       <div class="section-header sh-5">
@@ -810,6 +875,11 @@ kbd{
     <div class="sidebar-section">
       <a class="sidebar-link" href="#sec-life">
         <span class="sidebar-dot" style="background:var(--c1)"></span>생활서비스
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="#sec-personal">
+        <span class="sidebar-dot" style="background:#f59e0b"></span>편의 기능
       </a>
     </div>
     <div class="sidebar-section">

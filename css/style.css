@@ -594,6 +594,7 @@ a.card.lh-card:hover { border-color: var(--accent); }
   font-size: 13px; font-weight: 600; cursor: pointer; transition: .15s;
 }
 .fav-save:hover { border-color: var(--accent); color: var(--accent); }
+.fav-save.saved { border-color: var(--accent); color: var(--accent); background: var(--accent-tint); }
 .fav-hint { font-size: 12.5px; color: var(--muted); }
 .fav-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .favchip {
@@ -638,6 +639,12 @@ a.card.lh-card:hover { border-color: var(--accent); }
 .map-marker.mm-me { background: var(--ok); width: 18px; height: 18px; }
 .leaflet-popup-content { font-size: 13px; line-height: 1.5; }
 @media (max-width: 480px) { .svc-map { height: 280px; } }
+/* 다크모드에서 밝은 OSM 타일이 눈부시지 않게 — 타일만 반전(마커·팝업은 marker-pane라 무관) */
+@media (prefers-color-scheme: dark) {
+  .leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
+}
+:root[data-theme="dark"] .leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
+:root[data-theme="light"] .leaflet-tile { filter: none; }
 
 /* ===== PWA 설치 버튼 ===== */
 .install-btn {

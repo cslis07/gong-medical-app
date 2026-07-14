@@ -77,7 +77,7 @@
     if (!st.map) {
       st.map = L.map(el, { scrollWheelZoom: false });
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19, attribution: '&copy; OpenStreetMap',
+        maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
       }).addTo(st.map);
       st.layer = L.layerGroup().addTo(st.map);
     }
@@ -96,6 +96,9 @@
     });
     st.map.invalidateSize();
     if (bounds.length) st.map.fitBounds(bounds, { padding: [28, 28], maxZoom: 16 });
+    // 컨테이너가 방금 보여진 직후엔 크기 계산이 어긋나 타일이 회색으로 남을 수 있다.
+    // 다음 프레임에 한 번 더 보정한다.
+    setTimeout(() => { if (st.map) { st.map.invalidateSize(); if (bounds.length) st.map.fitBounds(bounds, { padding: [28, 28], maxZoom: 16 }); } }, 120);
   }
 
   // 각 검색 함수가 결과 렌더 후 호출한다.
