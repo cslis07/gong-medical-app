@@ -13,9 +13,8 @@
 - **공단 실시간 주차면수** — 활용신청 승인(2026-07-08)됐으나 **제공기관 백엔드가 죽어 있음**. 코드·스냅샷은 이미 붙어 있어(`lib/kotsa-parking.js`, `data/parking-kotsa.js`) 백엔드 회복 시 `npm run build:parking` + `KOTSA_PARKING=1` 재배포만 하면 켜진다. 회복 확인: `/api/parking?diag=1`
 - **공공임대 단지(SH 포함)** — 마이홈 API 키 미전파(code 30) + 마이홈이 Vercel IP 차단(fetch failed). 현재 `{pending:true}` degrade. 키 전파 후 재확인, `signguCode` 필수 여부 확인.
 - **광주 지역코드 복구** — 전남광주통합특별시 출범(2026-07-01)으로 5개 구 LAWD_CD 전부 무효(전부 0건). 실거래가 지역 목록에서 제외 중. [행안부 코드표](https://business.juso.go.kr/jsi/jsiAreaCode)에서 새 코드 확인 후 `LAWD`(js/services.js)에 복구.
-- **브라우저 육안 검증** — Chrome 확장 끊김으로 최근 개선(실거래가 필터/지도·페이지네이션, 미세먼지 필터·배지, LH 필터, 주차장 탭, 전면 리디자인, **즐겨찾기·PWA**)이 **API·배포파일 레벨로만 검증**됨. 특히 즐겨찾기 칩/PWA 설치 플로우는 DOM 육안 확인 필요.
+- **브라우저 육안 검증** — Chrome 확장 끊김으로 최근 개선(실거래가 필터/지도·페이지네이션, 미세먼지 필터·배지, LH 필터, 주차장 탭, 전면 리디자인, **즐겨찾기·PWA·지도 뷰**)이 **API·배포파일 레벨로만 검증**됨. 특히 ①즐겨찾기 칩 저장·재조회 ②PWA 설치 플로우 ③지도 핀 위치·타일 로드·다크모드는 **DOM 육안 확인 미완**. Leaflet 타일이 뜨는지, divIcon 배지가 겹치지 않는지 확인 필요.
 - **PWA 아이콘 PNG** — 현재 `icon.svg` 1종(모던 Chrome/Edge 설치 OK). iOS 홈화면 아이콘·구형 브라우저용 192/512 PNG는 미생성(로컬에 ImageMagick 없음 — `convert`는 Windows NTFS 툴). 기존 §4 "OG 이미지"와 묶어 처리.
-- **지도 뷰(보류)** — 결과를 지도에 핀으로. CSP(`default-src 'self'`)상 실 타일맵은 Leaflet 로컬 벤더링 + `img-src`/`connect-src`에 타일 도메인 허용 필요. 사용자 결정 대기.
 
 ---
 
@@ -75,6 +74,7 @@
 - **헤더 배지**: 수도권(서울·경기·인천) 183개 측정소 평균 PM10을 숫자+등급+색상으로 상시 표시(클릭 시 미세먼지 탭).
 - **즐겨찾기·최근조회**(2026-07-14): `js/favorites.js`가 9개 패널(혼잡도·주유소·따릉이·고속도로·실거래가·미세먼지·시내버스·LH·주차장)에 칩 바를 주입. 조회 버튼을 누르면 조건 스냅샷을 `localStorage`(`gong.recent.v1`)에 자동 기록, ⭐로 즐겨찾기(`gong.fav.v1`) 고정. 칩 클릭 시 입력창 되채움 + 해당 탭에서 재조회. 백엔드 0. `PANELS` 레지스트리에 `fields`/`run`/`changeFields`만 추가하면 패널 확장.
 - **PWA**(2026-07-14): `manifest.webmanifest` + `sw.js`(정적 stale-while-revalidate 캐시, `/api`는 항상 네트워크) + `js/pwa.js`(SW 등록 + `beforeinstallprompt` 시 헤더에 "⬇️ 앱 설치" 버튼). 아이콘은 `icon.svg`(any+maskable). 홈 화면 설치 + 오프라인 셸.
+- **지도 뷰**(2026-07-14): `js/map.js` — 위치기반 4탭(주유소·따릉이·시내버스·주차장) 결과를 실제 지도(Leaflet + OSM 타일)에 핀으로. 결과 위 "🗺️ 지도 보기" 토글, 처음 열 때만 Leaflet 지연 로드. **CSP 대응**: Leaflet은 `/vendor/leaflet/`에 로컬 벤더링(script-src 'self' 충족), OSM 타일 도메인만 `img-src`에 예외 추가(`https://*.tile.openstreetmap.org`). 타일은 사용자 브라우저가 직접 받아 Vercel IP 차단과 무관. 기본 마커 PNG 대신 divIcon 원형 배지 → 이미지 의존 0. 주유소 좌표는 `lib/gas.js`가 Opinet KATEC(`GIS_X_COOR`/`GIS_Y_COOR`)를 proj4로 WGS84 역변환해 제공.
 - 오류 시 🔄 다시 시도 박스, 모바일 최적화(바텀시트·탭 가로스크롤·44px 터치), 📖 `guide.html`.
 
 ---
@@ -93,6 +93,8 @@ lib/respond.js        에러 응답 정제(원문·키 유출 차단) + redact (
 js/guide.js           guide.html 전용 스크립트 (CSP 때문에 인라인에서 분리)
 js/theme.js           라이트/다크 테마 부트스트랩 + 토글 (head에서 동기 로드, FOUC 방지)
 js/favorites.js       ★ 즐겨찾기·최근조회 (localStorage, services.js 뒤 로드, 패널 레지스트리)
+js/map.js             ★ 지도 뷰 (Leaflet, 4탭 결과 핀. GongMap.set(panel, points, center))
+vendor/leaflet/       ★ Leaflet 1.9.4 로컬 벤더링 (leaflet.js 148KB + leaflet.css) — CSP 대응
 js/pwa.js             ★ 서비스워커 등록 + 설치 버튼
 sw.js                 ★ 서비스워커 (정적 SWR 캐시, /api 제외) — 루트에 둬야 scope '/'
 manifest.webmanifest  ★ PWA 매니페스트 (아이콘·shortcuts)

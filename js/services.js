@@ -304,7 +304,7 @@ async function searchGas() {
     if (d.needKey) return setBox("gasStatus", "⚠️ 주유소 기능은 OPINET 인증키 설정 후 이용 가능합니다.", "warn");
     const rows = d.rows || [];
     if (!rows.length) return endEmpty("gasResults", "gasStatus", d.message || "반경 내 주유소가 없습니다.", "warn");
-    gasCache = { rows, radius: Number(d.radius) || Number(radius) };
+    gasCache = { rows, radius: Number(d.radius) || Number(radius), center: { lat, lon } };
     fillGasBrands(rows);
     applyGasFilter();
   } catch (e) { setBox("gasStatus", `오류: ${e.message}`, "error"); retryBox("gasResults", e.message, searchGas); }
@@ -324,6 +324,7 @@ function applyGasFilter() {
   if (!out.length) return endEmpty("gasResults", "gasStatus", `${brand} 주유소가 반경 내에 없습니다.`, "warn");
   setBox("gasStatus", `가격순 ${out.length}곳${brand ? ` · ${brand}` : ""} (반경 ${radius / 1000}km)`, "ok");
   byId("gasResults").innerHTML = out.map((s, i) => renderGas(s, i)).join("");
+  if (window.GongMap) GongMap.set("gas", out.map((s) => ({ lat: s.lat, lon: s.lon, label: s.name, sub: `${s.price ? s.price.toLocaleString() + "원/L" : ""}${s.brand ? " · " + s.brand : ""}` })), gasCache.center);
 }
 function renderGas(s, i) {
   const chips = [s.carWash ? "세차장" : "", s.maint ? "경정비" : "", s.cvs ? "편의점" : "", s.kpetro ? "품질인증" : ""]
@@ -362,6 +363,7 @@ async function searchBike() {
         <div class="card-actions">${map}</div>
       </article>`;
     }).join("");
+    if (window.GongMap) GongMap.set("bike", rows.map((s) => ({ lat: s.lat, lon: s.lon, label: s.name, sub: `자전거 ${s.bikes}대 · 거치대 ${s.racks}개` })), { lat, lon });
   } catch (e) { setBox("bikeStatus", `오류: ${e.message}`, "error"); retryBox("bikeResults", e.message, searchBike); }
 }
 byId("bikeBtn").addEventListener("click", searchBike);
@@ -626,6 +628,7 @@ async function searchCitybus() {
         <p class="meta">누르면 실시간 도착정보 표시 <span class="opt">▾</span></p>
         <div class="cb-arrivals"></div>
       </article>`).join("");
+    if (window.GongMap) GongMap.set("citybus", stops.map((s) => ({ lat: s.lat, lon: s.lon, label: s.name, sub: s.arsno ? `정류소번호 ${s.arsno}` : "" })), { lat, lon });
   } catch (e) { setBox("cbStatus", `오류: ${e.message}`, "error"); retryBox("cbResults", e.message, searchCitybus); }
 }
 async function loadArrivals(cardEl) {
@@ -778,6 +781,7 @@ async function searchParking(page = 1) {
     if (!rows.length) { clearPager("pkPager"); return endEmpty("pkResults", "pkStatus", f ? "조건에 맞는 주차장이 없습니다." : "주변 주차장이 없습니다.", "warn"); }
     setBox("pkStatus", `조건에 맞는 ${d.matched.toLocaleString()}곳 · 실시간 제공 ${d.liveCount}곳`, "ok");
     byId("pkResults").innerHTML = rows.map(renderParking).join("");
+    if (window.GongMap) GongMap.set("parking", rows.map((p) => ({ lat: p.lat, lon: p.lon, label: p.name, sub: p.addr })), pkCoords);
     renderPager("pkPager", d.page, d.totalPages, (p) => { searchParking(p).then(() => scrollToResults("pkResults")); }, d.matched);
   } catch (e) { setBox("pkStatus", `오류: ${e.message}`, "error"); retryBox("pkResults", e.message, () => searchParking(1)); }
 }

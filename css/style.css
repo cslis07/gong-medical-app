@@ -615,6 +615,30 @@ a.card.lh-card:hover { border-color: var(--accent); }
 .favchip-del:hover { color: #d64545; }
 @media (max-width: 480px) { .favchip-go { max-width: 150px; } }
 
+/* ===== 지도 뷰 (Leaflet) ===== */
+.map-toggle-bar { margin: 6px 0 0; }
+.map-toggle {
+  padding: 8px 14px; border: 1px solid var(--border); background: var(--card);
+  color: var(--muted); border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.map-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.svc-map {
+  height: 340px; margin: 10px 0 4px; border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden; background: var(--surface-2);
+}
+.svc-map .leaflet-container { height: 100%; width: 100%; background: var(--surface-2); font: inherit; }
+/* 커스텀 핀 (기본 마커 PNG 미사용 → divIcon 원형 배지) */
+.map-marker {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid #fff; box-shadow: 0 1px 5px rgba(0,0,0,.4);
+  font-size: 12px; font-weight: 700; color: #fff;
+}
+.map-marker.mm-pt { background: var(--accent); }
+.map-marker.mm-me { background: var(--ok); width: 18px; height: 18px; }
+.leaflet-popup-content { font-size: 13px; line-height: 1.5; }
+@media (max-width: 480px) { .svc-map { height: 280px; } }
+
 /* ===== PWA 설치 버튼 ===== */
 .install-btn {
   padding: 7px 12px; border: 1px solid var(--accent); background: var(--accent);
