@@ -99,6 +99,9 @@ js/pwa.js             ★ 서비스워커 등록 + 설치 버튼
 sw.js                 ★ 서비스워커 (정적 SWR 캐시, /api 제외) — 루트에 둬야 scope '/'
 manifest.webmanifest  ★ PWA 매니페스트 (아이콘·shortcuts)
 icon.svg              ★ 앱 아이콘 (any + maskable)
+robots.txt            ★ 크롤러 허용 + /api 차단 + sitemap 링크
+sitemap.xml           ★ / · /guide.html
+vercel.json           redirects: /favicon.ico → /icon.svg (완성도 점검 후 추가)
 data/parking-nationwide.js  전국 주차장 스냅샷 17,768곳 (4.5MB, 자동생성)
 data/parking-kotsa.js       공단 시설+운영 스냅샷 (현재 빈 배열 — 백엔드 장애)
 scripts/build-parking-snapshot.mjs  위 두 스냅샷 빌더 (`npm run build:parking`)
