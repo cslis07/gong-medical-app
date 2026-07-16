@@ -504,6 +504,13 @@ a.card.lh-card:hover { border-color: var(--accent); }
 /* =========================================================================
    반응형
    ========================================================================= */
+/* 중간 폭(태블릿·좁은 창): 4열이 너무 빡빡해 입력칸이 최소폭까지 짜부라지는 구간.
+   2열 + 버튼 전체폭으로 전환해 여유를 준다. */
+@media (max-width: 800px) and (min-width: 641px) {
+  .controls { grid-template-columns: 1fr 1fr; }
+  .controls .search-btn { grid-column: 1 / -1; }
+}
+
 @media (max-width: 640px) {
   .wrap { padding: 0 12px; }
 
