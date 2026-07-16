@@ -196,6 +196,11 @@ button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
 }
 .geo-only { grid-column: 1 / -1; }
 .field { display: flex; flex-direction: column; gap: 6px; }
+/* 그리드 아이템의 min-width:auto 때문에 입력칸이 못 줄어들어 버튼이 카드 밖으로
+   밀리는 오버플로 방지 (예: 실거래가 필터 줄의 "필터 적용") */
+.controls .field { min-width: 0; }
+.controls .field input, .controls .field select { width: 100%; min-width: 0; }
+.controls .search-btn { white-space: nowrap; min-width: 0; }
 .field label { font-size: 13px; font-weight: 600; color: var(--muted); }
 .field .opt { font-weight: 400; color: var(--muted); opacity: .8; }
 select, input[type=text], input[type=number], input[type=date] {

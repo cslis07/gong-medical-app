@@ -2,7 +2,7 @@
 // 정적(HTML·CSS·JS·아이콘)은 cache-first(+백그라운드 갱신), /api 는 캐시하지 않는다
 // (실시간 데이터가 stale해지면 안 됨 → 항상 네트워크, 실패 시 앱의 재시도 UI가 처리).
 // 버전을 올리면 옛 캐시를 지운다.
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE = "gong-shell-" + VERSION;
 
 // 콜드스타트 셸. subway-map.png(4.2MB)는 무겁고 지하철 탭에서만 쓰므로 런타임 캐시.
