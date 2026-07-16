@@ -428,14 +428,18 @@ byId("hwQ").addEventListener("keydown", (e) => { if (e.key === "Enter") searchHi
 //      · 부천시 41190 → 원미/소사/오정구 (구 부활)
 //      · 화성시 41590 → 만세/효행/병점/동탄구 (2026-02-01 4개 구 신설)
 //      · 인천 서구 28260 → 서해구 28275 · 검단구 28290 (2026-07-01 분구)
-//    광주 5개 구(29110·29140·29155·29170·29200)는 전남광주통합특별시 출범(2026-07-01) 이후
-//    전부 0건이고 새 코드를 아직 찾지 못해 목록에서 뺐다. 코드 확인되면 되살릴 것.
+//      · 전남광주통합특별시(2026-07-01): 시도 프리픽스가 29(광주)·46(전남) → "12"로 통합.
+//        시·구·군 순 재배열 — 목포 12110 / 여수 12130 / 순천 12150 / 나주 12170 / 광양 12190,
+//        광주 동구 12210 / 서구 12240 / 남구 12270 / 북구 12300 / 광산구 12330.
+//        (2026-07-16 RTMS 실조회로 동 이름까지 대조 확인. 옛 46110 목포도 0건 = 46 전체 폐기)
 const LAWD = {
   "서울": { "종로구": "11110", "중구": "11140", "용산구": "11170", "성동구": "11200", "광진구": "11215", "동대문구": "11230", "중랑구": "11260", "성북구": "11290", "강북구": "11305", "도봉구": "11320", "노원구": "11350", "은평구": "11380", "서대문구": "11410", "마포구": "11440", "양천구": "11470", "강서구": "11500", "구로구": "11530", "금천구": "11545", "영등포구": "11560", "동작구": "11590", "관악구": "11620", "서초구": "11650", "강남구": "11680", "송파구": "11710", "강동구": "11740" },
   "경기": { "수원 영통구": "41117", "수원 팔달구": "41115", "성남 분당구": "41135", "성남 수정구": "41131", "용인 수지구": "41465", "용인 기흥구": "41463", "고양 일산동구": "41285", "부천 원미구": "41192", "부천 소사구": "41194", "부천 오정구": "41196", "안양 동안구": "41173", "화성 만세구": "41591", "화성 효행구": "41593", "화성 병점구": "41595", "화성 동탄구": "41597", "김포시": "41570", "하남시": "41450", "남양주시": "41360", "광명시": "41210", "의정부시": "41150" },
   "인천": { "연수구": "28185", "남동구": "28200", "서해구": "28275", "검단구": "28290", "계양구": "28245", "부평구": "28237" },
   "부산": { "해운대구": "26350", "수영구": "26500", "동래구": "26260", "부산진구": "26230" },
   "대구": { "수성구": "27260", "달서구": "27290" }, "대전": { "유성구": "30200", "서구": "30170" },
+  "광주": { "동구": "12210", "서구": "12240", "남구": "12270", "북구": "12300", "광산구": "12330" },
+  "전남": { "목포시": "12110", "여수시": "12130", "순천시": "12150", "나주시": "12170", "광양시": "12190" },
 };
 function initRealEstate() {
   const sel = byId("reRegion");
@@ -495,6 +499,8 @@ function applyReFilter() {
 
   let out = rows.slice();
   if (kind) out = out.filter((r) => r.kind === kind);                        // 전세 / 월세 분리
+  const aptQ = byId("reApt").value.trim().replace(/\s+/g, "");
+  if (aptQ) out = out.filter((r) => String(r.apt || "").replace(/\s+/g, "").includes(aptQ));   // 단지명 부분일치
   if (Number.isFinite(min)) out = out.filter((r) => rePrice(uiType, r) >= min * 10000);
   if (Number.isFinite(max)) out = out.filter((r) => rePrice(uiType, r) <= max * 10000);
   if (uiType === "wolse" && Number.isFinite(monMax)) out = out.filter((r) => (r.monthly || 0) <= monMax);
@@ -516,8 +522,9 @@ function applyReFilter() {
 // 필터·정렬을 바꾸면 1페이지로 되돌린다.
 const applyReFilterReset = () => { rePage = 1; applyReFilter(); };
 byId("reApply").addEventListener("click", applyReFilterReset);
-["reMin", "reMax", "reMonMax"].forEach((id) => byId(id).addEventListener("keydown", (e) => { if (e.key === "Enter") applyReFilterReset(); }));
+["reMin", "reMax", "reMonMax", "reApt"].forEach((id) => byId(id).addEventListener("keydown", (e) => { if (e.key === "Enter") applyReFilterReset(); }));
 byId("reSort").addEventListener("change", applyReFilterReset);
+byId("reApt").addEventListener("input", () => { if (reCache.rows.length) applyReFilterReset(); });   // 단지명 실시간 필터
 
 const eok = (manwon) => manwon >= 10000 ? `${(manwon / 10000).toFixed(manwon % 10000 ? 1 : 0)}억` + (manwon % 10000 ? ` ${(manwon % 10000).toLocaleString()}만` : "") : `${manwon.toLocaleString()}만`;
 function renderRealEstate(uiType, r) {

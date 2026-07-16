@@ -12,7 +12,7 @@
 
 - **공단 실시간 주차면수** — 활용신청 승인(2026-07-08)됐으나 **제공기관 백엔드가 죽어 있음**. 코드·스냅샷은 이미 붙어 있어(`lib/kotsa-parking.js`, `data/parking-kotsa.js`) 백엔드 회복 시 `npm run build:parking` + `KOTSA_PARKING=1` 재배포만 하면 켜진다. 회복 확인: `/api/parking?diag=1`
 - **공공임대 단지(SH 포함)** — 마이홈 API 키 미전파(code 30) + 마이홈이 Vercel IP 차단(fetch failed). 현재 `{pending:true}` degrade. 키 전파 후 재확인, `signguCode` 필수 여부 확인.
-- **광주 지역코드 복구** — 전남광주통합특별시 출범(2026-07-01)으로 5개 구 LAWD_CD 전부 무효(전부 0건). 실거래가 지역 목록에서 제외 중. [행안부 코드표](https://business.juso.go.kr/jsi/jsiAreaCode)에서 새 코드 확인 후 `LAWD`(js/services.js)에 복구.
+- ~~광주 지역코드 복구~~ → **완료(2026-07-16)**. RTMS 전수 프로브로 새 시도 프리픽스 **"12"** 발견(서울 11 다음). 광주 동 12210/서 12240/남 12270/북 12300/광산 12330 + 전남 5시(목포 12110~광양 12190) 동 이름 대조로 실증, `LAWD` 복구. **옛 46(전남)도 전체 폐기됨** 주의.
 - **브라우저 육안 검증 (2026-07-16 대부분 완료)** — Chrome MCP가 잠시 복구된 사이 실측: **콘솔 에러 0건(로드 포함)**, 즐겨찾기 저장("⭐ 저장됨")·최근조회 칩·지도(타일·번호핀·팝업·다크반전·토글) 전부 정상 확인. 실측 중 **필터 버튼 오버플로 버그 발견→수정**(아래). 남은 육안 확인 2건: ①필터 버튼 수정 후 모습(CSS는 서버 라이브, SW 캐시 특성상 재방문 1회 후 적용) ②PWA 설치 프롬프트(테스트 중 미출현 — Chrome 설치 휴리스틱, 오류 아님).
 - **PWA 아이콘·OG PNG (2026-07-16 완료)** — `npm run build:assets`(scripts/build-assets.mjs, sharp devDep)가 icon.svg → icon-192/512·apple-touch-icon PNG + **OG 1200×630 한글 브랜드 이미지**를 생성. manifest는 PNG(any+maskable)+SVG 폴백, twitter summary_large_image. ⚠️ 이 머신의 `convert`는 ImageMagick이 아니라 Windows NTFS 툴 — 래스터화는 sharp로만.
 
@@ -72,7 +72,7 @@
   - 주차장은 전국 17,000여곳이라 **서버가 `page`/`size`로 잘라 준다**(12건/쪽). 페이지 이동 시 좌표를 캐시해 위치를 다시 묻지 않는다.
 - **위치 입력**: 브라우저 geolocation **또는 주소 입력**(`/api/geocode`). 주유소·따릉이·시내버스·주차장에 적용.
 - **헤더 배지**: 수도권(서울·경기·인천) 183개 측정소 평균 PM10을 숫자+등급+색상으로 상시 표시(클릭 시 미세먼지 탭).
-- **즐겨찾기·최근조회**(2026-07-14): `js/favorites.js`가 9개 패널(혼잡도·주유소·따릉이·고속도로·실거래가·미세먼지·시내버스·LH·주차장)에 칩 바를 주입. 조회 버튼을 누르면 조건 스냅샷을 `localStorage`(`gong.recent.v1`)에 자동 기록, ⭐로 즐겨찾기(`gong.fav.v1`) 고정. 칩 클릭 시 입력창 되채움 + 해당 탭에서 재조회. 백엔드 0. `PANELS` 레지스트리에 `fields`/`run`/`changeFields`만 추가하면 패널 확장.
+- **즐겨찾기·최근조회**(2026-07-14, 07-16 확장): `js/favorites.js`가 11개 패널(지하철 역·로또 내번호 포함, 혼잡도·주유소·따릉이·고속도로·실거래가·미세먼지·시내버스·LH·주차장)에 칩 바를 주입. 지하철은 검색 UI가 동적 생성이라 `delegate`(패널 위임)로 기록. 조회 버튼을 누르면 조건 스냅샷을 `localStorage`(`gong.recent.v1`)에 자동 기록, ⭐로 즐겨찾기(`gong.fav.v1`) 고정. 칩 클릭 시 입력창 되채움 + 해당 탭에서 재조회. 백엔드 0. `PANELS` 레지스트리에 `fields`/`run`/`changeFields`만 추가하면 패널 확장.
 - **PWA**(2026-07-14): `manifest.webmanifest` + `sw.js`(정적 stale-while-revalidate 캐시, `/api`는 항상 네트워크) + `js/pwa.js`(SW 등록 + `beforeinstallprompt` 시 헤더에 "⬇️ 앱 설치" 버튼). 아이콘은 `icon.svg`(any+maskable). 홈 화면 설치 + 오프라인 셸.
 - **지도 뷰**(2026-07-14): `js/map.js` — 위치기반 4탭(주유소·따릉이·시내버스·주차장) 결과를 실제 지도(Leaflet + OSM 타일)에 핀으로. 결과 위 "🗺️ 지도 보기" 토글, 처음 열 때만 Leaflet 지연 로드. **CSP 대응**: Leaflet은 `/vendor/leaflet/`에 로컬 벤더링(script-src 'self' 충족), OSM 타일 도메인만 `img-src`에 예외 추가(`https://*.tile.openstreetmap.org`). 타일은 사용자 브라우저가 직접 받아 Vercel IP 차단과 무관. 기본 마커 PNG 대신 divIcon 원형 배지 → 이미지 의존 0. 주유소 좌표는 `lib/gas.js`가 Opinet KATEC(`GIS_X_COOR`/`GIS_Y_COOR`)를 proj4로 WGS84 역변환해 제공.
 - 오류 시 🔄 다시 시도 박스, 모바일 최적화(바텀시트·탭 가로스크롤·44px 터치), 📖 `guide.html`.
@@ -124,7 +124,7 @@ package.json          deps: fast-xml-parser, proj4
 - [x] **주차장 전국 확대** (2026-07-10) — 전국주차장정보표준데이터로 17,768곳 커버. 스냅샷 방식(§9).
 - [ ] **공단 실시간 주차면수** — 한국교통안전공단 `B553881/Parking`은 **활용신청 승인됨(2026-07-08)에도 제공기관 백엔드가 죽어 있다**(`Error forwarding request to backend server`). 코드·스냅샷 빌드는 이미 붙어 있으니(`lib/kotsa-parking.js`, `data/parking-kotsa.js`) 백엔드가 살아나면 `npm run build:parking` + `KOTSA_PARKING=1` 재배포만 하면 켜진다. 회복 확인: `/api/parking?diag=1`
 - [ ] **공공임대 단지(SH 포함)** — `data.myhome.go.kr/rentalHouseList` 구현 완료했으나 ① 키가 마이홈 엔드포인트에 미전파(code 30) ② 마이홈이 Vercel IP 차단(fetch failed). 현재 "pending" 안내로 degrade. 전파 후 재확인 필요. `signguCode`(시군구, 마이홈 자체 코드) 필수 여부도 함께 확인.
-- [ ] **광주 지역코드 복구** — 전남광주통합특별시 출범으로 5개 구 LAWD_CD가 전부 무효(전부 0건). 새 코드를 못 찾아 실거래가 지역 목록에서 제외한 상태. [행안부 행정구역 코드 변경 안내](https://business.juso.go.kr/jsi/jsiAreaCode)에서 확인 후 `LAWD`(js/services.js)에 되살릴 것.
+- [x] **광주 지역코드 복구** (2026-07-16) — 새 프리픽스 12 발견, 광주 5구+전남 5시 실증 복구. §7 참고.
 - [ ] **브라우저 육안 검증** — Chrome 확장이 끊겨 최근 개선(실거래가 필터/지도·페이지네이션, 미세먼지 필터·배지, LH 필터, 주차장 탭)은 **API·배포파일 레벨로만 검증**됨.
 - [ ] (보류) **공연 잔여석** — 인터파크가 NOL로 개편되며 이름검색이 SPA HTML만 반환, 유효 goodsCode 확보 불가.
 - [ ] (보류) **대중교통 길찾기(ODsay)** — 키 발급 + 호출 IP 화이트리스트 필요(Vercel IP 유동).
@@ -230,7 +230,7 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 | LH 전량 수집 시 7,590건 중 2,700건만 도착 | 40페이지를 `Promise.all`로 한 번에 던지면 **13페이지가 무응답**. `.catch(()=>[])`가 조용히 삼켜 데이터가 말없이 사라짐 | `lib/pool.js`(동시성 4 + 재시도 1회). 실패 페이지는 응답의 `failedPages`로 **드러낸다** |
 | 실거래가 응답이 10초 초과 | RTMS는 호출 1건이 5~9초. 17페이지면 기본 동시성으론 17초 | RTMS는 병렬에 강하므로 동시성 20. 더해 `vercel.json`에 `maxDuration: 60`(Hobby 기본 10초) |
 | 부천·화성·인천 서구가 **거래 0건** (오류 아님, `resultCode=000`) | **행정구역 개편으로 LAWD_CD가 바뀜.** RTMS는 과거 거래도 새 코드로 재색인한다 | 부천→41192/41194/41196, 화성→41591·41593·41595·41597(만세·효행·병점·동탄), 인천 서구→28275(서해구)·28290(검단구). 전부 실제 조회로 검증 |
-| 광주 5개 구 전부 0건 | 전남광주통합특별시 출범(2026-07-01)으로 시도코드 변경 추정. 46/53~57 접두어 스캔에도 안 잡힘 | **미해결.** 지역 목록에서 제외. 행안부 코드표 확인 필요 |
+| 광주 5개 구 전부 0건 | 전남광주통합특별시 출범(2026-07-01)으로 **시도 프리픽스가 12로 신설**(29·46 폐기). 과거 스캔(46/53~57)은 "특별시=서울 11 다음 12"를 예상 못 함 | **해결(2026-07-16).** 미사용 프리픽스 전수×110 프로브로 12110(목포) 적중 → 12210~12330 광주 5구를 동 이름 대조로 확정. 옛 46110(목포)도 0건 ⇒ 46 전체 재색인됨 |
 | 코드 스캔 중 `API tok…` 응답 | 60개를 동시에 던져 data.go.kr **트래픽 제한** 발동 | 프로브는 소량·순차로 |
 | 지하철 실내공기질 등급이 미세먼지 탭과 어긋남 | `app.js`의 `airLevel()`이 **3단계**(나쁨>35), 나머지는 환경부 **4단계** ⇒ PM2.5 100이 한쪽은 "나쁨", 다른 쪽은 "매우나쁨" | 4단계로 통일(≤15/≤35/≤75/초과). 분포 카운터·`airFilter` 옵션도 함께 확장 |
 | 주차장 검색 버튼이 이벤트 객체를 페이지 번호로 넘김 | `addEventListener("click", searchParking)` — `searchParking(page)`의 첫 인자로 `PointerEvent`가 들어감 | `() => searchParking(1)`로 감쌈 |

@@ -12,11 +12,14 @@
   // ---- 패널별 설정: 어떤 입력이 "조회 조건"을 이루는지 + 조회 실행 함수 ----
   // changeFields: 값 세팅 후 change 이벤트로 UI를 동기화해야 하는 컨트롤(가시성 토글 등)
   const PANELS = {
+    // 지하철: 검색 UI(mapStnInput/mapStnBtn)가 노선도 렌더 후 동적 생성 → delegate로 위임 처리
+    subway:     { fields: ["mapStnInput"], run: () => { if (byId("mapStnInput")) openMapStation(); }, empty: "지하철역", delegate: { btnId: "mapStnBtn", inputId: "mapStnInput" } },
     density:    { fields: ["densQ"], run: () => searchDensity(), empty: "장소 미지정" },
     gas:        { fields: ["gasProd", "gasRadius", "gasFilter", "gasAddr"], run: () => searchGas(), empty: "내 위치", locKey: "gasAddr" },
     bike:       { fields: ["bikeAddr"], run: () => searchBike(), empty: "내 위치", locKey: "bikeAddr" },
     highway:    { fields: ["hwMode", "hwQ"], changeFields: ["hwMode"], run: () => searchHighway(), empty: "고속도로" },
-    realestate: { fields: ["reType", "reRegion", "reYm"], changeFields: ["reType"], run: () => searchRealEstate(), empty: "실거래가" },
+    realestate: { fields: ["reType", "reRegion", "reYm", "reApt"], changeFields: ["reType"], run: () => searchRealEstate(), empty: "실거래가" },
+    lotto:      { fields: ["lottoRound", "lottoMine"], run: () => searchLotto(), empty: "최신 회차" },
     air:        { fields: ["airSido", "airQ", "airGrade"], run: () => searchAir(), empty: "미세먼지" },
     citybus:    { fields: ["cbAddr"], run: () => searchCitybus(), empty: "내 위치", locKey: "cbAddr" },
     lh:         { fields: ["lhMode", "lhName", "lhRegion", "lhStatusF", "lhSido"], changeFields: ["lhMode"], run: () => (byId("lhMode").value === "rental" ? searchRental() : searchLH()), empty: "청약·임대" },
@@ -162,17 +165,27 @@
   }
 
   // 조회 버튼을 누르면(=검색 시도) 최근 조회로 기록. 실제 검색 함수는 손대지 않는다.
+  function maybeRecord(panel) {
+    const cfg = PANELS[panel];
+    const vals = snapshot(panel);
+    // 전부 비었고 위치기반도 아니면 기록 생략
+    const hasAny = Object.values(vals).some((v) => String(v).trim() !== "");
+    if (hasAny || cfg.locKey) addRecent(panel, vals);
+  }
   function wireRecord(panel) {
     const cfg = PANELS[panel];
     const sec = byId("panel-" + panel);
-    const btn = sec && sec.querySelector(".search-btn");
+    if (!sec) return;
+    if (cfg.delegate) {
+      // 동적 생성 UI(지하철 노선도 검색): 패널에 위임해 버튼 클릭·Enter·datalist 선택 시 기록
+      sec.addEventListener("click", (e) => { if (e.target && e.target.id === cfg.delegate.btnId) maybeRecord(panel); });
+      sec.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target && e.target.id === cfg.delegate.inputId) maybeRecord(panel); });
+      sec.addEventListener("change", (e) => { if (e.target && e.target.id === cfg.delegate.inputId) maybeRecord(panel); });
+      return;
+    }
+    const btn = sec.querySelector(".search-btn");
     if (!btn) return;
-    btn.addEventListener("click", () => {
-      const vals = snapshot(panel);
-      // 전부 비었고 위치기반도 아니면 기록 생략
-      const hasAny = Object.values(vals).some((v) => String(v).trim() !== "");
-      if (hasAny || cfg.locKey) addRecent(panel, vals);
-    });
+    btn.addEventListener("click", () => maybeRecord(panel));
   }
 
   Object.keys(PANELS).forEach((panel) => {
