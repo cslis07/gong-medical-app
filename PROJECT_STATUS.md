@@ -1,6 +1,6 @@
 # PROJECT_STATUS — 서울 교통·생활 정보 앱
 
-> 최종 갱신: 2026-07-14 · 위치: `C:\Users\GB\Documents\gong-medical-app`
+> 최종 갱신: 2026-07-16 · 위치: `C:\Users\GB\Documents\gong-medical-app`
 > 배포: cslis07/Vercel · 공개 URL: https://gong-medical-app.vercel.app
 > GitHub: cslis07/gong-medical-app (main)
 
@@ -13,8 +13,8 @@
 - **공단 실시간 주차면수** — 활용신청 승인(2026-07-08)됐으나 **제공기관 백엔드가 죽어 있음**. 코드·스냅샷은 이미 붙어 있어(`lib/kotsa-parking.js`, `data/parking-kotsa.js`) 백엔드 회복 시 `npm run build:parking` + `KOTSA_PARKING=1` 재배포만 하면 켜진다. 회복 확인: `/api/parking?diag=1`
 - **공공임대 단지(SH 포함)** — 마이홈 API 키 미전파(code 30) + 마이홈이 Vercel IP 차단(fetch failed). 현재 `{pending:true}` degrade. 키 전파 후 재확인, `signguCode` 필수 여부 확인.
 - **광주 지역코드 복구** — 전남광주통합특별시 출범(2026-07-01)으로 5개 구 LAWD_CD 전부 무효(전부 0건). 실거래가 지역 목록에서 제외 중. [행안부 코드표](https://business.juso.go.kr/jsi/jsiAreaCode)에서 새 코드 확인 후 `LAWD`(js/services.js)에 복구.
-- **브라우저 육안 검증** — Chrome 확장 끊김으로 최근 개선(실거래가 필터/지도·페이지네이션, 미세먼지 필터·배지, LH 필터, 주차장 탭, 전면 리디자인, **즐겨찾기·PWA·지도 뷰**)이 **API·배포파일 레벨로만 검증**됨. 특히 ①즐겨찾기 칩 저장·재조회 ②PWA 설치 플로우 ③지도 핀 위치·타일 로드·다크모드는 **DOM 육안 확인 미완**. Leaflet 타일이 뜨는지, divIcon 배지가 겹치지 않는지 확인 필요.
-- **PWA 아이콘 PNG** — 현재 `icon.svg` 1종(모던 Chrome/Edge 설치 OK). iOS 홈화면 아이콘·구형 브라우저용 192/512 PNG는 미생성(로컬에 ImageMagick 없음 — `convert`는 Windows NTFS 툴). 기존 §4 "OG 이미지"와 묶어 처리.
+- **브라우저 육안 검증 (2026-07-16 대부분 완료)** — Chrome MCP가 잠시 복구된 사이 실측: **콘솔 에러 0건(로드 포함)**, 즐겨찾기 저장("⭐ 저장됨")·최근조회 칩·지도(타일·번호핀·팝업·다크반전·토글) 전부 정상 확인. 실측 중 **필터 버튼 오버플로 버그 발견→수정**(아래). 남은 육안 확인 2건: ①필터 버튼 수정 후 모습(CSS는 서버 라이브, SW 캐시 특성상 재방문 1회 후 적용) ②PWA 설치 프롬프트(테스트 중 미출현 — Chrome 설치 휴리스틱, 오류 아님).
+- **PWA 아이콘·OG PNG (2026-07-16 완료)** — `npm run build:assets`(scripts/build-assets.mjs, sharp devDep)가 icon.svg → icon-192/512·apple-touch-icon PNG + **OG 1200×630 한글 브랜드 이미지**를 생성. manifest는 PNG(any+maskable)+SVG 폴백, twitter summary_large_image. ⚠️ 이 머신의 `convert`는 ImageMagick이 아니라 Windows NTFS 툴 — 래스터화는 sharp로만.
 
 ---
 
@@ -209,6 +209,8 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 | 증상 | 원인 | 해결 |
 |---|---|---|
 | 배포 `Error`, 신규 `/api/*` 전부 **404 NOT_FOUND** | **Vercel Hobby 함수 12개 초과**(api/에 13개) | 핸들러를 `lib/`로 옮기고 `api/[service].js` catch-all 1개로 통합 |
+| "필터 적용" 버튼이 세로로 찌그러져 카드 밖으로 잘림 | CSS 뷰포트 ~660px(DPR 1.5)에서 4열 그리드 **트랙 최소폭 합 > 카드 폭**. 그리드 아이템 기본 `min-width:auto`라 입력칸이 못 줄어듦 | ① `.controls .field`/입력에 `min-width:0` ② 641~800px 중간 브레이크포인트에서 2열 전환 |
+| 배포 직후에도 브라우저에 이전 CSS/JS가 보임 | SW **stale-while-revalidate** — 첫 방문은 캐시 서빙, 백그라운드 갱신 | 정상 동작. 재방문 1회면 반영. 강제 반영 필요 시 sw.js `VERSION` 올려 배포 |
 | 고속버스(KOBUS) `fetch failed` → `connect ETIMEDOUT` *(탭 제거됨, 교훈 보존)* | KOBUS가 **Vercel 데이터센터 IP 차단**(TLS 아님). `node:https`로 바꾸니 진짜 원인이 드러남 | 해결 불가 → 도달 실패 감지 시 `{blocked:true}` 반환, 프론트는 **공식 예매 링크 카드**로 폴백 |
 | 로또 dhlottery 302 → 홈으로 | dhlottery가 해외/데이터센터 IP 차단 | **공개 CDN 미러**(smok95.github.io/lotto) 프록시로 우회 |
 | vworld 지오코딩 프로덕션 `fetch failed` | vworld도 Vercel IP 차단(로컬은 정상) | **Nominatim(OSM) 폴백** 추가. vworld 실패 시 자동 전환 |
