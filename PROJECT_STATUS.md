@@ -73,7 +73,7 @@
 - **위치 입력**: 브라우저 geolocation **또는 주소 입력**(`/api/geocode`). 주유소·따릉이·시내버스·주차장에 적용.
 - **헤더 배지**: 수도권(서울·경기·인천) 183개 측정소 평균 PM10을 숫자+등급+색상으로 상시 표시(클릭 시 미세먼지 탭).
 - **즐겨찾기·최근조회**(2026-07-14, 07-16 확장): `js/favorites.js`가 11개 패널(지하철 역·로또 내번호 포함, 혼잡도·주유소·따릉이·고속도로·실거래가·미세먼지·시내버스·LH·주차장)에 칩 바를 주입. 지하철은 검색 UI가 동적 생성이라 `delegate`(패널 위임)로 기록. 조회 버튼을 누르면 조건 스냅샷을 `localStorage`(`gong.recent.v1`)에 자동 기록, ⭐로 즐겨찾기(`gong.fav.v1`) 고정. 칩 클릭 시 입력창 되채움 + 해당 탭에서 재조회. 백엔드 0. `PANELS` 레지스트리에 `fields`/`run`/`changeFields`만 추가하면 패널 확장.
-- **PWA**(2026-07-14): `manifest.webmanifest` + `sw.js`(정적 stale-while-revalidate 캐시, `/api`는 항상 네트워크) + `js/pwa.js`(SW 등록 + `beforeinstallprompt` 시 헤더에 "⬇️ 앱 설치" 버튼). 아이콘은 `icon.svg`(any+maskable). 홈 화면 설치 + 오프라인 셸.
+- **PWA**(2026-07-14, 07-16 SW 네트워크우선 전환): `manifest.webmanifest` + `sw.js`(정적 **네트워크 우선**+오프라인 시 캐시 폴백, `/api`는 항상 네트워크) + `js/pwa.js`(SW 등록 + `beforeinstallprompt` 시 헤더에 "⬇️ 앱 설치" 버튼). 아이콘은 `icon.svg`(any+maskable). 홈 화면 설치 + 오프라인 셸.
 - **지도 뷰**(2026-07-14): `js/map.js` — 위치기반 4탭(주유소·따릉이·시내버스·주차장) 결과를 실제 지도(Leaflet + OSM 타일)에 핀으로. 결과 위 "🗺️ 지도 보기" 토글, 처음 열 때만 Leaflet 지연 로드. **CSP 대응**: Leaflet은 `/vendor/leaflet/`에 로컬 벤더링(script-src 'self' 충족), OSM 타일 도메인만 `img-src`에 예외 추가(`https://*.tile.openstreetmap.org`). 타일은 사용자 브라우저가 직접 받아 Vercel IP 차단과 무관. 기본 마커 PNG 대신 divIcon 원형 배지 → 이미지 의존 0. 주유소 좌표는 `lib/gas.js`가 Opinet KATEC(`GIS_X_COOR`/`GIS_Y_COOR`)를 proj4로 WGS84 역변환해 제공.
 - **공유 링크·실시간 새로고침**(2026-07-16): 즐겨찾기 바의 "🔗 공유"가 현재 검색조건을 URL 쿼리(`?s=<panel>&<필드>=…#<panel>`)로 인코딩해 `navigator.share`/클립보드로 복사. 로드 시 `restoreFromUrl`이 파싱해 복원(위치탭 주소없음·지하철 동적UI는 자동조회 미루고 채우기만). 실시간 4탭(혼잡도·따릉이·주차장·지하철)에 "🔄 새로고침" 버튼 + `kstClock()` 기준시각. 버스 도착은 펼칠 때마다 재조회(구 `dataset.loaded` 캐시 버그 수정).
 - 오류 시 🔄 다시 시도 박스, 모바일 최적화(바텀시트·탭 가로스크롤·44px 터치), 📖 `guide.html`.
@@ -211,7 +211,7 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 |---|---|---|
 | 배포 `Error`, 신규 `/api/*` 전부 **404 NOT_FOUND** | **Vercel Hobby 함수 12개 초과**(api/에 13개) | 핸들러를 `lib/`로 옮기고 `api/[service].js` catch-all 1개로 통합 |
 | "필터 적용" 버튼이 세로로 찌그러져 카드 밖으로 잘림 | CSS 뷰포트 ~660px(DPR 1.5)에서 4열 그리드 **트랙 최소폭 합 > 카드 폭**. 그리드 아이템 기본 `min-width:auto`라 입력칸이 못 줄어듦 | ① `.controls .field`/입력에 `min-width:0` ② 641~800px 중간 브레이크포인트에서 2열 전환 |
-| 배포 직후에도 브라우저에 이전 CSS/JS가 보임 | SW **stale-while-revalidate** — 첫 방문은 캐시 서빙, 백그라운드 갱신 | 정상 동작. 재방문 1회면 반영. 강제 반영 필요 시 sw.js `VERSION` 올려 배포 |
+| 배포 직후 공유링크 복원이 반쪽만 됨(일부 필드만) | SW **stale-while-revalidate**가 index.html·favorites.js를 **서로 다른 배포 버전**으로 섞어 서빙(version skew). 실측(2026-07-16 Chrome MCP)에서 재현 → SW 캐시 지우니 정상 | **SW를 네트워크 우선으로 변경**(sw.js, v4). 온라인이면 항상 최신, 오프라인만 캐시 셸. skew 원인 제거 |
 | 고속버스(KOBUS) `fetch failed` → `connect ETIMEDOUT` *(탭 제거됨, 교훈 보존)* | KOBUS가 **Vercel 데이터센터 IP 차단**(TLS 아님). `node:https`로 바꾸니 진짜 원인이 드러남 | 해결 불가 → 도달 실패 감지 시 `{blocked:true}` 반환, 프론트는 **공식 예매 링크 카드**로 폴백 |
 | 로또 dhlottery 302 → 홈으로 | dhlottery가 해외/데이터센터 IP 차단 | **공개 CDN 미러**(smok95.github.io/lotto) 프록시로 우회 |
 | vworld 지오코딩 프로덕션 `fetch failed` | vworld도 Vercel IP 차단(로컬은 정상) | **Nominatim(OSM) 폴백** 추가. vworld 실패 시 자동 전환 |
