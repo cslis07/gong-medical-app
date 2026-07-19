@@ -189,6 +189,7 @@
           <label for="lottoMine">내 번호 <span class="opt">(선택 — 6개, 쉼표/공백)</span></label>
           <input type="text" id="lottoMine" placeholder="예: 4, 13, 14, 18, 31, 38" />
         </div>
+        <button id="lottoGen" class="search-btn" type="button" title="1~45 무작위 6개 채우기" style="background:var(--card);color:var(--accent);border:1px solid var(--accent)">🎲 자동생성</button>
         <button id="lottoBtn" class="search-btn">당첨결과 조회</button>
       </section>
       <p class="hint">동행복권 공식 결과를 공개 미러(CDN)로 조회합니다. 내 번호를 넣으면 등수를 계산합니다. 구매·당첨금 수령은 공식 채널에서 확인하세요.</p>
@@ -224,6 +225,13 @@
             <option value="">전체 브랜드</option>
           </select>
         </div>
+        <div class="field">
+          <label for="gasSort">정렬</label>
+          <select id="gasSort">
+            <option value="price">가격순</option>
+            <option value="dist">거리순</option>
+          </select>
+        </div>
         <div class="field grow">
           <label for="gasAddr">주소 <span class="opt">(선택 — 비우면 내 위치)</span></label>
           <input type="text" id="gasAddr" placeholder="예: 서울 강남구 테헤란로 152" />
@@ -239,6 +247,13 @@
     <!-- ============ 🚲 따릉이 ============ -->
     <section class="panel" id="panel-bike">
       <section class="controls">
+        <div class="field">
+          <label for="bikeSort">정렬</label>
+          <select id="bikeSort">
+            <option value="dist">거리순</option>
+            <option value="bikes">자전거 많은순</option>
+          </select>
+        </div>
         <div class="field grow">
           <label for="bikeAddr">주소 <span class="opt">(선택 — 비우면 내 위치)</span></label>
           <input type="text" id="bikeAddr" placeholder="예: 서울 마포구 양화로 160" />
@@ -357,6 +372,13 @@
           <input type="text" id="airQ" placeholder="예: 강남, 종로, 수원" />
         </div>
         <div class="field">
+          <label for="airPollutant">기준물질</label>
+          <select id="airPollutant">
+            <option value="pm10">미세(PM10)</option>
+            <option value="pm25">초미세(PM2.5)</option>
+          </select>
+        </div>
+        <div class="field">
           <label for="airGrade">등급</label>
           <select id="airGrade">
             <option value="">전체</option>
@@ -366,9 +388,16 @@
             <option value="full">매우나쁨</option>
           </select>
         </div>
+        <div class="field">
+          <label for="airStd">기준</label>
+          <select id="airStd">
+            <option value="env">환경부</option>
+            <option value="who">WHO(엄격)</option>
+          </select>
+        </div>
         <button id="airBtn" class="search-btn">대기질 조회</button>
       </section>
-      <p class="hint">에어코리아 실시간 측정정보입니다. 측정소별 미세먼지(PM10)·초미세먼지(PM2.5)와 오늘 예보를 보여줍니다. 측정소명으로 좁히거나 등급으로 필터할 수 있습니다.</p>
+      <p class="hint">에어코리아 실시간 측정정보입니다. <strong>기준물질</strong>로 등급 필터 대상을(PM10/PM2.5), <strong>기준</strong>으로 환경부↔WHO 엄격 기준을 전환할 수 있습니다.</p>
       <div id="airStatus" class="status"></div>
       <div id="airResults" class="results"></div>
     </section>

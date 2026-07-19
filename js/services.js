@@ -273,6 +273,12 @@ async function searchLotto() {
   } catch (e) { setBox("lottoStatus", `오류: ${e.message}`, "error"); retryBox("lottoResults", e.message, searchLotto); }
 }
 byId("lottoBtn").addEventListener("click", searchLotto);
+// 🎲 자동생성 — 1~45 무작위 6개(중복 없이)
+byId("lottoGen").addEventListener("click", () => {
+  const set = new Set();
+  while (set.size < 6) set.add(Math.floor(Math.random() * 45) + 1);
+  byId("lottoMine").value = [...set].sort((a, b) => a - b).join(", ");
+});
 byId("lottoRound").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLotto(); });
 byId("lottoMine").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLotto(); });
 
@@ -332,19 +338,22 @@ function applyGasFilter() {
   const { rows, radius } = gasCache;
   if (!rows.length) return;
   const brand = byId("gasFilter").value;
-  const out = brand ? rows.filter((s) => s.brand === brand) : rows;
+  const sort = byId("gasSort") ? byId("gasSort").value : "price";
+  let out = (brand ? rows.filter((s) => s.brand === brand) : rows).slice();
   if (!out.length) return endEmpty("gasResults", "gasStatus", `${brand} 주유소가 반경 내에 없습니다.`, "warn");
-  setBox("gasStatus", `가격순 ${out.length}곳${brand ? ` · ${brand}` : ""} (반경 ${radius / 1000}km)`, "ok");
-  byId("gasResults").innerHTML = out.map((s, i) => renderGas(s, i)).join("");
+  out.sort((a, b) => sort === "dist" ? (a.distance || 0) - (b.distance || 0) : (a.price || Infinity) - (b.price || Infinity));
+  setBox("gasStatus", `${sort === "dist" ? "거리순" : "가격순"} ${out.length}곳${brand ? ` · ${brand}` : ""} (반경 ${radius / 1000}km)`, "ok");
+  byId("gasResults").innerHTML = out.map((s, i) => renderGas(s, i, sort)).join("");
   if (window.GongMap) GongMap.set("gas", out.map((s) => ({ lat: s.lat, lon: s.lon, label: s.name, sub: `${s.price ? s.price.toLocaleString() + "원/L" : ""}${s.brand ? " · " + s.brand : ""}` })), gasCache.center);
 }
-function renderGas(s, i) {
+function renderGas(s, i, sort = "price") {
   const chips = [s.carWash ? "세차장" : "", s.maint ? "경정비" : "", s.cvs ? "편의점" : "", s.kpetro ? "품질인증" : ""]
     .filter(Boolean).map((c) => `<span class="chip">${E(c)}</span>`).join("");
   const map = s.address ? `<a class="btn map" href="https://map.kakao.com/link/search/${encodeURIComponent(s.name)}" target="_blank" rel="noopener">🗺️ 지도</a>` : "";
   const tel = s.tel ? `<a class="btn tel" href="tel:${E(s.tel).replace(/[^0-9]/g, "")}">📞 ${E(s.tel)}</a>` : "";
+  const medal = i === 0 ? (sort === "dist" ? "📍 " : "🥇 ") : "";
   return `<article class="card">
-    <div class="card-top"><h3>${i === 0 ? "🥇 " : ""}${E(s.name)}</h3>
+    <div class="card-top"><h3>${medal}${E(s.name)}</h3>
       <span class="bed ok">${s.price ? s.price.toLocaleString() + "원/L" : "-"}</span></div>
     <p class="meta">${E(s.brand)}${s.distance ? " · " + s.distance.toLocaleString() + "m" : ""}</p>
     ${s.address ? `<p class="addr">📍 ${E(s.address)}</p>` : ""}
@@ -354,8 +363,10 @@ function renderGas(s, i) {
 }
 byId("gasBtn").addEventListener("click", searchGas);
 byId("gasFilter").addEventListener("change", () => { if (gasCache.rows.length) applyGasFilter(); });
+byId("gasSort").addEventListener("change", () => { if (gasCache.rows.length) applyGasFilter(); });
 
 // ==================== 🚲 따릉이 ====================
+let bikeCache = { rows: [], center: null };
 async function searchBike() {
   try {
     const { lat, lon } = await getLocation("bikeStatus", "bikeAddr");
@@ -365,20 +376,29 @@ async function searchBike() {
     if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
     const rows = d.rows || [];
     if (!rows.length) return endEmpty("bikeResults", "bikeStatus", d.message || "주변 대여소가 없습니다.", "warn");
-    setBox("bikeStatus", `가까운 대여소 ${rows.length}곳 · ${kstClock()} 기준`, "ok");
-    byId("bikeResults").innerHTML = rows.map((s) => {
-      const lvl = s.bikes === 0 ? "full" : s.bikes <= 2 ? "busy" : "ok";
-      const map = `<a class="btn map" href="https://map.kakao.com/link/map/${encodeURIComponent(s.name)},${s.lat},${s.lon}" target="_blank" rel="noopener">🗺️ 지도</a>`;
-      return `<article class="card">
-        <div class="card-top"><h3>${E(s.name)}</h3><span class="bed ${lvl}">자전거 ${s.bikes}대</span></div>
-        <p class="meta">🚲 거치대 ${s.racks}개 · 📍 ${s.distance.toLocaleString()}m</p>
-        <div class="card-actions">${map}</div>
-      </article>`;
-    }).join("");
-    if (window.GongMap) GongMap.set("bike", rows.map((s) => ({ lat: s.lat, lon: s.lon, label: s.name, sub: `자전거 ${s.bikes}대 · 거치대 ${s.racks}개` })), { lat, lon });
+    bikeCache = { rows, center: { lat, lon } };
+    applyBikeSort();
   } catch (e) { setBox("bikeStatus", `오류: ${e.message}`, "error"); retryBox("bikeResults", e.message, searchBike); }
 }
+function applyBikeSort() {
+  const { rows, center } = bikeCache;
+  if (!rows.length) return;
+  const sort = byId("bikeSort") ? byId("bikeSort").value : "dist";
+  const out = rows.slice().sort((a, b) => sort === "bikes" ? (b.bikes || 0) - (a.bikes || 0) : (a.distance || 0) - (b.distance || 0));
+  setBox("bikeStatus", `${sort === "bikes" ? "자전거 많은순" : "가까운 순"} 대여소 ${out.length}곳 · ${kstClock()} 기준`, "ok");
+  byId("bikeResults").innerHTML = out.map((s) => {
+    const lvl = s.bikes === 0 ? "full" : s.bikes <= 2 ? "busy" : "ok";
+    const map = `<a class="btn map" href="https://map.kakao.com/link/map/${encodeURIComponent(s.name)},${s.lat},${s.lon}" target="_blank" rel="noopener">🗺️ 지도</a>`;
+    return `<article class="card">
+      <div class="card-top"><h3>${E(s.name)}</h3><span class="bed ${lvl}">자전거 ${s.bikes}대</span></div>
+      <p class="meta">🚲 거치대 ${s.racks}개 · 📍 ${s.distance.toLocaleString()}m</p>
+      <div class="card-actions">${map}</div>
+    </article>`;
+  }).join("");
+  if (window.GongMap) GongMap.set("bike", out.map((s) => ({ lat: s.lat, lon: s.lon, label: s.name, sub: `자전거 ${s.bikes}대 · 거치대 ${s.racks}개` })), center);
+}
 byId("bikeBtn").addEventListener("click", searchBike);
+byId("bikeSort").addEventListener("change", () => { if (bikeCache.rows.length) applyBikeSort(); });
 
 // ==================== 🛣️ 고속도로 (휴게소 + 소통) ====================
 function syncHwMode() {
@@ -652,17 +672,23 @@ async function searchAir() {
     applyAirFilter();
   } catch (e) { setBox("airStatus", `오류: ${e.message}`, "error"); retryBox("airResults", e.message, searchAir); }
 }
+const GRADE_EMOJI = { ok: "😀", warn: "🙂", busy: "😷", full: "🤢", "": "❓" };
 function applyAirFilter() {
   if (!airCache) return;
   const d = airCache, sido = d.sido;
   const q = byId("airQ").value.trim(), g = byId("airGrade").value;
-  let st = d.stations || [];
+  const std = byId("airStd").value, pol = byId("airPollutant").value;   // 기준(환경부/WHO) · 기준물질
+  // 등급을 클라이언트에서 선택 기준으로 재계산 (WHO 토글이 카드·요약·필터에 모두 반영되게)
+  const grade = (s) => ({ pm10: airGradeOf(s.pm10, "pm10", std), pm25: airGradeOf(s.pm25, "pm25", std) });
+  let st = (d.stations || []).map((s) => ({ ...s, g: grade(s) }));
   if (q) st = st.filter((s) => String(s.station || "").includes(q));
-  if (g) st = st.filter((s) => s.pm10Grade.c === g);
+  if (g) st = st.filter((s) => s.g[pol].c === g);   // 선택한 기준물질(PM10/PM2.5) 등급으로 필터
 
-  const g10 = airGradeOf(d.summary.pm10, "pm10"), g25 = airGradeOf(d.summary.pm25, "pm25");
+  const g10 = airGradeOf(d.summary.pm10, "pm10", std), g25 = airGradeOf(d.summary.pm25, "pm25", std);
+  const worst = [g10, g25].sort((a, b) => "ok warn busy full".indexOf(b.c) - "ok warn busy full".indexOf(a.c))[0];
+  const stdLabel = std === "who" ? "WHO 기준" : "환경부 기준";
   const head = `<article class="card">
-    <div class="card-top"><h3>${E(sido)} 평균</h3></div>
+    <div class="card-top"><h3>${GRADE_EMOJI[worst.c] || ""} ${E(sido)} 평균 <span class="opt">(${stdLabel})</span></h3></div>
     <div class="dust-summary">
       <div class="dust-box ${g10.c}"><span>미세먼지 PM10</span><b>${d.summary.pm10 ?? "-"}</b><em>${g10.t}</em></div>
       <div class="dust-box ${g25.c}"><span>초미세 PM2.5</span><b>${d.summary.pm25 ?? "-"}</b><em>${g25.t}</em></div>
@@ -677,15 +703,18 @@ function applyAirFilter() {
     setBox("airStatus", `조건에 맞는 측정소가 없습니다. (전체 ${d.stations.length}곳)`, "warn");
     byId("airResults").innerHTML = head; return;
   }
-  setBox("airStatus", `${sido} · 측정소 ${st.length}곳${st.length !== d.stations.length ? ` / 전체 ${d.stations.length}` : ""}`, "ok");
+  const polLabel = pol === "pm25" ? "PM2.5" : "PM10";
+  setBox("airStatus", `${sido} · 측정소 ${st.length}곳${st.length !== d.stations.length ? ` / 전체 ${d.stations.length}` : ""} · ${polLabel} ${stdLabel}`, "ok");
   byId("airResults").innerHTML = head + st.map((s) => `
     <article class="card">
-      <div class="card-top"><h3>${E(s.station)}</h3><span class="bed ${s.pm10Grade.c}">PM10 ${s.pm10 ?? "-"} · ${E(s.pm10Grade.t)}</span></div>
-      <p class="meta">초미세(PM2.5) ${s.pm25 ?? "-"} · ${E(s.pm25Grade.t)}${s.o3 != null ? ` · 오존 ${s.o3}` : ""}${s.time ? ` · ${E(s.time)}` : ""}</p>
+      <div class="card-top"><h3>${E(s.station)}</h3><span class="bed ${s.g.pm10.c}">PM10 ${s.pm10 ?? "-"} · ${E(s.g.pm10.t)}</span></div>
+      <p class="meta">초미세(PM2.5) ${s.pm25 ?? "-"} · ${E(s.g.pm25.t)}${s.o3 != null ? ` · 오존 ${s.o3}` : ""}${s.time ? ` · ${E(s.time)}` : ""}</p>
     </article>`).join("");
 }
 byId("airQ").addEventListener("input", () => { if (airCache) applyAirFilter(); });
 byId("airGrade").addEventListener("change", () => { if (airCache) applyAirFilter(); });
+byId("airPollutant").addEventListener("change", () => { if (airCache) applyAirFilter(); });
+byId("airStd").addEventListener("change", () => { if (airCache) applyAirFilter(); });
 
 // 헤더: 수도권 평균 미세먼지 배지
 async function loadDustBadge() {
@@ -702,9 +731,14 @@ async function loadDustBadge() {
   } catch { /* 배지는 실패해도 무시 */ }
 }
 // PM 수치 → 등급(환경부 기준)
-function airGradeOf(v, kind) {
+// 등급 임계값 — 환경부 4단계 + WHO(엄격) 4단계(WHO 24h 가이드라인 기반으로 더 촘촘히)
+const AIR_TH = {
+  env: { pm10: [30, 80, 150], pm25: [15, 35, 75] },
+  who: { pm10: [20, 45, 100], pm25: [10, 25, 50] },
+};
+function airGradeOf(v, kind, std = "env") {
   if (v == null) return { t: "-", c: "" };
-  const th = kind === "pm10" ? [30, 80, 150] : [15, 35, 75];
+  const th = (AIR_TH[std] || AIR_TH.env)[kind];
   const c = v <= th[0] ? "ok" : v <= th[1] ? "warn" : v <= th[2] ? "busy" : "full";
   const t = v <= th[0] ? "좋음" : v <= th[1] ? "보통" : v <= th[2] ? "나쁨" : "매우나쁨";
   return { t, c };
@@ -999,6 +1033,26 @@ byId("nbResults").addEventListener("click", (e) => {
   if (addr && addrTarget && byId(addrTarget)) byId(addrTarget).value = addr;
   switchPanel(b.dataset.panel);
 });
+
+// ---------- 입력창 지우기(×) 버튼 ----------
+// 주요 텍스트 입력에 clear 버튼을 주입(모바일에서 긴 주소·역명 재입력 마찰 감소).
+(function initClearButtons() {
+  const ids = ["gasAddr", "bikeAddr", "cbAddr", "pkAddr", "nbAddr", "densQ", "airQ", "reApt", "lhName", "hwQ", "lottoMine"];
+  ids.forEach((id) => {
+    const el = byId(id);
+    if (!el || el.dataset.clearable) return;
+    el.dataset.clearable = "1";
+    const wrap = document.createElement("span");
+    wrap.className = "input-clear-wrap";
+    el.parentNode.insertBefore(wrap, el);
+    wrap.appendChild(el);
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "input-clear"; btn.setAttribute("aria-label", "입력 지우기"); btn.textContent = "✕"; btn.hidden = !el.value;
+    wrap.appendChild(btn);
+    el.addEventListener("input", () => { btn.hidden = !el.value; });
+    btn.addEventListener("click", () => { el.value = ""; btn.hidden = true; el.focus(); el.dispatchEvent(new Event("input", { bubbles: true })); });
+  });
+})();
 
 // ---------- 실시간 탭 새로고침 버튼 ----------
 // 지하철 도착·혼잡도·따릉이·주차장은 "실시간"인데 한 번 조회하면 값이 굳는다.

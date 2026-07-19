@@ -251,13 +251,45 @@
     };
     r.readAsText(file);
   }
+  // ---- 전 패널 즐겨찾기 모아보기(대시보드) ----
+  const PANEL_LABEL = { subway: "🚇 지하철", density: "👥 혼잡도", gas: "⛽ 주유소", bike: "🚲 따릉이", highway: "🛣️ 고속도로", realestate: "🏠 실거래가", air: "😷 미세먼지", citybus: "🚏 시내버스", lh: "🏘️ 청약·임대", parking: "🅿️ 주차장", lotto: "🎰 로또" };
+  let dashEl = null;
+  function ensureDash() {
+    if (dashEl) return dashEl;
+    dashEl = document.createElement("div");
+    dashEl.className = "favdash";
+    dashEl.style.display = "none";
+    dashEl.addEventListener("click", (e) => {
+      if (e.target === dashEl || e.target.closest(".favdash-close")) { dashEl.style.display = "none"; return; }
+      const go = e.target.closest(".favdash-go");
+      if (go) {
+        const entry = favs.find((f) => f.key === go.dataset.key);
+        if (entry) { dashEl.style.display = "none"; applyEntry(entry.panel, entry.vals); }
+      }
+    });
+    document.body.appendChild(dashEl);
+    return dashEl;
+  }
+  function openFavDash() {
+    if (!favs.length) { alert("저장된 즐겨찾기가 없습니다. 각 탭 검색창 아래 ⭐로 조건을 저장해보세요."); return; }
+    const el = ensureDash();
+    const byPanel = {};
+    favs.forEach((f) => { (byPanel[f.panel] = byPanel[f.panel] || []).push(f); });
+    const groups = Object.entries(byPanel).map(([p, list]) =>
+      `<div class="favdash-group"><h4>${PANEL_LABEL[p] || p}</h4><div class="favdash-chips">${list.map((f) =>
+        `<button type="button" class="favchip fav favdash-go" data-key="${E(f.key)}"><span class="favchip-go">⭐ ${E(f.label)}</span></button>`).join("")}</div></div>`).join("");
+    el.innerHTML = `<div class="favdash-box" role="dialog" aria-modal="true"><button class="favdash-close" aria-label="닫기">✕</button><h3>⭐ 내 즐겨찾기 <span class="opt">(${favs.length})</span></h3>${groups}</div>`;
+    el.style.display = "flex";
+  }
+
   (function mountBackupBar() {
     const footer = document.querySelector(".app-footer");
     if (!footer) return;
     const bar = document.createElement("p");
     bar.className = "disclaimer fav-backup";
-    bar.innerHTML = `⭐ 즐겨찾기 <button type="button" class="linkbtn" id="favExport">내보내기</button> · <button type="button" class="linkbtn" id="favImport">가져오기</button> <span class="opt">(이 브라우저 저장분 백업)</span><input type="file" id="favImportFile" accept="application/json,.json" hidden>`;
+    bar.innerHTML = `⭐ 즐겨찾기 <button type="button" class="linkbtn" id="favDash">모아보기</button> · <button type="button" class="linkbtn" id="favExport">내보내기</button> · <button type="button" class="linkbtn" id="favImport">가져오기</button> <span class="opt">(이 브라우저 저장분)</span><input type="file" id="favImportFile" accept="application/json,.json" hidden>`;
     footer.appendChild(bar);
+    byId("favDash").addEventListener("click", openFavDash);
     byId("favExport").addEventListener("click", exportFavs);
     byId("favImport").addEventListener("click", () => byId("favImportFile").click());
     byId("favImportFile").addEventListener("change", (e) => { if (e.target.files[0]) importFavs(e.target.files[0]); e.target.value = ""; });
