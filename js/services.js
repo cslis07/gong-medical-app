@@ -59,7 +59,7 @@ function switchPanel(name, { updateHash = true } = {}) {
   });
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === `panel-${name}`));
   if (updateHash && location.hash.slice(1) !== name) history.replaceState(null, "", `#${name}`);
-  if (name === "gas") loadGasAvg();
+  if (name === "gas") { loadGasAvg(); loadGasTrend(); }
 }
 
 // 카테고리 클릭 → 그 카테고리의 첫 서브탭으로 이동
@@ -86,7 +86,41 @@ async function loadGasAvg() {
     }).join("");
   } catch { gasAvgLoaded = false; }
 }
+// 선택 유종 최근 7일 평균유가 추이 스파크라인
+let gasTrendProd = null;
+async function loadGasTrend() {
+  const prodcd = byId("gasProd").value;
+  if (gasTrendProd === prodcd) return;
+  try {
+    const d = await (await fetch(`/api/gas?op=recent&prodcd=${prodcd}`)).json();
+    const series = d.ok ? (d.series || []) : [];
+    if (series.length < 2) { byId("gasTrend").innerHTML = ""; gasTrendProd = null; return; }
+    gasTrendProd = prodcd;
+    const name = byId("gasProd").selectedOptions[0]?.text || "";
+    byId("gasTrend").innerHTML = renderGasSparkline(series, name);
+  } catch { byId("gasTrend").innerHTML = ""; gasTrendProd = null; }
+}
+function renderGasSparkline(series, name) {
+  const prices = series.map((s) => s.price);
+  const min = Math.min(...prices), max = Math.max(...prices), n = series.length;
+  const W = 280, H = 46, pad = 5;
+  const x = (i) => pad + i * ((W - pad * 2) / (n - 1));
+  const y = (v) => (max === min ? H / 2 : H - pad - ((v - min) / (max - min)) * (H - pad * 2));
+  const pts = series.map((s, i) => `${x(i).toFixed(1)},${y(s.price).toFixed(1)}`).join(" ");
+  const last = prices[n - 1], diff = last - prices[0];
+  const arrow = diff > 0 ? "▲" : diff < 0 ? "▼" : "−", cls = diff > 0 ? "up" : diff < 0 ? "dn" : "";
+  const fmtD = (d) => `${d.slice(4, 6)}.${d.slice(6, 8)}`;
+  return `<div class="gas-trend-in">
+    <span class="gt-label">📈 최근 7일 ${E(name)} <span class="opt">${E(fmtD(series[0].date))}~${E(fmtD(series[n - 1].date))}</span></span>
+    <svg viewBox="0 0 ${W} ${H}" class="gt-svg" role="img" aria-label="최근 7일 평균유가 추이">
+      <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${x(n - 1).toFixed(1)}" cy="${y(last).toFixed(1)}" r="2.6" fill="var(--accent)"/>
+    </svg>
+    <span class="gt-val"><b>${last.toLocaleString()}</b>원/L <span class="gt-diff ${cls}">${arrow}${Math.abs(diff).toFixed(1)}</span></span>
+  </div>`;
+}
 document.querySelectorAll(".toptab").forEach((b) => b.addEventListener("click", () => switchPanel(b.dataset.panel)));
+byId("gasProd").addEventListener("change", () => { gasTrendProd = null; loadGasTrend(); });
 
 // 오류 재시도 박스 (app.js showError와 동일 톤)
 function retryBox(resultsId, msg, retryFn) {
@@ -673,6 +707,20 @@ async function searchAir() {
   } catch (e) { setBox("airStatus", `오류: ${e.message}`, "error"); retryBox("airResults", e.message, searchAir); }
 }
 const GRADE_EMOJI = { ok: "😀", warn: "🙂", busy: "😷", full: "🤢", "": "❓" };
+// 예보 등급 텍스트(좋음/보통/나쁨/매우나쁨) → 색상 클래스
+const KGRADE_CLASS = { "좋음": "ok", "보통": "warn", "나쁨": "busy", "매우나쁨": "full" };
+// 오늘·내일·모레 예보 (PM10·PM2.5) — 서버가 준 forecast10/25 배열을 칩으로
+function airForecastHtml(sido, d) {
+  const line = (title, days) => {
+    if (!days || !days.length) return "";
+    const chips = days.map((f) => `<span class="fc-chip ${KGRADE_CLASS[f.sidoGrade] || ""}"><b>${E(f.label)}</b> ${E(f.sidoGrade || "-")}</span>`).join("");
+    const overall = days[0] && days[0].overall ? `<div class="fc-overall">📢 ${E(days[0].overall)}</div>` : "";
+    return `<div class="fc-line"><span class="fc-key">${title}</span><span class="fc-chips">${chips}</span></div>${overall}`;
+  };
+  const p10 = line("PM10", d.forecast10 || (d.forecast ? [{ label: "오늘", sidoGrade: d.forecast.sidoGrade, overall: d.forecast.overall }] : []));
+  const p25 = line("PM2.5", d.forecast25 || (d.forecastPm25 ? [{ label: "오늘", sidoGrade: d.forecastPm25.sidoGrade, overall: d.forecastPm25.overall }] : []));
+  return p10 || p25 ? `<div class="forecast">${p10}${p25}</div>` : "";
+}
 function applyAirFilter() {
   if (!airCache) return;
   const d = airCache, sido = d.sido;
@@ -693,10 +741,7 @@ function applyAirFilter() {
       <div class="dust-box ${g10.c}"><span>미세먼지 PM10</span><b>${d.summary.pm10 ?? "-"}</b><em>${g10.t}</em></div>
       <div class="dust-box ${g25.c}"><span>초미세 PM2.5</span><b>${d.summary.pm25 ?? "-"}</b><em>${g25.t}</em></div>
     </div>
-    ${d.forecast && d.forecast.overall ? `<div class="forecast">
-      <div class="fc-row"><span class="fc-day">PM10</span>📢 ${E(d.forecast.overall)}${d.forecast.sidoGrade ? ` <b>· ${E(sido)} ${E(d.forecast.sidoGrade)}</b>` : ""}</div>
-      ${d.forecastPm25 && d.forecastPm25.overall ? `<div class="fc-row"><span class="fc-day">PM2.5</span>📢 ${E(d.forecastPm25.overall)}${d.forecastPm25.sidoGrade ? ` <b>· ${E(sido)} ${E(d.forecastPm25.sidoGrade)}</b>` : ""}</div>` : ""}
-    </div>` : ""}
+    ${airForecastHtml(sido, d)}
   </article>`;
 
   if (!st.length) {
