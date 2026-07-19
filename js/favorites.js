@@ -80,8 +80,8 @@
     renderBar(panel);
   }
 
-  // 저장된 조건을 입력창에 되채우고 해당 탭에서 조회 실행
-  function applyEntry(panel, vals) {
+  // 저장된 조건을 입력창에 되채우고 탭을 연다(조회는 하지 않음)
+  function fillEntry(panel, vals) {
     const cfg = PANELS[panel];
     (cfg.changeFields || []).forEach((id) => {
       if (id in vals) { const el = byId(id); if (el) { el.value = vals[id]; el.dispatchEvent(new Event("change")); } }
@@ -91,7 +91,30 @@
       if (id in vals) { const el = byId(id); if (el) el.value = vals[id]; }
     });
     switchPanel(panel);
-    try { cfg.run(); } catch (e) { console.error("favorite apply failed", e); }
+  }
+  // 되채우고 즉시 조회
+  function applyEntry(panel, vals) {
+    fillEntry(panel, vals);
+    try { PANELS[panel].run(); } catch (e) { console.error("favorite apply failed", e); }
+  }
+
+  // ---- 공유: 현재 조건을 URL에 담아 복사(또는 공유 시트) ----
+  function shareUrl(panel, vals) {
+    const sp = new URLSearchParams();
+    sp.set("s", panel);
+    Object.entries(vals).forEach(([k, v]) => { if (String(v).trim() !== "") sp.set(k, v); });
+    return `${location.origin}${location.pathname}?${sp.toString()}#${panel}`;
+  }
+  async function shareCurrent(panel, btn) {
+    const url = shareUrl(panel, snapshot(panel));
+    const label = PANELS[panel] && (labelOf(panel, snapshot(panel)));
+    try {
+      if (navigator.share) { await navigator.share({ title: "서울 교통·생활 정보", text: label, url }); return; }
+    } catch { /* 사용자가 공유 취소 — 복사로 폴백하지 않음 */ return; }
+    try {
+      await navigator.clipboard.writeText(url);
+      if (btn) { btn.classList.add("copied"); btn.textContent = "✓ 링크 복사됨"; setTimeout(() => { btn.classList.remove("copied"); btn.textContent = "🔗 공유"; }, 1600); }
+    } catch { window.prompt("아래 링크를 복사하세요", url); }
   }
 
   // ---- 각 패널에 즐겨찾기 바 주입 ----
@@ -129,6 +152,7 @@
     const saved = isFav(panel, snapshot(panel));
     bar.innerHTML =
       `<button class="fav-save${saved ? " saved" : ""}" type="button" title="현재 조건을 즐겨찾기에 ${saved ? "해제" : "저장"}">${saved ? "⭐ 저장됨" : "⭐ 이 조건 저장"}</button>` +
+      `<button class="fav-share" type="button" title="현재 조건을 링크로 공유">🔗 공유</button>` +
       (chips ? `<div class="fav-chips">${chips}</div>` : `<span class="fav-hint">자주 찾는 조건을 저장해두면 여기서 바로 불러와요</span>`);
   }
 
@@ -152,6 +176,7 @@
       const t = e.target.closest("button");
       if (!t) return;
       if (t.classList.contains("fav-save")) { toggleFav(panel, snapshot(panel)); return; }
+      if (t.classList.contains("fav-share")) { shareCurrent(panel, t); return; }
       const chipEl = t.closest(".favchip");
       if (!chipEl) return;
       const key = chipEl.dataset.key;
@@ -199,4 +224,20 @@
       if (el) { el.addEventListener("input", () => refreshSaveBtn(panel)); el.addEventListener("change", () => refreshSaveBtn(panel)); }
     });
   });
+
+  // ---- 공유 링크로 들어온 경우: URL의 검색조건을 복원 ----
+  // 위치기반 탭인데 주소가 비어 있으면(=GPS 필요) 자동 조회는 하지 않고 채워만 둔다(로드 즉시 권한요청 방지).
+  (function restoreFromUrl() {
+    const sp = new URLSearchParams(location.search);
+    const panel = sp.get("s");
+    if (!panel || !PANELS[panel]) return;
+    const cfg = PANELS[panel];
+    const vals = {};
+    cfg.fields.forEach((id) => { if (sp.has(id)) vals[id] = sp.get(id); });
+    if (!Object.keys(vals).length) { switchPanel(panel); return; }
+    // 자동 조회를 미루는 경우: ①GPS 권한이 필요한 위치탭(주소 없음) ②동적 UI(지하철 — 역 데이터 async 로드)
+    const deferRun = (cfg.locKey && !String(vals[cfg.locKey] || "").trim()) || cfg.delegate;
+    if (deferRun) fillEntry(panel, vals);   // 채우고 대기 — 사용자가 직접 조회
+    else applyEntry(panel, vals);
+  })();
 })();

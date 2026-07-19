@@ -75,6 +75,7 @@
 - **즐겨찾기·최근조회**(2026-07-14, 07-16 확장): `js/favorites.js`가 11개 패널(지하철 역·로또 내번호 포함, 혼잡도·주유소·따릉이·고속도로·실거래가·미세먼지·시내버스·LH·주차장)에 칩 바를 주입. 지하철은 검색 UI가 동적 생성이라 `delegate`(패널 위임)로 기록. 조회 버튼을 누르면 조건 스냅샷을 `localStorage`(`gong.recent.v1`)에 자동 기록, ⭐로 즐겨찾기(`gong.fav.v1`) 고정. 칩 클릭 시 입력창 되채움 + 해당 탭에서 재조회. 백엔드 0. `PANELS` 레지스트리에 `fields`/`run`/`changeFields`만 추가하면 패널 확장.
 - **PWA**(2026-07-14): `manifest.webmanifest` + `sw.js`(정적 stale-while-revalidate 캐시, `/api`는 항상 네트워크) + `js/pwa.js`(SW 등록 + `beforeinstallprompt` 시 헤더에 "⬇️ 앱 설치" 버튼). 아이콘은 `icon.svg`(any+maskable). 홈 화면 설치 + 오프라인 셸.
 - **지도 뷰**(2026-07-14): `js/map.js` — 위치기반 4탭(주유소·따릉이·시내버스·주차장) 결과를 실제 지도(Leaflet + OSM 타일)에 핀으로. 결과 위 "🗺️ 지도 보기" 토글, 처음 열 때만 Leaflet 지연 로드. **CSP 대응**: Leaflet은 `/vendor/leaflet/`에 로컬 벤더링(script-src 'self' 충족), OSM 타일 도메인만 `img-src`에 예외 추가(`https://*.tile.openstreetmap.org`). 타일은 사용자 브라우저가 직접 받아 Vercel IP 차단과 무관. 기본 마커 PNG 대신 divIcon 원형 배지 → 이미지 의존 0. 주유소 좌표는 `lib/gas.js`가 Opinet KATEC(`GIS_X_COOR`/`GIS_Y_COOR`)를 proj4로 WGS84 역변환해 제공.
+- **공유 링크·실시간 새로고침**(2026-07-16): 즐겨찾기 바의 "🔗 공유"가 현재 검색조건을 URL 쿼리(`?s=<panel>&<필드>=…#<panel>`)로 인코딩해 `navigator.share`/클립보드로 복사. 로드 시 `restoreFromUrl`이 파싱해 복원(위치탭 주소없음·지하철 동적UI는 자동조회 미루고 채우기만). 실시간 4탭(혼잡도·따릉이·주차장·지하철)에 "🔄 새로고침" 버튼 + `kstClock()` 기준시각. 버스 도착은 펼칠 때마다 재조회(구 `dataset.loaded` 캐시 버그 수정).
 - 오류 시 🔄 다시 시도 박스, 모바일 최적화(바텀시트·탭 가로스크롤·44px 터치), 📖 `guide.html`.
 
 ---

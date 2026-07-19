@@ -27,6 +27,8 @@ function endEmpty(resultsId, statusId, msg, type = "warn") {
   return setBox(statusId, msg, type);
 }
 function kstTodayISO() { const d = new Date(Date.now() + 9 * 3600e3); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`; }
+// 실시간 데이터 기준 시각(KST HH:MM) — 낡음 여부를 사용자가 볼 수 있게
+function kstClock() { const d = new Date(Date.now() + 9 * 3600e3); return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`; }
 const ymd = (iso) => String(iso || "").replace(/-/g, "");
 
 // ---------- 상단 내비: 카테고리(교통·주거·생활) → 서브탭 ----------
@@ -151,7 +153,7 @@ async function searchDensity() {
     if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
     const rows = d.rows || [];
     if (!rows.length) return endEmpty("densResults", "densStatus", `'${area}' 실시간 데이터가 없습니다. 목록의 정확한 장소명으로 다시 시도하세요.`, "warn");
-    setBox("densStatus", `${rows.length}곳`, "ok");
+    setBox("densStatus", `${rows.length}곳 · ${kstClock()} 기준`, "ok");
     byId("densResults").innerHTML = rows.map(renderDensity).join("");
   } catch (e) { setBox("densStatus", `오류: ${e.message}`, "error"); retryBox("densResults", e.message, searchDensity); }
 }
@@ -355,7 +357,7 @@ async function searchBike() {
     if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
     const rows = d.rows || [];
     if (!rows.length) return endEmpty("bikeResults", "bikeStatus", d.message || "주변 대여소가 없습니다.", "warn");
-    setBox("bikeStatus", `가까운 대여소 ${rows.length}곳`, "ok");
+    setBox("bikeStatus", `가까운 대여소 ${rows.length}곳 · ${kstClock()} 기준`, "ok");
     byId("bikeResults").innerHTML = rows.map((s) => {
       const lvl = s.bikes === 0 ? "full" : s.bikes <= 2 ? "busy" : "ok";
       const map = `<a class="btn map" href="https://map.kakao.com/link/map/${encodeURIComponent(s.name)},${s.lat},${s.lon}" target="_blank" rel="noopener">🗺️ 지도</a>`;
@@ -640,18 +642,21 @@ async function searchCitybus() {
     if (window.GongMap) GongMap.set("citybus", stops.map((s) => ({ lat: s.lat, lon: s.lon, label: s.name, sub: s.arsno ? `정류소번호 ${s.arsno}` : "" })), { lat, lon });
   } catch (e) { setBox("cbStatus", `오류: ${e.message}`, "error"); retryBox("cbResults", e.message, searchCitybus); }
 }
+// 도착정보는 매번 새로 불러온다(실시간). 열려 있으면 접고, 열 때마다 재조회한다.
+// (이전엔 dataset.loaded로 캐시해 두 번째 클릭부터 옛 값만 토글돼 "실시간"이 깨졌다.)
 async function loadArrivals(cardEl) {
   const box = cardEl.querySelector(".cb-arrivals");
-  if (cardEl.dataset.loaded === "1") { box.style.display = box.style.display === "none" ? "" : "none"; return; }
+  if (cardEl.dataset.open === "1") { box.style.display = "none"; cardEl.dataset.open = "0"; return; }
+  cardEl.dataset.open = "1"; box.style.display = "";
   box.innerHTML = `<p class="meta">도착정보 조회 중…</p>`;
   try {
     const d = await (await fetch(`/api/citybus?op=arrival&city=${encodeURIComponent(cardEl.dataset.city)}&node=${encodeURIComponent(cardEl.dataset.node)}`)).json();
     const buses = d.buses || [];
-    box.innerHTML = buses.length
+    const stamp = `<p class="meta opt" style="margin-top:6px">🔄 ${kstClock()} 기준 · 다시 누르면 최신</p>`;
+    box.innerHTML = (buses.length
       ? `<ul class="time-stats">${buses.slice(0, 12).map((b) => `<li class="meta"><b>${E(b.route)}</b>${b.type ? `<span class="chip" style="margin-left:6px">${E(b.type)}</span>` : ""} — ${b.min <= 1 ? "곧 도착" : b.min + "분 후"} · ${b.prevCnt}정류장 전</li>`).join("")}</ul>`
-      : `<p class="meta">현재 도착 예정 버스가 없습니다.</p>`;
-    cardEl.dataset.loaded = "1";
-  } catch (e) { box.innerHTML = `<p class="status warn">도착정보 오류: ${E(e.message)}</p>`; }
+      : `<p class="meta">현재 도착 예정 버스가 없습니다.</p>`) + stamp;
+  } catch (e) { box.innerHTML = `<p class="status warn">도착정보 오류: ${E(e.message)}</p>`; cardEl.dataset.open = "0"; }
 }
 byId("cbBtn").addEventListener("click", searchCitybus);
 byId("cbResults").addEventListener("click", (e) => {
@@ -788,7 +793,7 @@ async function searchParking(page = 1) {
     if (!d.ok) return setBox("pkStatus", d.error || d.message || "조회 실패", "warn");
     const rows = d.rows || [];
     if (!rows.length) { clearPager("pkPager"); return endEmpty("pkResults", "pkStatus", f ? "조건에 맞는 주차장이 없습니다." : "주변 주차장이 없습니다.", "warn"); }
-    setBox("pkStatus", `조건에 맞는 ${d.matched.toLocaleString()}곳 · 실시간 제공 ${d.liveCount}곳`, "ok");
+    setBox("pkStatus", `조건에 맞는 ${d.matched.toLocaleString()}곳 · 실시간 제공 ${d.liveCount}곳 · ${kstClock()} 기준`, "ok");
     byId("pkResults").innerHTML = rows.map(renderParking).join("");
     if (window.GongMap) GongMap.set("parking", rows.map((p) => ({ lat: p.lat, lon: p.lon, label: p.name, sub: p.addr })), pkCoords);
     renderPager("pkPager", d.page, d.totalPages, (p) => { searchParking(p).then(() => scrollToResults("pkResults")); }, d.matched);
@@ -821,6 +826,29 @@ function renderParking(p) {
 byId("pkBtn").addEventListener("click", () => searchParking(1));
 byId("pkFilter").addEventListener("change", () => { if (byId("pkResults").innerHTML) searchParking(1); });
 byId("pkAddr").addEventListener("keydown", (e) => { if (e.key === "Enter") searchParking(1); });
+
+// ---------- 실시간 탭 새로고침 버튼 ----------
+// 지하철 도착·혼잡도·따릉이·주차장은 "실시간"인데 한 번 조회하면 값이 굳는다.
+// 조건을 다시 건드리지 않고도 최신화할 수 있게 결과 위에 🔄 버튼을 붙인다.
+(function initRealtimeRefresh() {
+  const RT = [
+    { resultsId: "densResults", btnId: "densBtn", run: () => searchDensity() },
+    { resultsId: "bikeResults", btnId: "bikeBtn", run: () => searchBike() },
+    { resultsId: "cbResults",   btnId: "cbBtn",   run: () => searchCitybus() },
+    { resultsId: "pkResults",   btnId: "pkBtn",   run: () => searchParking(1) },
+  ];
+  RT.forEach(({ resultsId, btnId, run }) => {
+    const results = byId(resultsId), mainBtn = byId(btnId);
+    if (!results || !mainBtn) return;
+    const bar = document.createElement("div");
+    bar.className = "refresh-bar";
+    bar.innerHTML = `<button type="button" class="refresh-btn" hidden>🔄 새로고침</button>`;
+    results.parentNode.insertBefore(bar, results);
+    const btn = bar.querySelector(".refresh-btn");
+    mainBtn.addEventListener("click", () => { btn.hidden = false; });   // 검색을 시작하면 노출
+    btn.addEventListener("click", run);
+  });
+})();
 
 // ---------- 초기값 ----------
 (function initServices() {
