@@ -2,7 +2,7 @@
 // 정적(HTML·CSS·JS·아이콘)은 cache-first(+백그라운드 갱신), /api 는 캐시하지 않는다
 // (실시간 데이터가 stale해지면 안 됨 → 항상 네트워크, 실패 시 앱의 재시도 UI가 처리).
 // 버전을 올리면 옛 캐시를 지운다.
-const VERSION = "v4";
+const VERSION = "v5";
 const CACHE = "gong-shell-" + VERSION;
 
 // 콜드스타트 셸. subway-map.png(4.2MB)는 무겁고 지하철 탭에서만 쓰므로 런타임 캐시.
@@ -49,8 +49,10 @@ self.addEventListener("fetch", (e) => {
   // 정적 자산: 네트워크 우선, 실패(오프라인) 시에만 캐시.
   // stale-while-revalidate는 배포 직후 index.html·JS의 버전이 어긋나(version skew)
   // "일부만 최신"인 상태를 만들었다 → 온라인이면 항상 최신, 오프라인이면 캐시 셸.
+  // 문서(navigate)는 HTTP 디스크 캐시의 낡은 HTML을 피하려 재검증을 강제한다.
+  const netReq = req.mode === "navigate" ? new Request(req.url, { cache: "no-cache" }) : req;
   e.respondWith(
-    fetch(req)
+    fetch(netReq)
       .then((res) => {
         if (res && res.ok && res.type === "basic") {
           const copy = res.clone();
