@@ -615,6 +615,34 @@ a.card.lh-card:hover { border-color: var(--accent); }
 .refresh-bar { display: flex; justify-content: flex-end; margin: 8px 0 2px; }
 .refresh-btn { padding: 7px 13px; border: 1px solid var(--border); background: var(--card); color: var(--muted); border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; transition: .15s; }
 .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+/* 푸터 링크형 버튼 (즐겨찾기 백업/복원) */
+.linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
+.linkbtn:hover { color: var(--accent-strong); }
+.fav-backup { margin-top: 4px; }
+/* 실거래가 인사이트 (랭킹·시세추이) */
+.re-insights { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 2px; }
+.chip-btn { padding: 8px 14px; border: 1px solid var(--border); background: var(--card); color: var(--muted); border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; transition: .15s; }
+.chip-btn:hover { border-color: var(--accent); color: var(--accent); }
+.chip-btn.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.re-insights-out:not(:empty) { margin: 6px 0 4px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+.rank-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.rank-col h4, .trend-wrap h4 { margin: 0 0 8px; font-size: 14px; }
+.rank-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 5px; }
+.rank-list li { font-size: 13px; display: flex; justify-content: space-between; gap: 10px; }
+.rank-list li b { white-space: nowrap; color: var(--accent-strong); }
+.trend-svg { width: 100%; max-width: 420px; height: auto; display: block; margin: 4px 0; }
+@media (max-width: 480px) { .rank-wrap { grid-template-columns: 1fr; gap: 12px; } }
+/* 📍 내 주변 통합 */
+.results-nearby { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; padding-bottom: 24px; }
+.nb-card { border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 14px; box-shadow: var(--shadow-sm); }
+.nb-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.nb-head h3 { margin: 0; font-size: 15px; }
+.nb-more { font-size: 12.5px; white-space: nowrap; }
+.nb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.nb-list li { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; }
+.nb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb-meta { color: var(--muted); white-space: nowrap; }
+.nb-empty { color: var(--muted); }
 .fav-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .favchip {
   display: inline-flex; align-items: center; border: 1px solid var(--border);

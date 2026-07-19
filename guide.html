@@ -378,6 +378,8 @@ kbd{
       <div class="sidebar-sub">
         <a href="#feat-favorites">즐겨찾기·최근 조회</a>
         <a href="#feat-share">공유·새로고침</a>
+        <a href="#feat-nearby">내 주변 한눈에</a>
+        <a href="#feat-insights">실거래가 랭킹·추이</a>
         <a href="#feat-servicemap">지도 보기</a>
         <a href="#feat-install">앱으로 설치</a>
       </div>
@@ -659,13 +661,27 @@ kbd{
             <li><strong>⭐ 이 조건 저장</strong>을 누르면 즐겨찾기로 고정됩니다(저장되면 "⭐ 저장됨"으로 표시).</li>
             <li>칩을 누르면 입력창이 그 조건으로 채워지고 바로 다시 조회합니다. ✕로 삭제, 최근 칩의 ☆로 즐겨찾기 승격.</li>
           </ul>
-          <div class="tip">💡 모든 기록은 <strong>이 브라우저 안에만</strong> 저장됩니다(localStorage). 서버로 전송되지 않으며, 다른 기기와 동기화되지 않습니다.</div>
+          <div class="tip">💡 모든 기록은 <strong>이 브라우저 안에만</strong> 저장됩니다(localStorage). 서버로 전송되지 않으며, 다른 기기와 동기화되지 않습니다. 기기 변경·캐시 삭제에 대비해 페이지 맨 아래 <strong>“즐겨찾기 내보내기/가져오기”</strong>로 백업(JSON)할 수 있습니다.</div>
         </div>
 
         <div class="feature" id="feat-share">
           <h3>🔗 검색 조건 공유 · 🔄 실시간 새로고침</h3>
           <p>즐겨찾기 바의 <strong>“🔗 공유”</strong>를 누르면 지금 검색한 조건(지역·유형·단지명 등)이 담긴 링크가 복사됩니다. 카톡으로 보내면 상대도 <strong>같은 조회 화면</strong>이 바로 열립니다. (모바일에서는 공유 시트가 뜹니다.)</p>
           <p>지하철 도착·혼잡도·따릉이·주차장처럼 시시각각 변하는 탭은 결과에 <strong>기준 시각</strong>이 표시되고, <strong>“🔄 새로고침”</strong>으로 조건을 다시 입력하지 않고 최신 값을 받을 수 있습니다. 버스 도착정보는 정류소를 다시 펼칠 때마다 새로 조회합니다.</p>
+        </div>
+
+        <div class="feature" id="feat-nearby">
+          <h3>📍 내 주변 한눈에</h3>
+          <p>교통 카테고리의 <strong>“📍 내주변”</strong> 탭에서 현재 위치(또는 주소) 기준으로 가까운 <strong>주유소·따릉이·버스 정류소·주차장</strong>을 한 번에 봅니다. 각 항목의 “전체 보기 →”로 해당 탭에서 더 자세히 확인할 수 있고, 위치는 탭 사이에서 공유되어 매번 다시 묻지 않습니다.</p>
+        </div>
+
+        <div class="feature" id="feat-insights">
+          <h3>🏆 실거래가 랭킹·📈 시세 추이·📅 청약 캘린더</h3>
+          <ul>
+            <li><strong>이번 달 랭킹</strong>: 조회한 지역의 최고가 TOP·거래량 TOP 단지를 집계해 보여줍니다.</li>
+            <li><strong>시세 추이(6개월)</strong>: 선택 지역의 월별 평균 시세를 막대그래프로 — 흐름을 한눈에.</li>
+            <li><strong>LH 청약 마감일 저장</strong>: 공고의 “📅 마감일 저장”으로 <code>.ics</code> 파일을 내려받아 캘린더에 담고 하루 전 알림을 받을 수 있습니다.</li>
+          </ul>
         </div>
 
         <div class="feature" id="feat-servicemap">

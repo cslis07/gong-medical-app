@@ -225,6 +225,44 @@
     });
   });
 
+  // ---- 백업/복원: 무로그인이라 localStorage가 유일 저장소 → 캐시 삭제·기기변경 대비 ----
+  const dedupeByKey = (arr) => { const seen = new Set(); return arr.filter((e) => e && e.key && !seen.has(e.key) && seen.add(e.key)); };
+  function exportFavs() {
+    const data = { app: "gong-medical", v: 1, exportedAt: new Date().toISOString(), fav: favs, recent: recents };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const d = new Date(); const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+    a.href = url; a.download = `교통생활-즐겨찾기-${stamp}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function importFavs(file) {
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const d = JSON.parse(r.result);
+        if (!d || (!Array.isArray(d.fav) && !Array.isArray(d.recent))) throw new Error("형식");
+        if (Array.isArray(d.fav)) { favs = dedupeByKey([...d.fav, ...favs]); save(FAV_KEY, favs); }
+        if (Array.isArray(d.recent)) { recents = dedupeByKey([...d.recent, ...recents]).slice(0, REC_CAP); save(REC_KEY, recents); }
+        Object.keys(PANELS).forEach(renderBar);
+        alert(`즐겨찾기를 가져왔습니다. (즐겨찾기 ${favs.length} · 최근 ${recents.length})`);
+      } catch { alert("가져오기 실패: 올바른 백업 파일(JSON)이 아닙니다."); }
+    };
+    r.readAsText(file);
+  }
+  (function mountBackupBar() {
+    const footer = document.querySelector(".app-footer");
+    if (!footer) return;
+    const bar = document.createElement("p");
+    bar.className = "disclaimer fav-backup";
+    bar.innerHTML = `⭐ 즐겨찾기 <button type="button" class="linkbtn" id="favExport">내보내기</button> · <button type="button" class="linkbtn" id="favImport">가져오기</button> <span class="opt">(이 브라우저 저장분 백업)</span><input type="file" id="favImportFile" accept="application/json,.json" hidden>`;
+    footer.appendChild(bar);
+    byId("favExport").addEventListener("click", exportFavs);
+    byId("favImport").addEventListener("click", () => byId("favImportFile").click());
+    byId("favImportFile").addEventListener("change", (e) => { if (e.target.files[0]) importFavs(e.target.files[0]); e.target.value = ""; });
+  })();
+
   // ---- 공유 링크로 들어온 경우: URL의 검색조건을 복원 ----
   // 위치기반 탭인데 주소가 비어 있으면(=GPS 필요) 자동 조회는 하지 않고 채워만 둔다(로드 즉시 권한요청 방지).
   (function restoreFromUrl() {

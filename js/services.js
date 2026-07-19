@@ -277,20 +277,28 @@ byId("lottoRound").addEventListener("keydown", (e) => { if (e.key === "Enter") s
 byId("lottoMine").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLotto(); });
 
 // ==================== ⛽ 주유소 ====================
-// 공용 위치 획득 — 주소 입력(addrInputId)이 있으면 vworld 지오코딩 우선, 없으면 브라우저 geolocation
-async function getLocation(statusId, addrInputId) {
+// GPS 좌표를 탭 간에 공유한다. 주유소→따릉이→버스→주차장을 옮길 때마다 위치 권한을
+// 다시 묻던 마찰 제거. 신선도 5분, 강제 갱신은 forceFresh 또는 헤더의 "위치 갱신".
+let lastLoc = null;         // { lat, lon, ts }
+const LOC_TTL = 5 * 60 * 1000;
+function clearLocCache() { lastLoc = null; }
+// 공용 위치 획득 — 주소 입력(addrInputId)이 있으면 vworld 지오코딩 우선, 없으면 브라우저 geolocation(캐시)
+async function getLocation(statusId, addrInputId, { forceFresh = false } = {}) {
   const addr = addrInputId && byId(addrInputId) ? byId(addrInputId).value.trim() : "";
   if (addr) {
     setBox(statusId, `'${addr}' 위치 확인 중…`, "loading");
     const d = await (await fetch(`/api/geocode?q=${encodeURIComponent(addr)}`)).json();
     if (!d.ok) throw new Error(d.message || d.error || "주소를 찾을 수 없습니다.");
-    return { lat: d.lat, lon: d.lon };
+    return { lat: d.lat, lon: d.lon };   // 주소 조회는 캐시하지 않는다(내 위치와 구분)
+  }
+  if (!forceFresh && lastLoc && Date.now() - lastLoc.ts < LOC_TTL) {
+    return { lat: lastLoc.lat, lon: lastLoc.lon };   // 최근 GPS 재사용 — 권한 재요청 없음
   }
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject(new Error("이 브라우저는 위치 기능을 지원하지 않습니다. 주소를 입력해보세요."));
     setBox(statusId, "위치 확인 중… (권한을 허용해주세요)", "loading");
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      (pos) => { lastLoc = { lat: pos.coords.latitude, lon: pos.coords.longitude, ts: Date.now() }; resolve({ lat: lastLoc.lat, lon: lastLoc.lon }); },
       (err) => reject(new Error(err.code === 1 ? "위치 권한이 거부되었습니다. 주소를 입력하거나 권한을 허용해주세요." : `위치 확인 실패: ${err.message}`)),
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -453,6 +461,7 @@ function initRealEstate() {
 }
 // UI 유형(매매/전세/월세/분양권) → API 유형(trade/rent/silv) + 임대 종류
 const RE_UI = { trade: { api: "trade" }, jeonse: { api: "rent", kind: "전세" }, wolse: { api: "rent", kind: "월세" }, silv: { api: "silv" } };
+const RE_LABEL = { trade: "매매", jeonse: "전세", wolse: "월세", silv: "분양권" };
 let reCache = { rows: [], uiType: "trade", regionName: "" };
 // 서버가 전량(전 페이지)을 주므로 필터·정렬·페이지네이션은 전체 집합 위에서 클라이언트가 처리한다.
 const RE_PAGE_SIZE = 20;
@@ -469,6 +478,9 @@ async function searchRealEstate() {
   const uiType = byId("reType").value, lawd = byId("reRegion").value, ym = (byId("reYm").value || "").replace("-", "");
   if (!/^\d{6}$/.test(ym)) return setBox("reStatus", "거래연월을 선택하세요.", "warn");
   setBox("reStatus", "조회 중…", "loading"); showSkeletons("reResults"); clearPager("rePager");
+  // 새 검색이면 랭킹·추이 도구를 초기화(이전 지역 결과 잔존 방지)
+  byId("reInsights").hidden = true; byId("reInsightsOut").innerHTML = ""; reRankOpen = false; reTrendOpen = false;
+  byId("reRankBtn").classList.remove("on"); byId("reTrendBtn").classList.remove("on");
   try {
     const d = await (await fetch(`/api/realestate?type=${RE_UI[uiType].api}&lawd=${lawd}&ym=${ym}`)).json();
     if (d.needKey) return setBox("reStatus", "⚠️ 실거래가 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
@@ -520,7 +532,84 @@ function applyReFilter() {
   setBox("reStatus", `${out.length.toLocaleString()}건 중 ${slice.length}건 표시 · 전체 ${rows.length.toLocaleString()}건${collectWarning(reCache)}`, "ok");
   byId("reResults").innerHTML = slice.map((r) => renderRealEstate(uiType, r)).join("");
   renderPager("rePager", rePage, totalPages, (p) => { rePage = p; applyReFilter(); scrollToResults("reResults"); }, out.length);
+  byId("reInsights").hidden = false;   // 검색 성공 → 랭킹·추이 도구 노출
 }
+
+// ---- 🏆 이번 달 랭킹 (현재 로드된 데이터 집계, 신규 API 불필요) ----
+let reRankOpen = false;
+function renderReRanking() {
+  const out = byId("reInsightsOut");
+  reRankOpen = !reRankOpen;
+  byId("reTrendBtn").classList.remove("on");
+  if (!reRankOpen) { out.innerHTML = ""; return; }
+  byId("reRankBtn").classList.add("on");
+  const { rows, uiType } = reCache;
+  const kind = RE_UI[uiType].kind;
+  const base = (kind ? rows.filter((r) => r.kind === kind) : rows).filter((r) => rePrice(uiType, r) > 0);
+  if (!base.length) { out.innerHTML = `<div class="empty-state"><p>집계할 거래가 없습니다.</p></div>`; return; }
+  const topPrice = base.slice().sort((a, b) => rePrice(uiType, b) - rePrice(uiType, a)).slice(0, 8);
+  const cnt = {};
+  base.forEach((r) => { const k = r.apt || "-"; cnt[k] = (cnt[k] || 0) + 1; });
+  const topCnt = Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  out.innerHTML = `<div class="rank-wrap">
+    <div class="rank-col"><h4>💰 최고가 TOP</h4><ol class="rank-list">${topPrice.map((r) => `<li><span>${E(r.apt)} <span class="opt">${E(r.dong || "")}</span></span><b>${E(eok(rePrice(uiType, r)))}${uiType === "trade" || uiType === "silv" ? "원" : ""}</b></li>`).join("")}</ol></div>
+    <div class="rank-col"><h4>🔥 거래량 TOP</h4><ol class="rank-list">${topCnt.map(([nm, c]) => `<li><span>${E(nm)}</span><b>${c}건</b></li>`).join("")}</ol></div>
+  </div><p class="hint">${E(reCache.regionName)} · ${RE_LABEL[uiType] || uiType} · ${byId("reYm").value} 신고분 ${base.length.toLocaleString()}건 기준</p>`;
+}
+
+// ---- 📈 시세 추이 (최근 6개월 반복 조회 → 월별 평균·건수 SVG) ----
+let reTrendOpen = false;
+async function loadReTrend() {
+  const out = byId("reInsightsOut");
+  reTrendOpen = !reTrendOpen;
+  byId("reRankBtn").classList.remove("on");
+  if (!reTrendOpen) { out.innerHTML = ""; return; }
+  byId("reTrendBtn").classList.add("on");
+  const uiType = reCache.uiType, lawd = byId("reRegion").value;
+  const apiType = RE_UI[uiType].api, kind = RE_UI[uiType].kind;
+  const baseYm = (byId("reYm").value || "").replace("-", "");
+  if (!/^\d{6}$/.test(baseYm)) { out.innerHTML = ""; return; }
+  // 기준월 포함 최근 6개월
+  const months = [];
+  let y = +baseYm.slice(0, 4), m = +baseYm.slice(4, 6);
+  for (let i = 0; i < 6; i++) { months.unshift(`${y}${String(m).padStart(2, "0")}`); m--; if (m === 0) { m = 12; y--; } }
+  out.innerHTML = `<p class="status loading">📈 최근 6개월 시세를 불러오는 중…</p>`;
+  try {
+    const results = await Promise.all(months.map(async (ym) => {
+      try {
+        const d = await (await fetch(`/api/realestate?type=${apiType}&lawd=${lawd}&ym=${ym}`)).json();
+        let rows = d.ok ? (d.rows || []) : [];
+        if (kind) rows = rows.filter((r) => r.kind === kind);
+        const prices = rows.map((r) => rePrice(uiType, r)).filter((v) => v > 0);
+        const avg = prices.length ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
+        return { ym, avg, count: prices.length };
+      } catch { return { ym, avg: 0, count: 0 }; }
+    }));
+    out.innerHTML = renderTrendChart(results, uiType);
+  } catch (e) { out.innerHTML = `<p class="status warn">추이 조회 실패: ${E(e.message)}</p>`; }
+}
+function renderTrendChart(data, uiType) {
+  const max = Math.max(...data.map((d) => d.avg), 1);
+  const unit = uiType === "wolse" || uiType === "jeonse" ? "보증금" : "거래가";
+  const W = 300, H = 120, pad = 4, bw = (W - pad * 2) / data.length;
+  const bars = data.map((d, i) => {
+    const h = d.avg ? Math.max(4, (d.avg / max) * (H - 28)) : 0;
+    const x = pad + i * bw, y = H - 20 - h;
+    return `<g>
+      <rect x="${(x + bw * 0.15).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="var(--accent)"></rect>
+      <text x="${(x + bw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="9" fill="var(--muted)">${d.ym.slice(4)}월</text>
+      ${d.avg ? `<text x="${(x + bw / 2).toFixed(1)}" y="${(y - 3).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--text)">${(d.avg / 10000).toFixed(1)}</text>` : `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 24}" text-anchor="middle" font-size="9" fill="var(--muted)">·</text>`}
+    </g>`;
+  }).join("");
+  const rows = data.map((d) => `${d.ym.slice(0, 4)}.${d.ym.slice(4)} 평균 ${d.avg ? eok(d.avg) : "-"} · ${d.count}건`).join(" / ");
+  return `<div class="trend-wrap">
+    <h4>📈 ${E(reCache.regionName)} ${unit} 월별 평균 <span class="opt">(억원, 최근 6개월)</span></h4>
+    <svg viewBox="0 0 ${W} ${H}" class="trend-svg" role="img" aria-label="월별 평균 시세 막대그래프">${bars}</svg>
+    <p class="hint">${E(rows)}</p>
+  </div>`;
+}
+byId("reRankBtn").addEventListener("click", renderReRanking);
+byId("reTrendBtn").addEventListener("click", loadReTrend);
 // 필터·정렬을 바꾸면 1페이지로 되돌린다.
 const applyReFilterReset = () => { rePage = 1; applyReFilter(); };
 byId("reApply").addEventListener("click", applyReFilterReset);
@@ -727,16 +816,50 @@ function applyLhFilter() {
   setBox("lhStatus", `공고 ${rows.length.toLocaleString()}건${rows.length !== lhCache.length ? ` / 전체 ${lhCache.length.toLocaleString()}` : ""}${collectWarning(lhMeta)}`, "ok");
   byId("lhResults").innerHTML = slice.map((r) => {
     const url = safeUrl(r.url);   // LH가 준 DTL_URL — http(s)가 아니면 링크로 만들지 않는다
-    const inner = `
+    const actions = [
+      url ? `<a class="btn map" href="${E(url)}" target="_blank" rel="noopener noreferrer">상세공고 ↗</a>` : "",
+      icsDateParts(r.closeDate) ? `<button type="button" class="btn ics-btn" data-name="${E(r.name)}" data-close="${E(r.closeDate)}">📅 마감일 저장</button>` : "",
+    ].filter(Boolean).join("");
+    return `<article class="card">
       <div class="card-top"><h3>${E(r.name)}</h3><span class="bed ${lhBadge(r.status)}">${E(r.status || "-")}</span></div>
       <p class="meta">${[r.type, r.region].filter(Boolean).map(E).join(" · ")}</p>
-      <p class="meta">📅 게시 ${E(r.postDate || "-")}${r.closeDate ? ` · 마감 ${E(r.closeDate)}` : ""}${url ? ' · <span class="opt">클릭하면 상세공고 ↗</span>' : ""}</p>`;
-    return url
-      ? `<a class="card lh-card" href="${E(url)}" target="_blank" rel="noopener noreferrer">${inner}</a>`
-      : `<article class="card">${inner}</article>`;
+      <p class="meta">📅 게시 ${E(r.postDate || "-")}${r.closeDate ? ` · 마감 ${E(r.closeDate)}` : ""}</p>
+      ${actions ? `<div class="card-actions">${actions}</div>` : ""}
+    </article>`;
   }).join("");
   renderPager("lhPager", lhPage, totalPages, (p) => { lhPage = p; applyLhFilter(); scrollToResults("lhResults"); }, rows.length);
 }
+// ---- LH 마감일 → 캘린더(.ics) ----
+// 무로그인이라 서버 알림은 불가하지만, 마감일을 캘린더에 담아 사용자 기기가 리마인드하게 한다.
+function icsDateParts(s) { const m = String(s || "").match(/(\d{4})\D?(\d{1,2})\D?(\d{1,2})/); return m ? [m[1], m[2].padStart(2, "0"), m[3].padStart(2, "0")] : null; }
+const icsEsc = (s) => String(s || "").replace(/([\\;,])/g, "\\$1").replace(/\r?\n/g, "\\n");
+function downloadIcs(name, closeDate) {
+  const p = icsDateParts(closeDate);
+  if (!p) return alert("마감일 형식을 인식할 수 없어 캘린더에 담을 수 없습니다.");
+  const [y, mo, da] = p;
+  const start = `${y}${mo}${da}`;
+  const end = new Date(Date.UTC(+y, +mo - 1, +da + 1));   // 종일 이벤트 DTEND는 다음 날
+  const endStr = `${end.getUTCFullYear()}${String(end.getUTCMonth() + 1).padStart(2, "0")}${String(end.getUTCDate()).padStart(2, "0")}`;
+  const now = new Date();
+  const stamp = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, "0")}${String(now.getUTCDate()).padStart(2, "0")}T${String(now.getUTCHours()).padStart(2, "0")}${String(now.getUTCMinutes()).padStart(2, "0")}${String(now.getUTCSeconds()).padStart(2, "0")}Z`;
+  const uid = `lh-${start}-${Math.abs([...String(name)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7))}@gong-medical`;
+  const ics = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//gong-medical-app//LH//KO", "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT", `UID:${uid}`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${start}`, `DTEND;VALUE=DATE:${endStr}`,
+    `SUMMARY:[LH청약 마감] ${icsEsc(name)}`, `DESCRIPTION:${icsEsc(name)} 청약 접수 마감일`,
+    "BEGIN:VALARM", "TRIGGER:-P1D", "ACTION:DISPLAY", "DESCRIPTION:LH청약 마감 하루 전", "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = `LH마감-${start}.ics`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+byId("lhResults").addEventListener("click", (e) => {
+  const b = e.target.closest(".ics-btn");
+  if (b) downloadIcs(b.dataset.name, b.dataset.close);
+});
 // 필터를 바꾸면 1페이지로 되돌린다.
 const applyLhFilterReset = () => { lhPage = 1; applyLhFilter(); };
 byId("lhRegion").addEventListener("change", () => { if (lhCache.length) applyLhFilterReset(); });
@@ -826,6 +949,56 @@ function renderParking(p) {
 byId("pkBtn").addEventListener("click", () => searchParking(1));
 byId("pkFilter").addEventListener("change", () => { if (byId("pkResults").innerHTML) searchParking(1); });
 byId("pkAddr").addEventListener("keydown", (e) => { if (e.key === "Enter") searchParking(1); });
+
+// ==================== 📍 내 주변 통합 ====================
+// 현재 위치 1회로 주유소·따릉이·버스·주차장을 병렬 조회해 근처 상위 3곳씩 한 화면에.
+// 위치는 getLocation 캐시를 공유하므로 다른 위치탭에서 왔다면 권한 재요청이 없다.
+const nbDist = (m) => (m != null ? `${Number(m).toLocaleString()}m` : "");
+function nbGroup(icon, title, panel, items) {
+  const body = items.length
+    ? items.map((it) => `<li><span class="nb-name">${E(it.name)}</span><span class="nb-meta">${E(it.meta)}</span></li>`).join("")
+    : `<li class="nb-empty">주변 결과가 없습니다.</li>`;
+  return `<div class="nb-card">
+    <div class="nb-head"><h3>${icon} ${E(title)}</h3><button type="button" class="linkbtn nb-more" data-panel="${panel}">전체 보기 →</button></div>
+    <ul class="nb-list">${body}</ul>
+  </div>`;
+}
+async function searchNearby() {
+  try {
+    const { lat, lon } = await getLocation("nbStatus", "nbAddr");
+    setBox("nbStatus", "주변 정보를 모으는 중…", "loading");
+    byId("nbResults").innerHTML = "";
+    const jget = (u) => fetch(u).then((r) => r.json()).catch(() => ({}));
+    const [gas, bike, cb, pk] = await Promise.all([
+      jget(`/api/gas?lat=${lat}&lon=${lon}&prodcd=B027&radius=2000`),
+      jget(`/api/bike?lat=${lat}&lon=${lon}`),
+      jget(`/api/citybus?op=near&lat=${lat}&lon=${lon}`),
+      jget(`/api/parking?lat=${lat}&lon=${lon}&page=1&size=3`),
+    ]);
+    const gasItems = (gas.rows || []).slice(0, 3).map((s) => ({ name: s.name, meta: `${s.price ? s.price.toLocaleString() + "원/L" : "-"} · ${nbDist(s.distance)}` }));
+    const bikeItems = (bike.rows || []).slice(0, 3).map((s) => ({ name: s.name, meta: `자전거 ${s.bikes}대 · ${nbDist(s.distance)}` }));
+    const cbItems = (cb.stops || []).slice(0, 3).map((s) => ({ name: s.name, meta: `${s.arsno ? s.arsno + " · " : ""}${nbDist(s.distance)}` }));
+    const pkItems = (pk.rows || []).slice(0, 3).map((p) => ({ name: p.name, meta: `${p.available != null ? "잔여 " + p.available + " · " : ""}${nbDist(p.distance)}` }));
+    const total = gasItems.length + bikeItems.length + cbItems.length + pkItems.length;
+    if (!total) return endEmpty("nbResults", "nbStatus", "주변 정보를 찾지 못했습니다. 주소를 입력해보세요.", "warn");
+    setBox("nbStatus", `내 주변 요약 · ${kstClock()} 기준`, "ok");
+    byId("nbResults").innerHTML =
+      nbGroup("⛽", "주유소(휘발유 최저가)", "gas", gasItems) +
+      nbGroup("🚲", "따릉이 대여소", "bike", bikeItems) +
+      nbGroup("🚏", "버스 정류소", "citybus", cbItems) +
+      nbGroup("🅿️", "주차장", "parking", pkItems);
+  } catch (e) { setBox("nbStatus", `오류: ${e.message}`, "error"); retryBox("nbResults", e.message, searchNearby); }
+}
+byId("nbBtn").addEventListener("click", searchNearby);
+byId("nbResults").addEventListener("click", (e) => {
+  const b = e.target.closest(".nb-more");
+  if (!b) return;
+  // 내 주변에서 주소를 썼다면 해당 탭 주소칸에 넘겨준다(GPS면 캐시 공유로 그대로 조회)
+  const addr = byId("nbAddr").value.trim();
+  const addrTarget = { gas: "gasAddr", bike: "bikeAddr", citybus: "cbAddr", parking: "pkAddr" }[b.dataset.panel];
+  if (addr && addrTarget && byId(addrTarget)) byId(addrTarget).value = addr;
+  switchPanel(b.dataset.panel);
+});
 
 // ---------- 실시간 탭 새로고침 버튼 ----------
 // 지하철 도착·혼잡도·따릉이·주차장은 "실시간"인데 한 번 조회하면 값이 굳는다.

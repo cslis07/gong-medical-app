@@ -60,6 +60,7 @@
       <button class="toptab" data-panel="citybus" data-cat="transit" role="tab" aria-selected="false">🚏 시내버스</button>
       <button class="toptab" data-panel="bike" data-cat="transit" role="tab" aria-selected="false">🚲 따릉이</button>
       <button class="toptab" data-panel="highway" data-cat="transit" role="tab" aria-selected="false">🛣️ 고속도로</button>
+      <button class="toptab" data-panel="nearby" data-cat="transit" role="tab" aria-selected="false">📍 내주변</button>
       <!-- 주거 -->
       <button class="toptab" data-panel="realestate" data-cat="home" role="tab" aria-selected="false" hidden>🏠 실거래가</button>
       <button class="toptab" data-panel="lh" data-cat="home" role="tab" aria-selected="false" hidden>🏘️ LH청약</button>
@@ -270,6 +271,20 @@
       <div id="hwResults" class="results"></div>
     </section>
 
+    <!-- ============ 📍 내 주변 통합 ============ -->
+    <section class="panel" id="panel-nearby">
+      <section class="controls">
+        <div class="field grow">
+          <label for="nbAddr">주소 <span class="opt">(선택 — 비우면 내 위치)</span></label>
+          <input type="text" id="nbAddr" placeholder="예: 서울 중구 세종대로 110" />
+        </div>
+        <button id="nbBtn" class="search-btn">📍 내 주변 한눈에</button>
+      </section>
+      <p class="hint">현재 위치(또는 주소) 기준으로 가까운 <strong>주유소·따릉이·버스 정류소·주차장</strong>을 한 번에 보여줍니다. 각 항목의 “전체 보기”로 해당 탭에서 더 자세히 볼 수 있어요.</p>
+      <div id="nbStatus" class="status"></div>
+      <div id="nbResults" class="results-nearby"></div>
+    </section>
+
     <!-- ============ 🏠 아파트 실거래가 ============ -->
     <section class="panel" id="panel-realestate">
       <section class="controls">
@@ -321,6 +336,11 @@
       </section>
       <p class="hint">국토교통부 실거래가 공개자료입니다. 가격 필터는 <strong>매매가·전세보증금·월세보증금</strong> 기준(억원)입니다. 카드의 🗺️ 지도로 위치를 확인하세요.</p>
       <div id="reStatus" class="status"></div>
+      <div id="reInsights" class="re-insights" hidden>
+        <button type="button" id="reRankBtn" class="chip-btn">🏆 이번 달 랭킹</button>
+        <button type="button" id="reTrendBtn" class="chip-btn">📈 시세 추이(6개월)</button>
+      </div>
+      <div id="reInsightsOut" class="re-insights-out"></div>
       <div id="reResults" class="results"></div>
       <nav id="rePager" class="pager" aria-label="실거래가 페이지"></nav>
     </section>
