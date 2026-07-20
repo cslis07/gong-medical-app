@@ -1171,6 +1171,8 @@ byId("nbResults").addEventListener("click", (e) => {
     { resultsId: "bikeResults", btnId: "bikeBtn", run: () => searchBike() },
     { resultsId: "cbResults",   btnId: "cbBtn",   run: () => searchCitybus() },
     { resultsId: "pkResults",   btnId: "pkBtn",   run: () => searchParking(1) },
+    { resultsId: "airResults",  btnId: "airBtn",  run: () => searchAir() },
+    { resultsId: "hwResults",   btnId: "hwBtn",   run: () => searchHighway() },
   ];
   RT.forEach(({ resultsId, btnId, run }) => {
     const results = byId(resultsId), mainBtn = byId(btnId);

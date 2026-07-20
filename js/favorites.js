@@ -15,19 +15,20 @@
     // 지하철: 검색 UI(mapStnInput/mapStnBtn)가 노선도 렌더 후 동적 생성 → delegate로 위임 처리
     subway:     { fields: ["mapStnInput"], run: () => { if (byId("mapStnInput")) openMapStation(); }, empty: "지하철역", delegate: { btnId: "mapStnBtn", inputId: "mapStnInput" } },
     density:    { fields: ["densQ"], run: () => searchDensity(), empty: "장소 미지정" },
-    gas:        { fields: ["gasProd", "gasRadius", "gasFilter", "gasAddr"], run: () => searchGas(), empty: "내 위치", locKey: "gasAddr" },
-    bike:       { fields: ["bikeAddr"], run: () => searchBike(), empty: "내 위치", locKey: "bikeAddr" },
-    highway:    { fields: ["hwMode", "hwQ"], changeFields: ["hwMode"], run: () => searchHighway(), empty: "고속도로" },
-    realestate: { fields: ["reType", "reRegion", "reYm", "reApt"], changeFields: ["reType"], run: () => searchRealEstate(), empty: "실거래가" },
+    gas:        { fields: ["gasProd", "gasRadius", "gasFilter", "gasSort", "gasAddr"], run: () => searchGas(), empty: "내 위치", locKey: "gasAddr" },
+    bike:       { fields: ["bikeSort", "bikeAddr"], run: () => searchBike(), empty: "내 위치", locKey: "bikeAddr" },
+    highway:    { fields: ["hwMode", "hwQ", "ttStart", "ttEnd"], changeFields: ["hwMode"], run: () => searchHighway(), empty: "고속도로" },
+    realestate: { fields: ["reType", "reRegion", "reYm", "reApt", "reMin", "reMax", "reMonMax", "reSort"], changeFields: ["reType"], run: () => searchRealEstate(), empty: "실거래가" },
     lotto:      { fields: ["lottoRound", "lottoMine"], run: () => searchLotto(), empty: "최신 회차" },
-    air:        { fields: ["airSido", "airQ", "airGrade"], run: () => searchAir(), empty: "미세먼지" },
+    air:        { fields: ["airSido", "airQ", "airGrade", "airPollutant", "airStd"], run: () => searchAir(), empty: "미세먼지" },
     citybus:    { fields: ["cbAddr"], run: () => searchCitybus(), empty: "내 위치", locKey: "cbAddr" },
     lh:         { fields: ["lhMode", "lhName", "lhRegion", "lhStatusF", "lhSido"], changeFields: ["lhMode"], run: () => (byId("lhMode").value === "rental" ? searchRental() : searchLH()), empty: "청약·임대" },
     parking:    { fields: ["pkAddr", "pkFilter"], run: () => searchParking(1), empty: "내 위치", locKey: "pkAddr" },
   };
 
-  const load = (k) => { try { return JSON.parse(localStorage.getItem(k)) || []; } catch { return []; } };
-  const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+  const FAV_CAP = 200;   // 즐겨찾기 상한 — 무한 증가·용량 초과 방지
+  const load = (k) => { try { const a = JSON.parse(localStorage.getItem(k)); return Array.isArray(a) ? a : []; } catch { return []; } };
+  const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } };
   let favs = load(FAV_KEY);
   let recents = load(REC_KEY);
 
@@ -68,9 +69,11 @@
 
   function toggleFav(panel, vals) {
     const key = keyOf(panel, vals);
+    const prev = favs;
     if (isFav(panel, vals)) favs = favs.filter((f) => f.key !== key);
-    else favs.unshift({ panel, key, vals, label: labelOf(panel, vals), ts: Date.now() });
-    save(FAV_KEY, favs);
+    else { favs = [{ panel, key, vals, label: labelOf(panel, vals), ts: Date.now() }, ...favs]; if (favs.length > FAV_CAP) favs = favs.slice(0, FAV_CAP); }
+    // 저장공간 부족 시 조용히 실패하지 않고 되돌린 뒤 안내
+    if (!save(FAV_KEY, favs)) { favs = prev; alert("저장공간이 부족해 즐겨찾기를 저장하지 못했습니다. 오래된 항목을 정리하거나 내보내기로 백업 후 삭제해 주세요."); }
     renderBar(panel);
   }
 
@@ -242,12 +245,15 @@
     r.onload = () => {
       try {
         const d = JSON.parse(r.result);
-        if (!d || (!Array.isArray(d.fav) && !Array.isArray(d.recent))) throw new Error("형식");
-        if (Array.isArray(d.fav)) { favs = dedupeByKey([...d.fav, ...favs]); save(FAV_KEY, favs); }
-        if (Array.isArray(d.recent)) { recents = dedupeByKey([...d.recent, ...recents]).slice(0, REC_CAP); save(REC_KEY, recents); }
+        if (!d || (d.app && d.app !== "gong-medical") || (!Array.isArray(d.fav) && !Array.isArray(d.recent))) throw new Error("형식");
+        // 알 수 없는 panel·손상 엔트리는 버린다(대시보드 클릭 시 크래시 방지)
+        const valid = (e) => e && PANELS[e.panel] && e.key && e.vals && typeof e.vals === "object";
+        if (Array.isArray(d.fav)) { favs = dedupeByKey([...d.fav.filter(valid), ...favs]).slice(0, FAV_CAP); }
+        if (Array.isArray(d.recent)) { recents = dedupeByKey([...d.recent.filter(valid), ...recents]).slice(0, REC_CAP); }
+        if (!save(FAV_KEY, favs) || !save(REC_KEY, recents)) { alert("저장공간이 부족해 일부만 저장됐을 수 있습니다."); }
         Object.keys(PANELS).forEach(renderBar);
         alert(`즐겨찾기를 가져왔습니다. (즐겨찾기 ${favs.length} · 최근 ${recents.length})`);
-      } catch { alert("가져오기 실패: 올바른 백업 파일(JSON)이 아닙니다."); }
+      } catch { alert("가져오기 실패: 이 앱의 올바른 백업 파일(JSON)이 아닙니다."); }
     };
     r.readAsText(file);
   }
@@ -304,6 +310,8 @@
     const cfg = PANELS[panel];
     const vals = {};
     cfg.fields.forEach((id) => { if (sp.has(id)) vals[id] = sp.get(id); });
+    // 복원 후 주소창의 ?s=… 쿼리를 제거해 이후 북마크/공유에 옛 조건이 섞이지 않게 한다.
+    try { history.replaceState(null, "", location.pathname + "#" + panel); } catch {}
     if (!Object.keys(vals).length) { switchPanel(panel); return; }
     // 자동 조회를 미루는 경우: ①GPS 권한이 필요한 위치탭(주소 없음) ②동적 UI(지하철 — 역 데이터 async 로드)
     const deferRun = (cfg.locKey && !String(vals[cfg.locKey] || "").trim()) || cfg.delegate;

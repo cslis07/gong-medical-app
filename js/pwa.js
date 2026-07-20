@@ -5,8 +5,31 @@
   if (!secure) return;
 
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch((e) => console.warn("SW 등록 실패", e));
+    navigator.serviceWorker.register("/sw.js").then((reg) => {
+      // 새 버전 감지 → 하단에 "새 버전 업데이트" 배너
+      const notify = (worker) => {
+        if (!worker) return;
+        worker.addEventListener("statechange", () => {
+          if (worker.state === "installed" && navigator.serviceWorker.controller) showUpdateBanner(worker);
+        });
+      };
+      if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner(reg.waiting);
+      reg.addEventListener("updatefound", () => notify(reg.installing));
+    }).catch((e) => console.warn("SW 등록 실패", e));
+    // 새 워커가 제어권을 잡으면 1회 새로고침
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (!reloaded) { reloaded = true; location.reload(); } });
   });
+
+  function showUpdateBanner(worker) {
+    if (document.getElementById("swUpdate")) return;
+    const bar = document.createElement("div");
+    bar.id = "swUpdate";
+    bar.className = "sw-update";
+    bar.innerHTML = `<span>🆕 새 버전이 있습니다.</span><button type="button" id="swUpdateBtn">업데이트</button>`;
+    document.body.appendChild(bar);
+    document.getElementById("swUpdateBtn").addEventListener("click", () => { bar.remove(); worker.postMessage("SKIP_WAITING"); });
+  }
 
   // 브라우저가 설치 가능하다고 판단하면 헤더 옆에 "앱 설치" 버튼을 띄운다.
   let deferred = null;
