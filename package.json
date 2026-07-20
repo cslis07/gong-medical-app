@@ -8,6 +8,7 @@
     "dev": "vercel dev",
     "deploy": "vercel --prod",
     "build:assets": "node scripts/build-assets.mjs",
+    "build:tollgates": "node scripts/build-ex-tollgates.mjs",
     "build:parking": "node scripts/build-parking-snapshot.mjs"
   },
   "dependencies": {

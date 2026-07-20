@@ -275,15 +275,26 @@
             <option value="rest">🍜 휴게소 정보</option>
             <option value="congest">🚗 실시간 소통</option>
             <option value="sms">🚨 실시간 돌발·문자</option>
+            <option value="traveltime">🕐 구간 소요시간</option>
           </select>
         </div>
         <div class="field grow hw-rest">
           <label for="hwQ">휴게소명</label>
           <input type="text" id="hwQ" placeholder="예: 죽전, 안성, 천안삼거리, 행담도" />
         </div>
+        <div class="field hw-tt" style="display:none">
+          <label for="ttStart">출발 영업소</label>
+          <input type="text" id="ttStart" list="ttStartList" placeholder="예: 서울" autocomplete="off" />
+          <datalist id="ttStartList"></datalist>
+        </div>
+        <div class="field hw-tt" style="display:none">
+          <label for="ttEnd">도착 영업소</label>
+          <input type="text" id="ttEnd" list="ttEndList" placeholder="예: 대전" autocomplete="off" />
+          <datalist id="ttEndList"></datalist>
+        </div>
         <button id="hwBtn" class="search-btn">조회</button>
       </section>
-      <p class="hint">전국 고속도로 휴게소의 편의시설·대표음식·주유소 유가, 실시간 정체/서행 구간, 그리고 <strong>실시간 돌발·문자(사고·공사·정체)</strong>를 조회합니다. (한국도로공사)</p>
+      <p class="hint">전국 고속도로 휴게소·유가, 실시간 정체/서행, <strong>실시간 돌발·문자(사고·공사·정체)</strong>, 그리고 <strong>출발→도착 영업소 구간 실시간 소요시간</strong>을 조회합니다. (한국도로공사)</p>
       <div id="hwStatus" class="status"></div>
       <div id="hwResults" class="results"></div>
     </section>

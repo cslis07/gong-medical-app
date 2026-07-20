@@ -434,13 +434,50 @@ function applyBikeSort() {
 byId("bikeBtn").addEventListener("click", searchBike);
 byId("bikeSort").addEventListener("change", () => { if (bikeCache.rows.length) applyBikeSort(); });
 
-// ==================== 🛣️ 고속도로 (휴게소 + 소통) ====================
+// ==================== 🛣️ 고속도로 (휴게소 + 소통 + 돌발 + 구간 소요시간) ====================
 function syncHwMode() {
-  byId("panel-highway").querySelector(".hw-rest").style.display = byId("hwMode").value === "rest" ? "" : "none";
+  const m = byId("hwMode").value;
+  byId("panel-highway").querySelector(".hw-rest").style.display = m === "rest" ? "" : "none";
+  byId("panel-highway").querySelectorAll(".hw-tt").forEach((el) => { el.style.display = m === "traveltime" ? "" : "none"; });
+  if (m === "traveltime") loadTollgates();
 }
 byId("hwMode").addEventListener("change", syncHwMode);
+// 영업소 목록(드롭다운) 1회 로드 — 이름→코드 매핑
+let tollgateMap = null;
+async function loadTollgates() {
+  if (tollgateMap) return;
+  try {
+    const d = await (await fetch("/api/highway?op=tollgates")).json();
+    const list = (d.ok && d.list) || [];
+    if (!list.length) return;
+    tollgateMap = new Map(list.map((t) => [t.name, t.code]));
+    const opts = list.map((t) => `<option value="${E(t.name)}"></option>`).join("");
+    byId("ttStartList").innerHTML = opts;
+    byId("ttEndList").innerHTML = opts;
+  } catch { /* 실패 시 조회 때 재시도 */ }
+}
+async function searchTravelTime() {
+  if (!tollgateMap) await loadTollgates();
+  const sName = byId("ttStart").value.trim(), eName = byId("ttEnd").value.trim();
+  const start = tollgateMap && tollgateMap.get(sName), end = tollgateMap && tollgateMap.get(eName);
+  if (!start || !end) return setBox("hwStatus", "목록에서 출발·도착 영업소를 정확히 선택하세요.", "warn");
+  setBox("hwStatus", "구간 소요시간 조회 중…", "loading"); showSkeletons("hwResults", 1);
+  try {
+    const d = await (await fetch(`/api/highway?op=traveltime&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)).json();
+    if (d.needKey) return setBox("hwStatus", "⚠️ EX 인증키 설정 후 이용 가능합니다.", "warn");
+    if (!d.ok) return setBox("hwStatus", d.message || "조회 실패", "warn");
+    if (!d.found) return endEmpty("hwResults", "hwStatus", d.message || "해당 구간의 실시간 소요시간이 없습니다.", "warn");
+    setBox("hwStatus", `${d.stdTime} 기준 실시간`, "ok");
+    byId("hwResults").innerHTML = `<article class="card">
+      <div class="card-top"><h3>🕐 ${E(d.startNm)} → ${E(d.endNm)}</h3><span class="bed ok">${d.timeAvg}분</span></div>
+      <p class="meta">평균 <b>${d.timeAvg}분</b> · 최소 ${d.timeMin}분 · 최대 ${d.timeMax}분 <span class="opt">(승용차 기준)</span></p>
+      <p class="meta">🔄 ${E(d.stdDate)} ${E(d.stdTime)} 기준 · 수분 단위 갱신</p>
+    </article>`;
+  } catch (e) { setBox("hwStatus", `오류: ${e.message}`, "error"); retryBox("hwResults", e.message, searchTravelTime); }
+}
 async function searchHighway() {
   const mode = byId("hwMode").value;
+  if (mode === "traveltime") return searchTravelTime();
   if (mode === "rest" && !byId("hwQ").value.trim()) return setBox("hwStatus", "휴게소명을 입력하세요.", "warn");
   setBox("hwStatus", "조회 중…", "loading"); showSkeletons("hwResults");
   try {
@@ -504,6 +541,10 @@ function renderCongest(r) {
 }
 byId("hwBtn").addEventListener("click", searchHighway);
 byId("hwQ").addEventListener("keydown", (e) => { if (e.key === "Enter") searchHighway(); });
+["ttStart", "ttEnd"].forEach((id) => {
+  byId(id).addEventListener("keydown", (e) => { if (e.key === "Enter") searchTravelTime(); });
+  byId(id).addEventListener("change", () => { if (byId("ttStart").value.trim() && byId("ttEnd").value.trim()) searchTravelTime(); });
+});
 
 // ==================== 🏠 아파트 실거래가 ====================
 // 시군구 법정동코드(LAWD_CD, 5자리) — 서울 25구 + 주요 광역/경기
