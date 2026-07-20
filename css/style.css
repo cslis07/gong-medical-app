@@ -107,11 +107,7 @@
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; color: var(--text);
-  /* 생활·교통 모티프 배경(은은한 지하철 노선 워터마크) + 부드러운 컬러 워시 */
-  background:
-    radial-gradient(1200px 420px at 50% -140px, var(--accent-tint), transparent 70%),
-    url("/img/bg-transit.svg") 0 0 / 260px repeat,
-    var(--bg);
+  background: var(--bg);   /* 민무늬 — 가독성 우선 */
   font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
