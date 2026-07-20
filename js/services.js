@@ -353,7 +353,7 @@ async function searchGas() {
     const r = await fetch(`/api/gas?lat=${lat}&lon=${lon}&prodcd=${prodcd}&radius=${radius}`);
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
-    if (d.needKey) return setBox("gasStatus", "⚠️ 주유소 기능은 OPINET 인증키 설정 후 이용 가능합니다.", "warn");
+    if (d.needKey) return endEmpty("gasResults", "gasStatus", "⚠️ 주유소 기능은 OPINET 인증키 설정 후 이용 가능합니다.", "warn");
     const rows = d.rows || [];
     if (!rows.length) return endEmpty("gasResults", "gasStatus", d.message || "반경 내 주유소가 없습니다.", "warn");
     gasCache = { rows, radius: Number(d.radius) || Number(radius), center: { lat, lon } };
@@ -464,8 +464,8 @@ async function searchTravelTime() {
   setBox("hwStatus", "구간 소요시간 조회 중…", "loading"); showSkeletons("hwResults", 1);
   try {
     const d = await (await fetch(`/api/highway?op=traveltime&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)).json();
-    if (d.needKey) return setBox("hwStatus", "⚠️ EX 인증키 설정 후 이용 가능합니다.", "warn");
-    if (!d.ok) return setBox("hwStatus", d.message || "조회 실패", "warn");
+    if (d.needKey) { byId("hwResults").innerHTML = ""; return setBox("hwStatus", "⚠️ EX 인증키 설정 후 이용 가능합니다.", "warn"); }
+    if (!d.ok) { setBox("hwStatus", d.message || "조회 실패", "warn"); return retryBox("hwResults", d.message || "조회 실패", searchTravelTime); }
     if (!d.found) return endEmpty("hwResults", "hwStatus", d.message || "해당 구간의 실시간 소요시간이 없습니다.", "warn");
     setBox("hwStatus", `${d.stdTime} 기준 실시간`, "ok");
     byId("hwResults").innerHTML = `<article class="card">
@@ -485,8 +485,8 @@ async function searchHighway() {
       : mode === "sms" ? "/api/highway?op=sms"
       : `/api/highway?op=rest&q=${encodeURIComponent(byId("hwQ").value.trim())}`;
     const d = await (await fetch(url)).json();
-    if (d.needKey) return setBox("hwStatus", "⚠️ 고속도로 기능은 EX 인증키 설정 후 이용 가능합니다.", "warn");
-    if (!d.ok) return setBox("hwStatus", d.message || "조회 실패", "warn");
+    if (d.needKey) { byId("hwResults").innerHTML = ""; return setBox("hwStatus", "⚠️ 고속도로 기능은 EX 인증키 설정 후 이용 가능합니다.", "warn"); }
+    if (!d.ok) { setBox("hwStatus", d.message || "조회 실패", "warn"); return retryBox("hwResults", d.message || "조회 실패", searchHighway); }
     const rows = d.rows || [];
     if (!rows.length) return endEmpty("hwResults", "hwStatus",
       mode === "congest" ? "현재 정체/서행 구간이 없습니다. 원활합니다 🎉" : mode === "sms" ? "현재 진행 중인 돌발상황이 없습니다 🎉" : "일치하는 휴게소가 없습니다.",
@@ -600,8 +600,8 @@ async function searchRealEstate() {
   byId("reRankBtn").classList.remove("on"); byId("reTrendBtn").classList.remove("on");
   try {
     const d = await (await fetch(`/api/realestate?type=${RE_UI[uiType].api}&lawd=${lawd}&ym=${ym}`)).json();
-    if (d.needKey) return setBox("reStatus", "⚠️ 실거래가 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
-    if (!d.ok) return setBox("reStatus", d.error || "조회 실패", "warn");
+    if (d.needKey) return endEmpty("reResults", "reStatus", "⚠️ 실거래가 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
+    if (!d.ok) return endEmpty("reResults", "reStatus", d.error || "조회 실패", "warn");
     const sel = byId("reRegion");
     reCache = { rows: d.rows || [], uiType, regionName: sel.options[sel.selectedIndex]?.text || "", truncated: d.truncated, failedPages: d.failedPages };
     if (!reCache.rows.length) return endEmpty("reResults", "reStatus", "해당 지역·연월에 신고된 거래가 없습니다.", "warn");
@@ -762,8 +762,8 @@ async function searchAir() {
   setBox("airStatus", "조회 중…", "loading"); showSkeletons("airResults");
   try {
     const d = await (await fetch(`/api/air?sido=${encodeURIComponent(sido)}`)).json();
-    if (d.needKey) return setBox("airStatus", "⚠️ 미세먼지 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
-    if (!d.ok) return setBox("airStatus", d.error || "조회 실패", "warn");
+    if (d.needKey) return endEmpty("airResults", "airStatus", "⚠️ 미세먼지 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
+    if (!d.ok) return endEmpty("airResults", "airStatus", d.error || "조회 실패", "warn");
     if (!(d.stations || []).length) return endEmpty("airResults", "airStatus", "측정 데이터가 없습니다.", "warn");
     airCache = d;
     applyAirFilter();
@@ -859,7 +859,7 @@ async function searchCitybus() {
     const { lat, lon } = await getLocation("cbStatus", "cbAddr");
     setBox("cbStatus", "정류소 조회 중…", "loading"); showSkeletons("cbResults");
     const d = await (await fetch(`/api/citybus?op=near&lat=${lat}&lon=${lon}`)).json();
-    if (d.needKey) return setBox("cbStatus", "⚠️ 시내버스 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
+    if (d.needKey) return endEmpty("cbResults", "cbStatus", "⚠️ 시내버스 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
     const stops = d.stops || [];
     if (!stops.length) return endEmpty("cbResults", "cbStatus", "주변 정류소가 없습니다.", "warn");
     setBox("cbStatus", `가까운 정류소 ${stops.length}곳 · 정류소를 누르면 도착정보`, "ok");
@@ -928,8 +928,8 @@ async function searchLH() {
   try {
     // 서버가 전 페이지를 모아 주므로(API 기본창 = 최근 2개월) 필터·페이지네이션은 클라이언트에서 처리한다.
     const d = await (await fetch(`/api/lh`)).json();
-    if (d.needKey) return setBox("lhStatus", "⚠️ LH 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
-    if (!d.ok) return setBox("lhStatus", d.message || "조회 실패", "warn");
+    if (d.needKey) return endEmpty("lhResults", "lhStatus", "⚠️ LH 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
+    if (!d.ok) return endEmpty("lhResults", "lhStatus", d.message || "조회 실패", "warn");
     lhCache = d.rows || [];
     lhMeta = { truncated: d.truncated, failedPages: d.failedPages };
     if (!lhCache.length) return endEmpty("lhResults", "lhStatus", "공고가 없습니다.", "warn");
@@ -1013,9 +1013,9 @@ async function searchRental() {
   setBox("lhStatus", "공공임대 단지 조회 중…", "loading"); showSkeletons("lhResults");
   try {
     const d = await (await fetch(`/api/myhome?brtc=${brtc}&size=60`)).json();
-    if (d.needKey) return setBox("lhStatus", "⚠️ DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
-    if (d.pending) return setBox("lhStatus", "ℹ️ " + d.message, "warn");
-    if (!d.ok) return setBox("lhStatus", d.message || "조회 실패", "warn");
+    if (d.needKey) return endEmpty("lhResults", "lhStatus", "⚠️ DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
+    if (d.pending) return endEmpty("lhResults", "lhStatus", "ℹ️ " + d.message, "warn");
+    if (!d.ok) return endEmpty("lhResults", "lhStatus", d.message || "조회 실패", "warn");
     const rows = d.rows || [];
     if (!rows.length) return endEmpty("lhResults", "lhStatus", "단지 정보가 없습니다.", "warn");
     setBox("lhStatus", `공공임대 단지 ${rows.length}곳`, "ok");
@@ -1054,8 +1054,8 @@ async function searchParking(page = 1) {
     if (f === "live") qs.set("live", "1");
     if (f === "free") qs.set("free", "1");
     const d = await (await fetch(`/api/parking?${qs}`)).json();
-    if (d.needKey) return setBox("pkStatus", "⚠️ 주차장 기능은 SEOUL_API_KEY 설정 후 이용 가능합니다.", "warn");
-    if (!d.ok) return setBox("pkStatus", d.error || d.message || "조회 실패", "warn");
+    if (d.needKey) return endEmpty("pkResults", "pkStatus", "⚠️ 주차장 기능은 SEOUL_API_KEY 설정 후 이용 가능합니다.", "warn");
+    if (!d.ok) { clearPager("pkPager"); return endEmpty("pkResults", "pkStatus", d.error || d.message || "조회 실패", "warn"); }
     const rows = d.rows || [];
     if (!rows.length) { clearPager("pkPager"); return endEmpty("pkResults", "pkStatus", f ? "조건에 맞는 주차장이 없습니다." : "주변 주차장이 없습니다.", "warn"); }
     setBox("pkStatus", `조건에 맞는 ${d.matched.toLocaleString()}곳 · 실시간 제공 ${d.liveCount}곳 · ${kstClock()} 기준`, "ok");
