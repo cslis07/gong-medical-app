@@ -39,12 +39,12 @@
   --header-1: #2f5fe0;
   --header-2: #1e3fa8;
 
-  /* 형태 */
-  --r-lg: 18px;
-  --r: 14px;
-  --r-sm: 10px;
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, .05), 0 1px 3px rgba(16, 24, 40, .06);
-  --shadow-md: 0 4px 16px rgba(16, 24, 40, .10);
+  /* 형태 — 모바일 친화적으로 더 둥글게 */
+  --r-lg: 24px;
+  --r: 20px;
+  --r-sm: 14px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, .05), 0 2px 8px rgba(16, 24, 40, .05);
+  --shadow-md: 0 6px 22px rgba(16, 24, 40, .10);
   --shadow-lg: 0 18px 50px rgba(16, 24, 40, .28);
 }
 
@@ -106,7 +106,12 @@
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
-  margin: 0; background: var(--bg); color: var(--text);
+  margin: 0; color: var(--text);
+  /* 생활·교통 모티프 배경(은은한 지하철 노선 워터마크) + 부드러운 컬러 워시 */
+  background:
+    radial-gradient(1200px 420px at 50% -140px, var(--accent-tint), transparent 70%),
+    url("/img/bg-transit.svg") 0 0 / 260px repeat,
+    var(--bg);
   font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
@@ -122,8 +127,19 @@ button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
 }
 
 /* ===== 헤더 ===== */
-.app-header { background: linear-gradient(135deg, var(--header-1), var(--header-2)); color: #fff; padding: 26px 0 28px; }
-.app-header h1 { margin: 0; font-size: 25px; font-weight: 800; letter-spacing: -.4px; }
+.app-header {
+  background: linear-gradient(135deg, var(--header-1), var(--header-2)); color: #fff;
+  padding: 26px 0 30px; border-radius: 0 0 28px 28px; box-shadow: var(--shadow-md);
+  position: relative; overflow: hidden;
+}
+/* 헤더 우측에 은은한 지하철 차량 워터마크(교통 모티프, 흰색 글리프) */
+.app-header::after {
+  content: ""; position: absolute; right: 8px; bottom: -34px; width: 150px; height: 150px; pointer-events: none;
+  opacity: .13; transform: rotate(-8deg);
+  background: no-repeat center / contain
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="white"><rect x="146" y="120" width="220" height="230" rx="46"/><rect x="176" y="158" width="160" height="70" rx="18" fill="%232f5fe0"/><circle cx="196" cy="292" r="20" fill="%232f5fe0"/><circle cx="316" cy="292" r="20" fill="%232f5fe0"/><rect x="176" y="356" width="30" height="44" rx="8"/><rect x="306" y="356" width="30" height="44" rx="8"/></svg>');
+}
+.app-header h1 { margin: 0; font-size: 25px; font-weight: 800; letter-spacing: -.4px; position: relative; }
 .app-header .sub { margin: 7px 0 0; opacity: .9; font-size: 14px; }
 .app-header .header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .app-header .header-links { flex-shrink: 0; align-self: center; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; }
