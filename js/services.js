@@ -1142,10 +1142,73 @@ byId("nbResults").addEventListener("click", (e) => {
   switchPanel(b.dataset.panel);
 });
 
+// ==================== 🏥 야간진료 병의원 ====================
+// s/e 배열 인덱스: [월,화,수,목,금,토,일,공휴일]. JS getDay(): 일0..토6.
+const clDowIdx = () => (new Date().getDay() + 6) % 7;   // 월=0 … 일=6
+const hhmm = (n) => { const v = String(n).padStart(4, "0"); return `${v.slice(0, 2)}:${v.slice(2)}`; };
+function clOpenState(c) {
+  const i = clDowIdx(), s = c.start[i], e = c.end[i];
+  if (!s || !e) return { label: "오늘 휴무", cls: "full", open: false, closed: true };
+  const now = new Date(); const cur = now.getHours() * 100 + now.getMinutes();
+  const open = cur >= s && cur <= e;
+  return { label: open ? "지금 진료중" : "진료마감", cls: open ? "ok" : "warn", open, closed: false, s, e };
+}
+// 진료과 문자열로 병의원 종류 분류 (일반의원/치과/한의원)
+function clinicType(g) {
+  const s = String(g || "");
+  if (/한방|침구|사상체질|한의/.test(s)) return "han";
+  if (/구강|치과/.test(s)) return "dental";
+  return "general";
+}
+let clinicCache = { rows: [], center: null };
+async function searchClinic() {
+  try {
+    const { lat, lon } = await getLocation("clStatus", "clAddr");
+    setBox("clStatus", "야간진료 병의원 조회 중…", "loading"); showSkeletons("clResults");
+    const d = await (await fetch(`/api/clinic?lat=${lat}&lon=${lon}&limit=60`)).json();
+    if (d.needKey) return endEmpty("clResults", "clStatus", "⚠️ DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
+    if (!d.ok) { setBox("clStatus", d.error || "조회 실패", "warn"); return retryBox("clResults", d.error || "조회 실패", searchClinic); }
+    clinicCache = { rows: d.rows || [], center: { lat, lon }, generatedAt: d.generatedAt, widened: d.widened };
+    applyClinicFilter();
+  } catch (e) { setBox("clStatus", `오류: ${e.message}`, "error"); retryBox("clResults", e.message, searchClinic); }
+}
+function applyClinicFilter() {
+  const { rows, center, generatedAt, widened } = clinicCache;
+  if (!rows.length) return endEmpty("clResults", "clStatus", "주변에 야간진료 병의원 정보가 없습니다.", "warn");
+  const onlyNow = byId("clOpen").value === "now";
+  const type = byId("clType").value;
+  const TYPE_LABEL = { general: "일반의원", dental: "치과", han: "한의원", "": "" };
+  let list = rows.map((c) => ({ c, st: clOpenState(c) }));
+  if (type) list = list.filter((x) => clinicType(x.c.dgsbjt) === type);
+  list = list.filter((x) => !onlyNow || x.st.open);
+  if (!list.length) return endEmpty("clResults", "clStatus", `조건에 맞는 ${TYPE_LABEL[type] || "병의원"}이 주변에 없습니다. 종류·진료 필터를 넓혀보세요.`, "warn");
+  const openCnt = list.filter((x) => x.st.open).length;
+  setBox("clStatus", `${TYPE_LABEL[type] ? TYPE_LABEL[type] + " " : ""}${list.length}곳${onlyNow ? "" : ` · 지금 진료중 ${openCnt}곳`}${widened ? " · 반경 밖 최근접" : ""} · ${kstClock()} 기준`, "ok");
+  byId("clResults").innerHTML = list.map(({ c, st }) => {
+    const i = clDowIdx();
+    const today = st.closed ? "오늘 휴무" : `오늘 ${hhmm(c.start[i])}~${hhmm(c.end[i])}`;
+    const tel = c.tel ? `<a class="btn tel" href="tel:${E(c.tel)}">📞 전화</a>` : "";
+    const map = `<a class="btn map" href="https://map.kakao.com/link/map/${encodeURIComponent(c.name)},${c.lat},${c.lon}" target="_blank" rel="noopener">🗺️ 지도</a>`;
+    const dg = (c.dgsbjt || "").split(",").slice(0, 4).join(", ");
+    return `<article class="card">
+      <div class="card-top"><h3>🏥 ${E(c.name)}</h3><span class="bed ${st.cls}">${st.label}</span></div>
+      <p class="meta">🕐 ${E(today)} · 📍 ${c.distance.toLocaleString()}m</p>
+      ${dg ? `<p class="meta">${E(dg)}</p>` : ""}
+      <p class="addr">📍 ${E(c.addr)}</p>
+      <div class="card-actions">${tel}${map}</div>
+    </article>`;
+  }).join("");
+  if (window.GongMap) GongMap.set("clinic", list.map(({ c }) => ({ lat: c.lat, lon: c.lon, label: c.name, sub: c.tel || "" })), center);
+  if (generatedAt) byId("clResults").insertAdjacentHTML("beforeend", `<p class="hint" style="grid-column:1/-1">ℹ️ 진료시간은 변동될 수 있습니다. ${E(generatedAt)} 기준 데이터 · 방문 전 전화 확인 권장.</p>`);
+}
+byId("clBtn").addEventListener("click", searchClinic);
+byId("clOpen").addEventListener("change", () => { if (clinicCache.rows.length) applyClinicFilter(); });
+byId("clType").addEventListener("change", () => { if (clinicCache.rows.length) applyClinicFilter(); });
+
 // ---------- 입력창 지우기(×) 버튼 ----------
 // 주요 텍스트 입력에 clear 버튼을 주입(모바일에서 긴 주소·역명 재입력 마찰 감소).
 (function initClearButtons() {
-  const ids = ["gasAddr", "bikeAddr", "cbAddr", "pkAddr", "nbAddr", "densQ", "airQ", "reApt", "lhName", "hwQ", "lottoMine"];
+  const ids = ["gasAddr", "bikeAddr", "cbAddr", "pkAddr", "nbAddr", "clAddr", "densQ", "airQ", "reApt", "lhName", "hwQ", "lottoMine"];
   ids.forEach((id) => {
     const el = byId(id);
     if (!el || el.dataset.clearable) return;

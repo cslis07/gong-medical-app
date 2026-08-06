@@ -60,6 +60,7 @@
 | 🚏 시내버스 | 주변 정류소 → 정류소별 **실시간 도착**(노선·남은 정류장) | 국토부 TAGO | DATA_API_KEY |
 | 🅿️ 주차장 | **전국 17,700여곳** 가까운 순 + 서울 일부 **실시간 잔여면수**·요금·운영시간 / 실시간·무료 필터 · **서버 페이지네이션** | 서울 GetParkInfo+GetParkingInfo · 전국주차장정보표준데이터(스냅샷) | SEOUL_API_KEY / DATA_API_KEY |
 | 🏘️ 청약·임대 | LH 분양·임대 공고(**지역·상태 필터**, 상세링크, **전량 수집 + 페이지네이션**) / 공공임대 단지(LH·SH·지방) | LH · 마이홈 | DATA_API_KEY |
+| 🏥 야간진료 | 내 위치 반경 **18:30 이후 진료 병의원**(스냅샷) · 오늘 진료시간·**지금 진료중** 배지·거리·지도핀 · 지금진료중 필터 | 국립중앙의료원 E-Gen | DATA_API_KEY |
 
 ### 공통 기능 · UI
 - **디자인 시스템**(2026-07-12): `css/style.css`가 전부 토큰(`--bg/--card/--surface-2/--accent/--ok-bg…`) 기반. 라이트/다크 자동(`prefers-color-scheme`) + 헤더 토글(`js/theme.js`, `localStorage`, auto→light→dark). 하드코딩 색 30여 곳을 토큰화해 다크가 한 곳에서 뒤집힌다.
@@ -112,6 +113,9 @@ scripts/build-parking-snapshot.mjs  위 두 스냅샷 빌더 (`npm run build:par
 scripts/build-ex-tollgates.mjs  EX 영업소 목록 빌더 (`npm run build:tollgates`) → data/ex-tollgates.js
 scripts/build-assets.mjs        PWA 아이콘·OG PNG 빌더 (`npm run build:assets`, sharp)
 data/ex-tollgates.js            고속도로 영업소 566곳 코드+이름 (구간 소요시간 드롭다운용, 자동생성)
+lib/clinic.js                   ★ 야간진료 병의원 (스냅샷 반경 필터, HANDLERS에 clinic 등록)
+data/night-clinics.js           ★ 야간(18:30 이후 진료) 병의원 스냅샷 (E-Gen, 자동생성)
+scripts/build-night-clinics.mjs 위 스냅샷 빌더 (`npm run build:clinics`)
 index.html            12개 탭 + 패널 + 헤더 미세먼지 배지
 js/app.js             지하철 전용 로직(노선도·역 종합 모달)
 js/services.js        나머지 13개 탭 로직 + 탭 전환 + 공용 getLocation(주소/GPS)

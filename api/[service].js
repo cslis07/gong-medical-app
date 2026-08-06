@@ -20,6 +20,7 @@ const HANDLERS = {
   geocode: () => import("../lib/geocode.js"),
   myhome: () => import("../lib/myhome.js"),
   parking: () => import("../lib/parking.js"),
+  clinic: () => import("../lib/clinic.js"),
 };
 
 // Vercel Edge 캐시(s-maxage)는 **사용자 간에 공유**된다.
@@ -47,6 +48,8 @@ const CACHE = {
   citybus: (q) => (q.op === "near" ? [600, 1200] : [20, 60]),
   // 실시간 인구 — 원본이 5분 주기
   density: () => [120, 300],
+  // 야간진료: 좌표 같으면 같은 답(스냅샷). '지금 진료중'은 프론트가 계산해 stale 무관
+  clinic: () => [300, 900],
 };
 
 export default async function handler(req, res) {

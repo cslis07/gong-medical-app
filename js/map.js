@@ -11,6 +11,7 @@
     bike:    "bikeResults",
     citybus: "cbResults",
     parking: "pkResults",
+    clinic:  "clResults",
   };
   const state = {};           // panel -> { points, center, map, layer, open }
   let leafletP = null;

@@ -66,6 +66,7 @@
       <button class="toptab" data-panel="lh" data-cat="home" role="tab" aria-selected="false" hidden>🏘️ LH청약</button>
       <button class="toptab" data-panel="parking" data-cat="home" role="tab" aria-selected="false" hidden>🅿️ 주차장</button>
       <!-- 생활 -->
+      <button class="toptab" data-panel="clinic" data-cat="life" role="tab" aria-selected="false" hidden>🏥 야간진료</button>
       <button class="toptab" data-panel="air" data-cat="life" role="tab" aria-selected="false" hidden>😷 미세먼지</button>
       <button class="toptab" data-panel="density" data-cat="life" role="tab" aria-selected="false" hidden>👥 혼잡도</button>
       <button class="toptab" data-panel="gas" data-cat="life" role="tab" aria-selected="false" hidden>⛽ 주유소</button>
@@ -313,6 +314,36 @@
       <div id="nbResults" class="results-nearby"></div>
     </section>
 
+    <!-- ============ 🏥 야간진료 병의원 ============ -->
+    <section class="panel" id="panel-clinic">
+      <section class="controls">
+        <div class="field grow">
+          <label for="clAddr">주소 <span class="opt">(선택 — 비우면 내 위치)</span></label>
+          <input type="text" id="clAddr" placeholder="예: 서울 강남구 테헤란로 152" />
+        </div>
+        <div class="field">
+          <label for="clType">종류</label>
+          <select id="clType">
+            <option value="general" selected>일반의원</option>
+            <option value="dental">치과</option>
+            <option value="han">한의원</option>
+            <option value="">전체</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="clOpen">진료</label>
+          <select id="clOpen">
+            <option value="">전체</option>
+            <option value="now">지금 진료중만</option>
+          </select>
+        </div>
+        <button id="clBtn" class="search-btn">📍 주변 야간진료</button>
+      </section>
+      <p class="hint">현재 위치 기준으로 <strong>오후 6시 30분 이후까지 진료</strong>하는 일반 병의원을 가까운 순으로 보여줍니다. 오늘 진료시간·<strong>지금 진료중</strong> 여부를 함께 표시합니다. (국립중앙의료원 응급의료정보)</p>
+      <div id="clStatus" class="status"></div>
+      <div id="clResults" class="results"></div>
+    </section>
+
     <!-- ============ 🏠 아파트 실거래가 ============ -->
     <section class="panel" id="panel-realestate">
       <section class="controls">
@@ -496,7 +527,7 @@
   </main>
 
   <footer class="app-footer wrap">
-    <p>출처: 서울교통공사 · 서울 열린데이터광장 · 공공데이터포털 · 한국도로공사 · Opinet · 에어코리아 · LH · LOST112</p>
+    <p>출처: 서울교통공사 · 서울 열린데이터광장 · 공공데이터포털 · 한국도로공사 · Opinet · 에어코리아 · LH · 국립중앙의료원 · LOST112</p>
     <p class="disclaimer">실시간 정보는 제공 시점 기준이며 실제와 다를 수 있습니다. 요금·운영시간은 현장 안내를 확인하세요.</p>
     <p class="disclaimer">회원가입 없음 · 위치정보는 조회에만 쓰이고 서버에 저장하지 않습니다 · 즐겨찾기는 이 브라우저에만 저장됩니다. <a href="guide.html#sec-privacy">개인정보·위치정보 안내</a></p>
   </footer>
