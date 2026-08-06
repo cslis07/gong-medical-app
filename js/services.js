@@ -1165,7 +1165,8 @@ async function searchClinic() {
   try {
     const { lat, lon } = await getLocation("clStatus", "clAddr");
     setBox("clStatus", "야간진료 병의원 조회 중…", "loading"); showSkeletons("clResults");
-    const d = await (await fetch(`/api/clinic?lat=${lat}&lon=${lon}&limit=60`)).json();
+    const radius = byId("clRadius").value || "2000";
+    const d = await (await fetch(`/api/clinic?lat=${lat}&lon=${lon}&radius=${radius}&limit=60`)).json();
     if (d.needKey) return endEmpty("clResults", "clStatus", "⚠️ DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
     if (!d.ok) { setBox("clStatus", d.error || "조회 실패", "warn"); return retryBox("clResults", d.error || "조회 실패", searchClinic); }
     clinicCache = { rows: d.rows || [], center: { lat, lon }, generatedAt: d.generatedAt, widened: d.widened };
@@ -1177,13 +1178,20 @@ function applyClinicFilter() {
   if (!rows.length) return endEmpty("clResults", "clStatus", "주변에 야간진료 병의원 정보가 없습니다.", "warn");
   const onlyNow = byId("clOpen").value === "now";
   const type = byId("clType").value;
+  const nightCut = Number(byId("clNight").value) || 1830;
+  const iDay = clDowIdx();
   const TYPE_LABEL = { general: "일반의원", dental: "치과", han: "한의원", "": "" };
+  const NIGHT_LABEL = { 1830: "6:30", 1900: "7시", 2000: "8시", 2100: "9시" }[nightCut] || "6:30";
   let list = rows.map((c) => ({ c, st: clOpenState(c) }));
+  // 오늘 진료 종료가 야간 기준 이후인 곳만(=오늘 그 시각까지 진료). 오늘 휴무는 자동 제외.
+  list = list.filter((x) => Number(x.c.end[iDay]) >= nightCut);
   if (type) list = list.filter((x) => clinicType(x.c.dgsbjt) === type);
-  list = list.filter((x) => !onlyNow || x.st.open);
-  if (!list.length) return endEmpty("clResults", "clStatus", `조건에 맞는 ${TYPE_LABEL[type] || "병의원"}이 주변에 없습니다. 종류·진료 필터를 넓혀보세요.`, "warn");
+  if (onlyNow) list = list.filter((x) => x.st.open);
+  // 지금 진료중을 위로, 그다음 거리순
+  list.sort((a, b) => (b.st.open - a.st.open) || (a.c.distance - b.c.distance));
+  if (!list.length) return endEmpty("clResults", "clStatus", `오후 ${NIGHT_LABEL} 이후까지 하는 ${TYPE_LABEL[type] || "병의원"}이 주변에 없습니다. 야간 기준·반경·종류를 넓혀보세요.`, "warn");
   const openCnt = list.filter((x) => x.st.open).length;
-  setBox("clStatus", `${TYPE_LABEL[type] ? TYPE_LABEL[type] + " " : ""}${list.length}곳${onlyNow ? "" : ` · 지금 진료중 ${openCnt}곳`}${widened ? " · 반경 밖 최근접" : ""} · ${kstClock()} 기준`, "ok");
+  setBox("clStatus", `${TYPE_LABEL[type] ? TYPE_LABEL[type] + " " : ""}${list.length}곳 · 오후 ${NIGHT_LABEL}↑${onlyNow ? "" : ` · 지금 진료중 ${openCnt}곳`}${widened ? " · 반경 밖 최근접" : ""} · ${kstClock()} 기준`, "ok");
   byId("clResults").innerHTML = list.map(({ c, st }) => {
     const i = clDowIdx();
     const today = st.closed ? "오늘 휴무" : `오늘 ${hhmm(c.start[i])}~${hhmm(c.end[i])}`;
@@ -1202,8 +1210,11 @@ function applyClinicFilter() {
   if (generatedAt) byId("clResults").insertAdjacentHTML("beforeend", `<p class="hint" style="grid-column:1/-1">ℹ️ 진료시간은 변동될 수 있습니다. ${E(generatedAt)} 기준 데이터 · 방문 전 전화 확인 권장.</p>`);
 }
 byId("clBtn").addEventListener("click", searchClinic);
+// 종류·야간기준·지금진료중은 클라이언트 재필터, 반경은 서버 재조회
 byId("clOpen").addEventListener("change", () => { if (clinicCache.rows.length) applyClinicFilter(); });
 byId("clType").addEventListener("change", () => { if (clinicCache.rows.length) applyClinicFilter(); });
+byId("clNight").addEventListener("change", () => { if (clinicCache.rows.length) applyClinicFilter(); });
+byId("clRadius").addEventListener("change", () => { if (clinicCache.rows.length) searchClinic(); });
 
 // ---------- 입력창 지우기(×) 버튼 ----------
 // 주요 텍스트 입력에 clear 버튼을 주입(모바일에서 긴 주소·역명 재입력 마찰 감소).
