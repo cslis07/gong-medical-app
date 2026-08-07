@@ -139,6 +139,16 @@ button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
 .app-header .sub { margin: 7px 0 0; opacity: .9; font-size: 14px; }
 .app-header .header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .app-header .header-links { flex-shrink: 0; align-self: center; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; }
+/* 제목 없는 슬림 헤더(2026-08-07) — 버튼줄만 남는다. 워터마크도 같이 줄여야
+   헤더가 얇아졌을 때 잘린 조각만 삐죽 보이지 않는다. */
+.app-header.slim { padding: 12px 0 16px; border-radius: 0 0 22px 22px; }
+.app-header.slim .header-row { justify-content: flex-end; }
+.app-header.slim::after { width: 96px; height: 96px; bottom: -20px; right: 4px; opacity: .11; }
+/* 화면에서만 감추고 스크린리더·검색엔진에는 남기는 텍스트 */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
 .app-header .guide-link {
   text-decoration: none; padding: 9px 15px; border-radius: 999px;
   background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.30);
@@ -154,8 +164,27 @@ button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
 }
 .icon-btn:hover { background: rgba(255,255,255,.28); }
 
-/* ===== 카테고리 내비 (교통 · 주거 · 생활) ===== */
-.topnav { margin: 18px auto 0; }
+/* ===== 상단 내비 =====
+   2026-08-07: 카테고리 바·서브탭 줄 제거 → 탭 안에서는 «← 홈» 하나만 남는다.
+   결과가 길어도 홈으로 못 돌아가는 일이 없게 탭에서는 이 줄을 sticky 로 띄운다
+   (홈에서는 .nav-bar 가 빠져 그냥 빈 줄 — sticky 도, 배경도 없다). */
+.topnav { margin: 14px auto 0; }
+.topnav.nav-bar {
+  position: sticky; top: 0; z-index: 30; margin-top: 8px;
+  padding-top: 10px; padding-bottom: 10px; background: var(--bg);
+  display: flex; align-items: center; gap: 11px;
+}
+.herenow { font-size: 15.5px; font-weight: 800; color: var(--text); letter-spacing: -.3px; }
+.herenow[hidden] { display: none; }
+.backhome {
+  padding: 9px 16px; border: 1px solid var(--border); background: var(--card);
+  border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--text);
+  cursor: pointer; font-family: inherit; box-shadow: var(--shadow-sm); transition: .15s;
+}
+.backhome:hover { border-color: var(--accent); color: var(--accent); }
+.backhome[hidden] { display: none; }   /* 버튼 기본 display 를 확실히 눌러 둔다(§7 .subtabs 교훈) */
+
+/* 구 카테고리 바 — 현재 마크업에 없다. 되살릴 때를 위해 스타일만 남겨 둠 */
 .catbar {
   display: inline-flex; gap: 3px; padding: 4px; border-radius: 999px;
   background: var(--surface-2); border: 1px solid var(--border);

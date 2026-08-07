@@ -34,15 +34,18 @@ const ymd = (iso) => String(iso || "").replace(/-/g, "");
 // ---------- 상단 내비: 홈 → 카테고리(교통·주거·생활) → 서브탭 ----------
 // 탭을 location.hash에 반영해 새로고침 복원·링크 공유가 되게 한다(#parking 등).
 // data-off="1" 탭은 숨김 처리(비활성) — 네비·해시 이동 대상에서 제외
-// "home"은 .toptab 이 없는 특수 패널(허브)이라 목록에 손으로 넣는다. HOME_CAT 은
-// 어떤 .toptab 의 data-cat 과도 겹치지 않는 센티널(주거 카테고리가 "home"이라 구분 필요).
-const HOME = "home", HOME_CAT = "__home";
+// "home"은 .toptab 이 없는 특수 패널(허브)이라 목록에 손으로 넣는다.
+// ⚠️ .toptab 줄은 2026-08-07부터 화면에 없다(카테고리 바·서브탭 줄 제거). 그래도
+//    이 셀렉터가 홈 카드·data-off 계약의 원본이라 DOM 에는 그대로 살아 있다.
+const HOME = "home";
 const toptabEls = () => [...document.querySelectorAll(".toptab:not([data-off])")];
 const panelNames = () => [HOME, ...toptabEls().map((b) => b.dataset.panel)];
 const catOf = (name) => document.querySelector(`.toptab[data-panel="${name}"]`)?.dataset.cat || null;
+// 카테고리 바 제거로 현재 미사용 — 되살릴 때 필요해 남겨 둔다(삭제 금지 목록과 같은 취지).
 const firstTabOfCat = (cat) => document.querySelector(`.toptab[data-cat="${cat}"]:not([data-off])`)?.dataset.panel || null;
 
 // 카테고리 바만 갱신하고 그 안의 서브탭만 보이게 한다(패널 전환 없이).
+// 2026-08-07 카테고리 바·서브탭 줄 제거로 «현재 미사용» — 되살릴 때 필요해 남겨 둔다.
 function showCategory(cat) {
   document.querySelectorAll(".cattab").forEach((c) => {
     const on = c.dataset.cat === cat;
@@ -55,25 +58,22 @@ function showCategory(cat) {
 function switchPanel(name, { updateHash = true } = {}) {
   if (!panelNames().includes(name)) return;
   const isHome = name === HOME;
-  // 홈에서는 서브탭 줄을 접는다 — 홈 화면 자체가 전체 목록이라 중복이다.
-  const subtabs = document.querySelector(".subtabs");
-  if (subtabs) subtabs.hidden = isHome;
-  if (isHome) {
-    document.querySelectorAll(".cattab").forEach((c) => {
-      const on = c.dataset.cat === HOME_CAT;
-      c.classList.toggle("active", on);
-      c.setAttribute("aria-selected", on ? "true" : "false");
-    });
-    toptabEls().forEach((b) => { b.classList.remove("active"); b.setAttribute("aria-selected", "false"); });
-  } else {
-    const cat = catOf(name);
-    if (cat) showCategory(cat);   // 홈 칩은 어느 카테고리와도 안 맞아 여기서 자동으로 꺼진다
-    toptabEls().forEach((b) => {
-      const on = b.dataset.panel === name;
-      b.classList.toggle("active", on);
-      b.setAttribute("aria-selected", on ? "true" : "false");
-    });
+  // 탭 안에서 홈으로 돌아갈 유일한 길 — 결과가 길어도 닿게 내비 줄을 sticky 로 띄운다.
+  const back = byId("backHome");
+  if (back) back.hidden = isHome;
+  document.querySelector(".topnav")?.classList.toggle("nav-bar", !isHome);
+  // 지금 어느 화면인지 — 라벨은 숨은 .toptab 을 그대로 읽는다(이름의 원본은 하나)
+  const here = byId("hereNow");
+  if (here) {
+    here.hidden = isHome;
+    if (!isHome) here.textContent = document.querySelector(`.toptab[data-panel="${name}"]`)?.textContent.trim() || "";
   }
+  // .toptab 은 화면에 없지만 상태(active)는 유지한다 — 즐겨찾기·해시 로직이 읽는다.
+  toptabEls().forEach((b) => {
+    const on = !isHome && b.dataset.panel === name;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === `panel-${name}`));
   if (updateHash && location.hash.slice(1) !== name) history.replaceState(null, "", `#${name}`);
   if (name === "gas") { loadGasAvg(); loadGasTrend(); }
@@ -82,12 +82,7 @@ function switchPanel(name, { updateHash = true } = {}) {
   if (name === "subway") window.__refitSubwayMap?.();
 }
 
-// 카테고리 클릭 → 그 카테고리의 첫 서브탭으로 이동 (홈은 허브 패널로)
-document.querySelectorAll(".cattab").forEach((c) =>
-  c.addEventListener("click", () => {
-    if (c.dataset.cat === HOME_CAT) return switchPanel(HOME);
-    const t = firstTabOfCat(c.dataset.cat); if (t) switchPanel(t);
-  }));
+byId("backHome")?.addEventListener("click", () => switchPanel(HOME));
 
 // ---------- 🏠 홈 허브 ----------
 // 카드에 붙일 설명·대표색. key = .toptab 의 data-panel.

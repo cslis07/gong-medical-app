@@ -33,12 +33,13 @@
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <header class="app-header">
+  <!-- 헤더 2026-08-07: 큰 제목·소개문구 제거(사용자 요청). 홈 허브의 브랜드 블록이
+       같은 말을 이미 하고 있어 중복이었고, 모바일에서 제목이 3줄로 접혀 첫 화면을
+       절반 가까이 먹었다. ⚠️ h1 은 지우지 않고 «화면에서만» 감춘다 — 검색엔진·스크린리더가
+       읽을 제목이 페이지에서 사라지면 안 된다(og/title 과 별개). -->
+  <header class="app-header slim">
     <div class="wrap header-row">
-      <div>
-        <h1>🚇 서울 교통·생활 정보</h1>
-        <p class="sub">지하철 · 실시간 혼잡도 · 주차장 · 실거래가 · 미세먼지</p>
-      </div>
+      <h1 class="sr-only">서울 교통·생활 정보 — 지하철 · 실시간 혼잡도 · 주차장 · 주유소 · 야간진료</h1>
       <div class="header-links">
         <button id="dustBadge" class="dust-badge" title="수도권(서울·경기·인천) 실시간 평균 미세먼지 — 클릭하면 미세먼지 탭" style="display:none"></button>
         <button id="themeToggle" class="icon-btn" type="button" aria-label="테마 변경">🌗</button>
@@ -47,17 +48,16 @@
     </div>
   </header>
 
-  <!-- 상단 내비: 홈 → 카테고리(교통·주거·생활) → 서브탭
-       🏠 홈은 카테고리가 아니라 «허브 패널»이다. data-cat="__home" 은 어떤 .toptab 과도
-       맞지 않는 센티널이라 showCategory()가 자동으로 이 칩만 꺼준다(§홈 허브 주석 참고). -->
-  <nav class="topnav wrap" aria-label="서비스 카테고리">
-    <div class="catbar" role="tablist" aria-label="카테고리">
-      <button class="cattab active" data-cat="__home" role="tab" aria-selected="true">🏠 홈</button>
-      <button class="cattab" data-cat="transit" role="tab" aria-selected="false">🚉 교통</button>
-      <button class="cattab" data-cat="home" role="tab" aria-selected="false">🏘️ 주거</button>
-      <button class="cattab" data-cat="life" role="tab" aria-selected="false">🌆 생활</button>
-    </div>
-    <!-- 첫 화면은 홈이라 서브탭 줄은 감춰 둔다(switchPanel 이 홈을 벗어날 때 편다) -->
+  <!-- 상단 내비 2026-08-07: 카테고리 바(홈·교통·주거·생활)와 서브탭 줄을 둘 다 없앴다(사용자 요청).
+       탭 사이 이동은 홈 허브가 전담하고, 탭 안에서는 아래 «← 홈» 하나로 돌아온다.
+       ⚠️ .subtabs 안의 .toptab 버튼은 «지우지 말 것» — 화면에서만 감춘 상태다.
+          renderHub()가 이 목록을 읽어 홈 카드를 만들고(§2), data-off 로 탭을 껐다 켜는
+          계약(§9-6)도 여기 걸려 있다. 지우면 홈 화면이 빈다. -->
+  <nav class="topnav wrap" aria-label="화면 이동">
+    <button type="button" id="backHome" class="backhome" hidden>← 홈</button>
+    <!-- 칩줄이 없어져 «지금 어느 화면인지»를 알려줄 게 없어졌다(딥링크로 들어오면 더더욱).
+         라벨은 숨은 .toptab 텍스트를 그대로 쓴다 — 이름이 두 군데로 갈라지지 않게. -->
+    <strong id="hereNow" class="herenow" hidden></strong>
     <div class="subtabs" role="tablist" aria-label="서비스" hidden>
       <!-- 교통 -->
       <button class="toptab" data-panel="subway" data-cat="transit" role="tab" aria-selected="false">🚇 지하철</button>
