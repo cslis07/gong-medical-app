@@ -1,150 +1,114 @@
 # PROJECT_STATUS — 서울 교통·생활 정보 앱
 
-> 최종 갱신: 2026-07-16 · 위치: `C:\Users\GB\Documents\gong-medical-app`
-> 배포: cslis07/Vercel · 공개 URL: https://gong-medical-app.vercel.app
-> GitHub: cslis07/gong-medical-app (main)
+> - **최종 갱신**: 2026-08-07
+> - **위치(절대경로)**: `C:\Users\GB\Documents\gong-medical-app`
+> - **GitHub**: `cslis07/gong-medical-app` · 기본 브랜치 `main`
+> - **배포**: https://gong-medical-app.vercel.app · **Vercel(cslis07 계정)**, `vercel --prod --yes` CLI 직접 배포
+> - **규모**: 순수 HTML+vanilla JS(빌드툴 없음). 탭 **활성 8 / 숨김 6** · API 핸들러 `lib/*.js` 14종(단일 catch-all 함수 1개) · 프론트 `js/*.js` 7개 · 빌드 스냅샷 `data/*.js` 4개 · 빌드 스크립트 `scripts/*.mjs` 4개
 
 ---
 
 ## 0. 지금 하던 일 (WIP)
 
-> 이어서 작업할 때 여기부터 본다. 상세는 §4(남은 작업)·§7(에러/해결).
+> **코드 최신 커밋 `0fbe387`까지 전부 push·배포 완료** (2026-08-07 확인). 이후 커밋은 이 문서 갱신뿐이라 **재배포 불필요**. 작업 재개 시 `git status`로 실제 상태를 한 번 더 확인할 것.
 
-- **공단 실시간 주차면수** — 활용신청 승인(2026-07-08)됐으나 **제공기관 백엔드가 죽어 있음**. 코드·스냅샷은 이미 붙어 있어(`lib/kotsa-parking.js`, `data/parking-kotsa.js`) 백엔드 회복 시 `npm run build:parking` + `KOTSA_PARKING=1` 재배포만 하면 켜진다. 회복 확인: `/api/parking?diag=1`
-- **공공임대 단지(SH 포함)** — 마이홈 API 키 미전파(code 30) + 마이홈이 Vercel IP 차단(fetch failed). 현재 `{pending:true}` degrade. 키 전파 후 재확인, `signguCode` 필수 여부 확인.
-- ~~광주 지역코드 복구~~ → **완료(2026-07-16)**. RTMS 전수 프로브로 새 시도 프리픽스 **"12"** 발견(서울 11 다음). 광주 동 12210/서 12240/남 12270/북 12300/광산 12330 + 전남 5시(목포 12110~광양 12190) 동 이름 대조로 실증, `LAWD` 복구. **옛 46(전남)도 전체 폐기됨** 주의.
-- **브라우저 육안 검증 (2026-07-16 대부분 완료)** — Chrome MCP가 잠시 복구된 사이 실측: **콘솔 에러 0건(로드 포함)**, 즐겨찾기 저장("⭐ 저장됨")·최근조회 칩·지도(타일·번호핀·팝업·다크반전·토글) 전부 정상 확인. 실측 중 **필터 버튼 오버플로 버그 발견→수정**(아래). 남은 육안 확인 2건: ①필터 버튼 수정 후 모습(CSS는 서버 라이브, SW 캐시 특성상 재방문 1회 후 적용) ②PWA 설치 프롬프트(테스트 중 미출현 — Chrome 설치 휴리스틱, 오류 아님).
-- **PWA 아이콘·OG PNG (2026-07-16 완료)** — `npm run build:assets`(scripts/build-assets.mjs, sharp devDep)가 icon.svg → icon-192/512·apple-touch-icon PNG + **OG 1200×630 한글 브랜드 이미지**를 생성. manifest는 PNG(any+maskable)+SVG 폴백, twitter summary_large_image. ⚠️ 이 머신의 `convert`는 ImageMagick이 아니라 Windows NTFS 툴 — 래스터화는 sharp로만.
-
----
-
-## 🙈 현재 숨긴 탭 (2026-08 사용자 요청, 삭제 아님)
-
-시내버스·미세먼지·로또·분실물은 **`data-off="1"` + CSS `.toptab[data-off]{display:none}`**로 숨김. `panelNames()`·`firstTabOfCat()`가 `:not([data-off])`로 걸러 네비·해시 이동에서도 제외. 내주변 통합뷰에서 버스 그룹도 제거. **되살리려면 index.html 해당 `<button>`의 `data-off` 제거만** 하면 됨(패널·핸들러·favorites/map/refresh 등록은 그대로 살아 있음).
-
-## ⛔ 하지 말 것
-
-> 반복해서 사고가 났던 지점. 손대기 전에 반드시 확인.
-
-1. **`api/` 폴더에 새 파일을 만들지 말 것.** Vercel Hobby 함수 12개 제한 — `api/`의 파일 1개 = 함수 1개다. 신규 핸들러는 `lib/xxx.js`에 두고 `api/[service].js`의 `HANDLERS`에만 등록한다. (§6-1, §7)
-2. **API 키를 절대 커밋하지 말 것.** `.env`(gitignore) + `vercel env add <KEY> production`으로만 관리. env 변경 후에는 **반드시 재배포**(`vercel --prod --yes`)해야 반영된다. (§5, §6-3)
-3. **cslis07 계정 외로 push하지 말 것.** GitHub·Vercel 모두 cslis07. push 전 `gh auth status --active` 확인. (§6-2)
-4. **로컬만 검증하고 배포하지 말 것.** 외부 API가 데이터센터(Vercel) IP를 차단하는 경우가 흔하다(KOBUS·dhlottery·vworld·마이홈 등). 신규 소스는 **반드시 프로덕션에서도 호출 검증**. (§6-4, §7)
-5. **에러 원문·상위 응답 본문을 사용자에게 그대로 반사하지 말 것.** 키 유출 위험. `lib/respond.js`의 `errorMessage()`로 통일하고 원문은 `console.error`로만. (§6.5)
+- **직전 세션 작업**: 사용자 요청으로 탭 6개 숨김 — 시내버스·미세먼지·로또·분실물(교통/생활) + 실거래가·LH청약(주거). `data-off="1"` 방식(삭제 아님). 그 직전엔 **🏥 야간진료 탭 신규 추가**.
+- **다음 채팅이 가장 먼저 할 한 가지**: 특별히 없음(깨끗). 굳이 꼽으면 **브라우저 육안 확인** — 숨긴 탭/야간진료 탭이 실제 화면에 의도대로 반영됐는지(SW 캐시 때문에 재방문 시 1회 새로고침 필요). Chrome 확장이 자주 끊겨 세션 내내 육안검증이 단속적이었음.
 
 ---
 
 ## 1. 프로젝트 목적
 
-공공/공식 데이터로 **서울(수도권) 교통·생활 정보**를 한 화면에서 조회하는 무료 웹앱.
-회원가입·로그인 없이, 상단 탭으로 12개 생활 서비스를 제공한다.
+공공/공식 데이터로 **서울(수도권) 교통·생활 정보**를 한 화면에서 조회하는 **무료·무로그인** 웹앱. 상단 카테고리(교통·주거·생활) → 서브탭 구조.
 
-- **구조**: 순수 HTML + vanilla JS(빌드 없음) + **Vercel 서버리스 프록시**(API 키 은닉·CORS 우회·스크래핑)
-- **원칙**: 예매·결제·개인정보 입력은 하지 않는다. 조회만 하고 결제/예매는 공식 페이지로 링크(handoff).
-- **이력**: 공공의료 앱 → 지하철 전용 개편 → k-skill 참고해 생활서비스 확장 → data.go.kr/EX/OPINET 대량 확장
-  → 2026-07-10 **영화관·고속/시외버스 탭 제거**(어차피 공식 페이지에서 예매해야 해 조회만으론 가치가 낮음).
-  URL·Vercel 프로젝트명(`gong-medical-app`)은 하위호환을 위해 그대로 유지.
-- **참고 소스**: NomaDamas/k-skill 문서(MCP를 그대로 쓰지 않고, 각 기능이 쓰는 **공개 API 엔드포인트만 참고**해 자체 이식).
+- **구조**: 순수 HTML + vanilla JS(빌드 없음) + **Vercel 서버리스 프록시**(API 키 은닉·CORS 우회·스크래핑).
+- **원칙**: 예매·결제·개인정보 입력 안 함. 조회만, 예매/결제는 공식 페이지로 링크(handoff). 서버 상태 저장 없음 — 사용자 데이터는 브라우저 `localStorage`에만.
+- **최근 방향성(2026-07~08)**: 초기 12탭에서 → 야간진료 추가(생활) → **불필요 탭 6개 숨김**으로 정리. 즉 "많은 탭"보다 **핵심 탭 + 실시간성·편의기능(즐겨찾기·공유·지도·내주변)** 강화 방향.
+- **이력**: 공공의료 앱 → 지하철 전용 개편 → k-skill 참고 생활서비스 확장 → data.go.kr/EX/OPINET 대량 확장 → 2026-07-10 영화관·고속/시외버스 탭 제거 → 2026-08 탭 6개 숨김. URL·Vercel 프로젝트명(`gong-medical-app`)은 하위호환 위해 유지(옛 공공의료 잔재).
 
 ---
 
-## 2. 현재 구현된 기능 (탭 12종, 전부 라이브)
+## 2. 현재 구현된 기능
 
-| 탭 | 기능 | 데이터 소스 | 사용 키 |
-|---|---|---|---|
-| 🚇 지하철 | 공식 노선도 → 역 검색 → 도착·위치·첫막차·최단경로·편의시설·승하차·공기질 종합 모달 | 서울 열린데이터 | SEOUL_API_KEY / SEOUL_REALTIME_KEY |
-| 👥 혼잡도 | 서울 핫스팟 120여곳 실시간 인구·혼잡도·성별/연령 | citydata_ppltn | SEOUL_API_KEY |
-| 🧳 분실물 | LOST112·서울교통공사 조회 조건 정리 + 공식 링크(안내형) | — | 불필요 |
-| 🎰 로또 | 회차별 당첨번호·등위별 당첨금·내 번호 등수 계산 | smok95 CDN 미러 | 불필요 |
-| ⛽ 주유소 | 내 위치/주소 반경 최저가 주유소(가격순)·주소·편의시설 + **전국 평균유가 바** | Opinet | OPINET_API_KEY |
-| 🚲 따릉이 | 주변 대여소 실시간 자전거·거치대 수 | 서울 bikeList | SEOUL_API_KEY |
-| 🛣️ 고속도로 | 휴게소(편의시설·대표메뉴·유가) / 실시간 정체·서행 / **실시간 돌발·문자(사고·공사·정체, 좌표·지도)** / **구간 실시간 소요시간(출발→도착 영업소)** | 한국도로공사 EX | EX_API_KEY |
-| 🏠 실거래가 | 아파트 **매매/전세/월세/분양권** · 가격·월세 필터 · 정렬 · 카드별 🗺️지도 · **전량 수집 + 페이지네이션** | 국토부 RTMS | DATA_API_KEY |
-| 😷 미세먼지 | 시도별 측정소 PM10/PM2.5·등급 + **오늘/내일/모레 예보** + **기준물질·WHO 토글** + **헤더 수도권 평균 배지** | 에어코리아 | DATA_API_KEY |
-| 🚏 시내버스 | 주변 정류소 → 정류소별 **실시간 도착**(노선·남은 정류장) | 국토부 TAGO | DATA_API_KEY |
-| 🅿️ 주차장 | **전국 17,700여곳** 가까운 순 + 서울 일부 **실시간 잔여면수**·요금·운영시간 / 실시간·무료 필터 · **서버 페이지네이션** | 서울 GetParkInfo+GetParkingInfo · 전국주차장정보표준데이터(스냅샷) | SEOUL_API_KEY / DATA_API_KEY |
-| 🏘️ 청약·임대 | LH 분양·임대 공고(**지역·상태 필터**, 상세링크, **전량 수집 + 페이지네이션**) / 공공임대 단지(LH·SH·지방) | LH · 마이홈 | DATA_API_KEY |
-| 🏥 야간진료 | 내 위치 반경 **18:30 이후 진료 병의원**(스냅샷) · 오늘 진료시간·**지금 진료중** 배지·거리·지도핀 · 지금진료중 필터 | 국립중앙의료원 E-Gen | DATA_API_KEY |
+### 탭 (활성 8 · 숨김 6)
 
-### 공통 기능 · UI
-- **디자인 시스템**(2026-07-12): `css/style.css`가 전부 토큰(`--bg/--card/--surface-2/--accent/--ok-bg…`) 기반. 라이트/다크 자동(`prefers-color-scheme`) + 헤더 토글(`js/theme.js`, `localStorage`, auto→light→dark). 하드코딩 색 30여 곳을 토큰화해 다크가 한 곳에서 뒤집힌다.
-- **카테고리 내비**: 12탭을 교통(지하철·시내버스·따릉이·고속도로)/주거(실거래가·LH·주차장)/생활(미세먼지·혼잡도·주유소·로또·분실물) 3그룹으로. `.catbar` 세그먼트 → `.subtabs`. `switchPanel(name)`이 해당 카테고리만 노출(`showCategory`).
-- **로딩 스켈레톤**(`showSkeletons`)·**빈 상태 카드**(`endEmpty`)·**포커스 링**(`:focus-visible`)·**`prefers-reduced-motion`**·상태줄 `aria-live`.
-- **탭 딥링크**: `#parking` 처럼 `location.hash`에 탭이 반영된다. 새로고침·링크 공유·뒤로가기 복원.
-- **CDN 캐시**: `api/[service].js`의 `CACHE` 표가 서비스별 `s-maxage`를 정한다. 200이 아니거나 `{ok:false}`면 자동으로 `no-store`.
-- **페이지네이션**(실거래가·주차장·LH): `renderPager()`(js/services.js) 공용 컴포넌트. `‹ 1 … 4 5 6 … 20 ›` 형태.
-  - 실거래가·LH는 서버가 **전 페이지를 모아 주고** 클라이언트가 필터·정렬·페이징(20건/쪽). 필터를 바꾸면 1페이지로 복귀.
-  - 주차장은 전국 17,000여곳이라 **서버가 `page`/`size`로 잘라 준다**(12건/쪽). 페이지 이동 시 좌표를 캐시해 위치를 다시 묻지 않는다.
-- **위치 입력**: 브라우저 geolocation **또는 주소 입력**(`/api/geocode`). 주유소·따릉이·시내버스·주차장에 적용.
-- **헤더 배지**: 수도권(서울·경기·인천) 183개 측정소 평균 PM10을 숫자+등급+색상으로 상시 표시(클릭 시 미세먼지 탭).
-- **즐겨찾기·최근조회**(2026-07-14, 07-16 확장): `js/favorites.js`가 11개 패널(지하철 역·로또 내번호 포함, 혼잡도·주유소·따릉이·고속도로·실거래가·미세먼지·시내버스·LH·주차장)에 칩 바를 주입. 지하철은 검색 UI가 동적 생성이라 `delegate`(패널 위임)로 기록. 조회 버튼을 누르면 조건 스냅샷을 `localStorage`(`gong.recent.v1`)에 자동 기록, ⭐로 즐겨찾기(`gong.fav.v1`) 고정. 칩 클릭 시 입력창 되채움 + 해당 탭에서 재조회. 백엔드 0. `PANELS` 레지스트리에 `fields`/`run`/`changeFields`만 추가하면 패널 확장.
-- **PWA**(2026-07-14, 07-16 SW 네트워크우선 전환): `manifest.webmanifest` + `sw.js`(정적 **네트워크 우선**+오프라인 시 캐시 폴백, `/api`는 항상 네트워크) + `js/pwa.js`(SW 등록 + `beforeinstallprompt` 시 헤더에 "⬇️ 앱 설치" 버튼). 아이콘은 `icon.svg`(any+maskable). 홈 화면 설치 + 오프라인 셸.
-- **지도 뷰**(2026-07-14): `js/map.js` — 위치기반 4탭(주유소·따릉이·시내버스·주차장) 결과를 실제 지도(Leaflet + OSM 타일)에 핀으로. 결과 위 "🗺️ 지도 보기" 토글, 처음 열 때만 Leaflet 지연 로드. **CSP 대응**: Leaflet은 `/vendor/leaflet/`에 로컬 벤더링(script-src 'self' 충족), OSM 타일 도메인만 `img-src`에 예외 추가(`https://*.tile.openstreetmap.org`). 타일은 사용자 브라우저가 직접 받아 Vercel IP 차단과 무관. 기본 마커 PNG 대신 divIcon 원형 배지 → 이미지 의존 0. 주유소 좌표는 `lib/gas.js`가 Opinet KATEC(`GIS_X_COOR`/`GIS_Y_COOR`)를 proj4로 WGS84 역변환해 제공.
-- **가치 기능 6종**(2026-07-16): ①**위치 캐시 공유**(`getLocation` 모듈전역 `lastLoc` 5분 TTL — 위치탭 간 GPS 재요청 제거) ②**즐겨찾기 백업/복원**(푸터 내보내기/가져오기, JSON, 키 병합) ③**LH 마감일 .ics**(카드 "📅 마감일 저장" → VEVENT+VALARM blob) ④**실거래가 시세추이**(최근 6개월 반복조회 → 월별 평균 SVG 막대, 외부 라이브러리 0) ⑤**이번 달 랭킹**(로드된 데이터 집계 최고가·거래량 TOP) ⑥**📍 내주변 탭**(위치 1회로 주유소·따릉이·버스·주차장 병렬조회 상위3, "전체 보기" 이동).
-- **공유 링크·실시간 새로고침**(2026-07-16): 즐겨찾기 바의 "🔗 공유"가 현재 검색조건을 URL 쿼리(`?s=<panel>&<필드>=…#<panel>`)로 인코딩해 `navigator.share`/클립보드로 복사. 로드 시 `restoreFromUrl`이 파싱해 복원(위치탭 주소없음·지하철 동적UI는 자동조회 미루고 채우기만). 실시간 4탭(혼잡도·따릉이·주차장·지하철)에 "🔄 새로고침" 버튼 + `kstClock()` 기준시각. 버스 도착은 펼칠 때마다 재조회(구 `dataset.loaded` 캐시 버그 수정).
-- **차별화 2종**(2026-07-20): ①**유가 추이 스파크라인**(Opinet `avgRecentPrice` 최근 7일 → 유종별 SVG 선그래프, `/api/gas?op=recent`) ②**미세먼지 오늘/내일/모레 예보**(`getMinuDustFrcstDspth`를 어제·오늘 발표 병합해 대상일별 최신 발표 선택 — 기존 `searchDate=오늘` 단독은 발표 전이라 빈 응답 잦던 버그도 해결. PM10·PM2.5 각각 칩).
-- **값싼 개선 6종**(2026-07-20): ①주유소(가격/거리순)·따릉이(거리/자전거많은순) **정렬** ②미세먼지 **기준물질(PM10/PM2.5)** 등급필터 정합 + **WHO 기준 토글**(등급을 클라 재계산, `AIR_TH.env/who`) + 이모지 요약 ③주요 입력창 **지우기(×) 버튼**(`initClearButtons` 주입) ④로또 **🎲 자동생성**(1~45 중복없는 6개) ⑤**통합 즐겨찾기 대시보드**(푸터 "모아보기" → 패널별 그룹 오버레이, 클릭 재조회).
-- 오류 시 🔄 다시 시도 박스, 모바일 최적화(바텀시트·탭 가로스크롤·44px 터치), 📖 `guide.html`.
+| 탭 | 상태 | 기능 | 데이터 소스 | 키 |
+|---|---|---|---|---|
+| 🚇 지하철 | 활성 | 노선도→역 검색→도착·위치·첫막차·최단경로·편의시설·승하차·공기질 종합 모달 | 서울 열린데이터 | SEOUL_API_KEY / SEOUL_REALTIME_KEY |
+| 🚲 따릉이 | 활성 | 주변 대여소 실시간 자전거·거치대(정렬: 거리/자전거많은순) | 서울 bikeList | SEOUL_API_KEY |
+| 🛣️ 고속도로 | 활성 | 휴게소 / 실시간 소통 / **실시간 돌발·문자** / **구간 실시간 소요시간** | 한국도로공사 EX | EX_API_KEY |
+| 📍 내주변 | 활성 | 현위치 기준 주유소·따릉이·주차장 상위3 통합(버스 그룹은 시내버스 숨김에 맞춰 제거) | 위 소스 병렬 | 상동 |
+| 🅿️ 주차장 | 활성 | 전국 17,768곳 가까운 순 + 서울 일부 실시간 잔여면수 · 서버 페이지네이션 | 서울 GetParkInfo/Info · 표준데이터 스냅샷 | SEOUL_API_KEY / DATA_API_KEY |
+| 🏥 야간진료 | 활성 | 반경 내 야간(오늘 종료 ≥선택시각) 병의원 · 지금진료중·거리·전화·지도 · 종류(일반의원/치과/한의원)·야간기준·반경 필터 | 국립중앙의료원 E-Gen 스냅샷 | DATA_API_KEY |
+| 👥 혼잡도 | 활성 | 서울 핫스팟 120여곳 실시간 인구·혼잡도·성별/연령 | citydata_ppltn | SEOUL_API_KEY |
+| ⛽ 주유소 | 활성 | 반경 최저가(정렬: 가격/거리) + 전국 평균유가 바 + **최근 7일 유가추이 스파크라인** | Opinet | OPINET_API_KEY |
+| 🚏 시내버스 | **숨김** | 주변 정류소→실시간 도착 | 국토부 TAGO | DATA_API_KEY |
+| 🏠 실거래가 | **숨김** | 매매/전세/월세/분양권 · 단지명·가격 필터 · 시세추이 · 신고가 랭킹 · 전량수집 | 국토부 RTMS | DATA_API_KEY |
+| 🏘️ LH청약 | **숨김** | LH 공고(지역·상태 필터, .ics) / 공공임대 단지 | LH · 마이홈 | DATA_API_KEY |
+| 😷 미세먼지 | **숨김** | 측정소 PM10/PM2.5 + 오늘/내일/모레 예보 + WHO토글 + 헤더 배지 | 에어코리아 | DATA_API_KEY |
+| 🎰 로또 | **숨김** | 회차 당첨번호·등수 계산·자동생성 | smok95 CDN 미러 | 불필요 |
+| 🧳 분실물 | **숨김** | LOST112·서울교통공사 조회 조건 정리 + 공식 링크 | — | 불필요 |
+
+> **숨김 처리**(2026-08, 사용자 요청): 위 6개 탭은 삭제가 아니라 **`data-off="1"` + CSS `.toptab[data-off]{display:none}`**. `panelNames()`/`firstTabOfCat()`가 `:not([data-off])`로 걸러 네비·해시(`#air` 등)로도 안 열림. **패널·핸들러·favorites/map/refresh 등록은 그대로 살아 있음** → `index.html`에서 해당 `<button>`의 `data-off`만 지우면 즉시 복구. 헤더 미세먼지 배지(`/api/air?op=metro`)는 탭과 별개라 계속 동작.
+
+### 공통 기능·UI (코드에 안 적힌 맥락 위주)
+- **디자인 토큰**: `css/style.css` 전부 CSS 변수 기반. 라이트/다크 자동(`prefers-color-scheme`) + 헤더 토글(`js/theme.js`, auto→light→dark). 배경은 **민무늬**(워터마크 제거됨, 가독성 우선).
+- **즐겨찾기·최근조회**(`js/favorites.js`): `PANELS` 레지스트리 기반, `localStorage`(`gong.fav.v1`/`gong.recent.v1`). 조회 시 조건 스냅샷 자동 기록, ⭐고정, 칩 클릭 재조회. **공유 링크**(URL 쿼리 인코딩+`navigator.share`/클립보드, 로드 시 `restoreFromUrl` 복원) · **백업/복원(JSON)** · **통합 대시보드(모아보기)** 포함. 지하철은 동적 UI라 `delegate` 방식.
+- **지도 뷰**(`js/map.js`): 위치기반 탭(주유소·따릉이·주차장·야간진료·시내버스) 결과를 Leaflet+OSM에 divIcon 핀. **CSP 대응**으로 Leaflet은 `/vendor/leaflet/` 로컬 벤더링, OSM 타일 도메인만 `img-src` 예외. 처음 열 때만 지연 로드.
+- **PWA**(`manifest.webmanifest`+`sw.js`+`js/pwa.js`): 설치 버튼 + 새버전 업데이트 배너. **SW는 네트워크 우선**(오프라인만 캐시), 문서는 `no-cache` 재검증(배포 직후 stale 방지).
+- **위치 캐시**: `getLocation`(services.js) 모듈전역 `lastLoc` 5분 TTL — 위치탭 간 GPS 재요청 제거.
+- **실시간 새로고침**: 혼잡도·따릉이·주차장 등에 🔄 + `kstClock()` 기준시각.
+- 로딩 스켈레톤·빈상태 카드(`endEmpty`)·오류 재시도 박스·`aria-live`·입력창 ×버튼·모바일 최적화·📖 `guide.html`.
 
 ---
 
-## 3. 수정한 주요 파일
+## 3. 수정한 주요 파일 (★ = 최근 세션 신규)
 
-```
-api/[service].js      ★ 단일 catch-all 라우터 (Vercel 함수 1개) → lib/ 위임
-lib/*.js              ★ 실제 핸들러 13개 (아래)
-  subway.js  density.js  lotto.js   gas.js       bike.js
-  highway.js realestate.js air.js   citybus.js   parking.js
-  lh.js      myhome.js   geocode.js
-lib/kotsa-parking.js  공단 B553881 클라이언트(비핸들러 모듈, HANDLERS에 등록 안 함)
-lib/pool.js           동시성 제한 + 재시도 유틸(전량 수집용, 비핸들러 모듈)
-lib/respond.js        에러 응답 정제(원문·키 유출 차단) + redact (비핸들러 모듈)
-js/guide.js           guide.html 전용 스크립트 (CSP 때문에 인라인에서 분리)
-js/theme.js           라이트/다크 테마 부트스트랩 + 토글 (head에서 동기 로드, FOUC 방지)
-js/favorites.js       ★ 즐겨찾기·최근조회 (localStorage, services.js 뒤 로드, 패널 레지스트리)
-js/map.js             ★ 지도 뷰 (Leaflet, 4탭 결과 핀. GongMap.set(panel, points, center))
-vendor/leaflet/       ★ Leaflet 1.9.4 로컬 벤더링 (leaflet.js 148KB + leaflet.css) — CSP 대응
-js/pwa.js             ★ 서비스워커 등록 + 설치 버튼
-sw.js                 ★ 서비스워커 (정적 SWR 캐시, /api 제외) — 루트에 둬야 scope '/'
-manifest.webmanifest  ★ PWA 매니페스트 (아이콘·shortcuts)
-icon.svg              ★ 앱 아이콘 (any + maskable)
-robots.txt            ★ 크롤러 허용 + /api 차단 + sitemap 링크
-sitemap.xml           ★ / · /guide.html
-vercel.json           redirects: /favicon.ico → /icon.svg (완성도 점검 후 추가)
-data/parking-nationwide.js  전국 주차장 스냅샷 17,768곳 (4.5MB, 자동생성)
-data/parking-kotsa.js       공단 시설+운영 스냅샷 (현재 빈 배열 — 백엔드 장애)
-scripts/build-parking-snapshot.mjs  위 두 스냅샷 빌더 (`npm run build:parking`)
-scripts/build-ex-tollgates.mjs  EX 영업소 목록 빌더 (`npm run build:tollgates`) → data/ex-tollgates.js
-scripts/build-assets.mjs        PWA 아이콘·OG PNG 빌더 (`npm run build:assets`, sharp)
-data/ex-tollgates.js            고속도로 영업소 566곳 코드+이름 (구간 소요시간 드롭다운용, 자동생성)
-lib/clinic.js                   ★ 야간진료 병의원 (스냅샷 반경 필터, HANDLERS에 clinic 등록)
-data/night-clinics.js           ★ 야간(18:30 이후 진료) 병의원 스냅샷 (E-Gen, 자동생성)
-scripts/build-night-clinics.mjs 위 스냅샷 빌더 (`npm run build:clinics`)
-index.html            12개 탭 + 패널 + 헤더 미세먼지 배지
-js/app.js             지하철 전용 로직(노선도·역 종합 모달)
-js/services.js        나머지 13개 탭 로직 + 탭 전환 + 공용 getLocation(주소/GPS)
-css/style.css         전체 스타일(.toptabs/.panel/.dust-badge/.lotto-ball 등)
-dev-server.mjs        로컬 서버(동일 catch-all 라우터 경유)
-guide.html            이용가이드
-package.json          deps: fast-xml-parser, proj4
-.env                  API 키 6종 (gitignore)
-```
+| 경로 | 역할 |
+|---|---|
+| `api/[service].js` | 단일 catch-all 라우터(Vercel 함수 1개) → `lib/` 동적 import 위임 + 서비스별 CDN 캐시 표 |
+| `lib/subway.js` `density.js` `lotto.js` `gas.js` `bike.js` `highway.js` `realestate.js` `air.js` `citybus.js` `parking.js` `lh.js` `myhome.js` `geocode.js` | 서비스별 API 핸들러 |
+| ★ `lib/clinic.js` | 야간진료 병의원 — 스냅샷 좌표 반경 필터, HANDLERS에 `clinic` 등록 |
+| `lib/kotsa-parking.js` | 공단 B553881 클라이언트(비핸들러, 백엔드 장애로 빈 스냅샷) |
+| `lib/pool.js` | 동시성 제한 + 재시도(전량수집용, 비핸들러) |
+| `lib/respond.js` | 에러 응답 정제(원문·키 유출 차단). `errorMessage()` 사용. `redact()`는 정의만·미사용(삭제 금지, §9) |
+| `js/app.js` | 지하철 전용 로직(노선도·역 종합 모달) |
+| `js/services.js` | 나머지 탭 로직 + 탭 전환(`switchPanel`) + 공용 `getLocation` |
+| ★ `js/favorites.js` | 즐겨찾기·최근조회·공유·백업·대시보드 |
+| ★ `js/map.js` | 지도 뷰(`GongMap.set(panel, points, center)`) |
+| ★ `js/pwa.js` `sw.js` | 서비스워커 등록/업데이트 배너 · SW(네트워크 우선) |
+| `js/theme.js` `js/guide.js` | 테마 부트스트랩 · 가이드 전용 스크립트(CSP상 인라인 분리) |
+| ★ `data/night-clinics.js` | 야간(18:30↑) 병의원 43,384곳 컬럼형 스냅샷(≈10MB, 자동생성) |
+| `data/parking-nationwide.js` | 전국 주차장 17,768곳(4.5MB, 자동생성) |
+| `data/parking-kotsa.js` | 공단 시설+운영 스냅샷(현재 빈 배열 — 백엔드 장애) |
+| ★ `data/ex-tollgates.js` | 고속도로 영업소 566곳 코드+이름(구간소요시간 드롭다운, 자동생성) |
+| `scripts/build-parking-snapshot.mjs` | 주차장 스냅샷 빌더(`npm run build:parking`) |
+| ★ `scripts/build-night-clinics.mjs` | 야간진료 스냅샷 빌더(`npm run build:clinics`) |
+| ★ `scripts/build-ex-tollgates.mjs` | 영업소 목록 빌더(`npm run build:tollgates`) |
+| ★ `scripts/build-assets.mjs` | PWA 아이콘·OG PNG 빌더(`npm run build:assets`, sharp devDep) |
+| ★ `vendor/leaflet/` | Leaflet 1.9.4 로컬 벤더링(leaflet.js 148KB + css) — CSP 대응 |
+| ★ `icon.svg` `icon-192/512.png` `apple-touch-icon.png` `og-image.png` | 앱/OG 아이콘 |
+| ★ `robots.txt` `sitemap.xml` | 크롤러 허용(+/api 차단)·사이트맵 |
+| `manifest.webmanifest` `vercel.json` `index.html` `css/style.css` `guide.html` `dev-server.mjs` | 매니페스트 · 배포설정(함수 maxDuration·헤더·CSP·favicon 리다이렉트) · 진입점 · 스타일 · 가이드 · 로컬서버 |
+| `img/subway-map.png` | 지하철 노선도 이미지(4.2MB, 커밋 대상) |
 
-> **신규 기능 추가 절차**: `lib/xxx.js`에 핸들러 작성 → `api/[service].js`의 `HANDLERS`에 등록 → 프론트에서 `/api/xxx?...` 호출. (dev-server는 자동으로 라우팅됨)
+> **신규 기능 추가 절차**: `lib/xxx.js` 작성 → `api/[service].js`의 `HANDLERS`(+필요시 `CACHE`)에 등록 → 프론트에서 `/api/xxx?...` 호출. dev-server는 자동 라우팅.
 
 ---
 
 ## 4. 남은 작업
 
-- [x] **주차장 전국 확대** (2026-07-10) — 전국주차장정보표준데이터로 17,768곳 커버. 스냅샷 방식(§9).
-- [ ] **공단 실시간 주차면수** — 한국교통안전공단 `B553881/Parking`은 **활용신청 승인됨(2026-07-08)에도 제공기관 백엔드가 죽어 있다**(`Error forwarding request to backend server`). 코드·스냅샷 빌드는 이미 붙어 있으니(`lib/kotsa-parking.js`, `data/parking-kotsa.js`) 백엔드가 살아나면 `npm run build:parking` + `KOTSA_PARKING=1` 재배포만 하면 켜진다. 회복 확인: `/api/parking?diag=1`
-- [ ] **공공임대 단지(SH 포함)** — `data.myhome.go.kr/rentalHouseList` 구현 완료했으나 ① 키가 마이홈 엔드포인트에 미전파(code 30) ② 마이홈이 Vercel IP 차단(fetch failed). 현재 "pending" 안내로 degrade. 전파 후 재확인 필요. `signguCode`(시군구, 마이홈 자체 코드) 필수 여부도 함께 확인.
-- [x] **광주 지역코드 복구** (2026-07-16) — 새 프리픽스 12 발견, 광주 5구+전남 5시 실증 복구. §7 참고.
-- [ ] **브라우저 육안 검증** — Chrome 확장이 끊겨 최근 개선(실거래가 필터/지도·페이지네이션, 미세먼지 필터·배지, LH 필터, 주차장 탭)은 **API·배포파일 레벨로만 검증**됨.
-- [ ] (보류) **공연 잔여석** — 인터파크가 NOL로 개편되며 이름검색이 SPA HTML만 반환, 유효 goodsCode 확보 불가.
-- [ ] (보류) **대중교통 길찾기(ODsay)** — 키 발급 + 호출 IP 화이트리스트 필요(Vercel IP 유동).
-- [ ] (선택) 택배 조회(CJ 무응답), 공공와이파이, 관광 TourAPI, 날씨(기상청 단기예보) — 활용신청 시 추가 가능.
-- [ ] (선택) 미사용 dead CSS 정리, OG 이미지(1200×630).
+### 진행 대기 (외부 요인)
+- [ ] **공단 실시간 주차면수** — 활용신청 승인(2026-07-08)에도 제공기관 백엔드 죽음(`Error forwarding request to backend server`). 코드·스냅샷 이미 붙어 있어(`lib/kotsa-parking.js`, `data/parking-kotsa.js`) 회복 시 `npm run build:parking` + `KOTSA_PARKING=1` 재배포만. 회복확인 `/api/parking?diag=1`. *왜 아직 안 함: 우리 코드 아닌 제공기관 장애.*
+- [ ] **공공임대 단지(SH 포함)** — `myhome/rentalHouseList` 구현 완료했으나 ①키 미전파(code 30) ②마이홈이 Vercel IP 차단. 현재 `{pending:true}` degrade. *왜: 키 전파+IP 이슈 미해결. LH청약 탭 숨김 상태라 우선순위 낮음.*
+
+### 선택 (여력 될 때)
+- [ ] **스냅샷 신선도 자동화** — `night-clinics`·`parking-nationwide`·`ex-tollgates`는 수동 `npm run build:*`만 있고 크론 없음. GitHub Actions 월 1회 리빌드 검토. *왜: 원본 갱신주기 낮아 급하지 않음.*
+- [ ] **택배 조회(CJ 무응답)·공공와이파이·관광 TourAPI·날씨(기상청)** — 활용신청 시 추가 가능. *왜: 신규 소스 우선순위 밀림.*
+- [ ] **미사용 dead CSS 정리** — 숨긴 탭 관련 스타일 등. *왜: 기능 영향 없어 후순위.*
+
+### 완료(기록 보존)
+- [x] 주차장 전국 확대(2026-07-10) · 광주 지역코드 복구(2026-07-16, §7) · 야간진료 탭(2026-08) · 탭 6개 숨김(2026-08)
 
 ---
 
@@ -153,69 +117,70 @@ package.json          deps: fast-xml-parser, proj4
 ```bash
 cd C:\Users\GB\Documents\gong-medical-app
 
-# 로컬 개발 서버 (기본 3005, PORT로 변경 가능)
+# 로컬 개발 서버 (기본 3005, PORT로 변경)
 node dev-server.mjs                 # → http://localhost:3005
 PORT=3010 node dev-server.mjs
 
-# 주차장 스냅샷 재생성 (표준데이터 38페이지 + 공단 시도) → data/*.js 갱신 후 재배포 필요
-npm run build:parking
+# 스냅샷 재생성 (원본 갱신·행정개편 시) → data/*.js 갱신 후 재배포 필요
+npm run build:parking      # 전국 주차장
+npm run build:clinics      # 야간진료 병의원 (E-Gen 전 페이지 스캔, 수분 소요)
+npm run build:tollgates    # 고속도로 영업소 목록
+npm run build:assets       # PWA 아이콘 + OG PNG (sharp)
+
+# 문법 검사 (커밋 전 필수)
+node --check js/services.js
+node --check "api/[service].js"
 
 # 배포 (cslis07 계정, CLI 직접)
 vercel --prod --yes
-
-# 문법 검사
-node --check lib/parking.js
-node --check "api/[service].js"
-
-# 핸들러 단독 테스트 (dev-server 없이)
-SEOUL_API_KEY=$(grep '^SEOUL_API_KEY=' .env | cut -d= -f2) \
-  node -e "import('./lib/parking.js').then(m=>m.default({query:{lat:'37.5663',lon:'126.9779'}},{status:c=>({json:o=>console.log(JSON.stringify(o).slice(0,300))})}))"
 
 # 프로덕션 스모크
 curl -s "https://gong-medical-app.vercel.app/api/parking?lat=37.5663&lon=126.9779&limit=3"
 ```
 
+### 커밋 전 검증 절차 (이 순서로)
+1. `node --check`로 바뀐 JS 문법 검사
+2. `node dev-server.mjs` + `curl`로 바뀐 엔드포인트/페이지 로컬 스모크
+3. `gh auth status --active`로 **cslis07 확인** → `git commit` → `git push origin main`
+4. `vercel --prod --yes` → **프로덕션에서 `curl`로 재확인**(로컬만 되고 프로덕션은 IP 차단되는 API가 흔함, §6-4)
+5. 가능하면 브라우저 육안(콘솔 에러 0 + 핵심 인터랙션)
+
 ### 환경변수 (`.env` 로컬 + Vercel Production 양쪽 필요)
-```
-SEOUL_API_KEY        # 지하철·혼잡도·따릉이·주차장 (서울 열린데이터 계정키)
-SEOUL_REALTIME_KEY   # 지하철 실시간 도착/위치 (별도 키)
-DATA_API_KEY         # 실거래가·미세먼지·시내버스·LH·myhome·주차장 표준데이터/공단 (data.go.kr 계정키, 9ae13365…)
-KOTSA_PARKING        # 선택. "1"이면 공단 실시간 주차면수 조회 시도. 기본 off(백엔드 장애 중)
-OPINET_API_KEY       # 주유소 (파라미터명 certkey)
-EX_API_KEY           # 고속도로 (한국도로공사 data.ex.co.kr)
-VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
-```
-> ⚠️ 키 값은 **절대 커밋 금지**. `.env`(gitignore) + `vercel env add <KEY> production`으로만 관리.
-> env 변경 후에는 **반드시 재배포**해야 반영된다.
+
+| 키 | 용도 | 설정 위치 |
+|---|---|---|
+| `DATA_API_KEY` | 실거래가·미세먼지·시내버스·LH·myhome·주차장 표준데이터·**야간진료(E-Gen)** (data.go.kr 계정키) | `.env` + Vercel |
+| `SEOUL_API_KEY` | 지하철 정보·혼잡도·따릉이·주차장(서울 열린데이터) | `.env` + Vercel |
+| `SEOUL_REALTIME_KEY` | 지하철 실시간 도착/위치(별도 키) | `.env` + Vercel |
+| `OPINET_API_KEY` | 주유소(파라미터명 `certkey`) | `.env` + Vercel |
+| `EX_API_KEY` | 고속도로(한국도로공사 data.ex.co.kr, 키 하나로 전 OpenAPI) | `.env` + Vercel |
+| `VWORLD_API_KEY` | 지오코딩(Vercel에선 차단→Nominatim 폴백) | `.env` + Vercel |
+| `KOTSA_PARKING` | 선택 토글. `"1"`이면 공단 실시간 주차면수 시도(기본 off, 백엔드 장애) | Vercel(선택) |
+
+> ⚠️ 키 값 **절대 커밋 금지**. `.env`(gitignore) + `vercel env add <KEY> production`. env 변경 후 **반드시 재배포**.
 
 ---
 
 ## 6. 배포 관련 주의사항
 
-1. **★ Vercel Hobby 함수 12개 제한** — `api/` 아래 파일 1개 = 서버리스 함수 1개다. 13개가 되자 배포가 `Error`로 실패했다. 그래서 **`api/[service].js` 단일 catch-all**만 두고 실제 핸들러는 `lib/`에 둔다. **`api/`에 새 파일을 만들지 말 것.**
+1. **★ Vercel Hobby 함수 12개 제한** — `api/` 아래 파일 1개 = 함수 1개. 그래서 **`api/[service].js` 단일 catch-all**만 두고 실제 핸들러는 `lib/`에 둔다. 서비스가 14개여도 함수는 1개. **`api/`에 새 파일 만들지 말 것.**
 2. **cslis07 계정 전용** — GitHub·Vercel 모두 cslis07. push 전 `gh auth status --active` 확인.
 3. **env는 재배포해야 적용** — `vercel env add` 후 `vercel --prod --yes` 필수.
-4. **외부 API의 데이터센터 IP 차단**이 흔하다. 아래 §7 참고. 신규 소스 붙일 때 **반드시 프로덕션에서도 호출 검증**할 것(로컬만 되는 경우가 많음).
-5. `img/subway-map.png`(4.2MB)와 `data/parking-nationwide.js`(4.5MB)는 **커밋 대상**, `node_modules`는 gitignore. Vercel이 `package.json`으로 deps(proj4, fast-xml-parser) 설치.
-6. Deployment Protection이 켜지면 외부 접속 401. 현재 공개(200).
-7. **`api/`에 새 파일 금지**(1번)이므로 주차장 보조 모듈은 `lib/kotsa-parking.js`에 둔다. `api/[service].js`의 `HANDLERS`는 명시적 맵이라 lib에 파일을 더해도 함수 수는 그대로다.
+4. **외부 API의 데이터센터 IP 차단**이 흔함(§7). 신규 소스는 **반드시 프로덕션에서도 호출 검증**.
+5. **커밋 대상 대용량 파일**: `img/subway-map.png`(4.2MB), `data/parking-nationwide.js`(4.5MB), `data/night-clinics.js`(≈10MB), `vendor/leaflet/`. `node_modules`는 gitignore. Vercel이 `package.json` deps(proj4, fast-xml-parser, sharp) 설치.
+6. **런타임 제약**: `vercel.json` `maxDuration: 60`(Hobby 기본 10초). 라우터가 핸들러를 **동적 import**(대용량 스냅샷을 무관 요청 콜드스타트에서 파싱하지 않도록).
+7. Deployment Protection 켜지면 외부 401. 현재 공개(200).
 
----
-
-## 6.5 보안 (2026-07-10 감사 후 적용)
+### 6.5 보안 (2026-07-10 감사 후 적용, 유효)
 
 | 항목 | 조치 | 파일 |
 |---|---|---|
-| **쿼터 소진(오픈 프록시)** — `/api/realestate` 1요청 = RTMS 최대 30회, `/api/lh` 40회, `subway?kind=stats` 31회. 인증이 없어 `curl` 33회면 하루치 소진 | ① 서비스별 **CDN 캐시**(`s-maxage`)로 동일 요청이 상위로 안 나감 ② LH `from`/`to`를 `^\d{8}$` + **최대 366일** 창으로 제한 ③ subway 월통계를 `pool(…, 6)`로 묶음 | `api/[service].js` · `lib/lh.js` · `lib/subway.js` |
-| **CSP 부재** | `default-src 'self'` 기반 CSP 추가. `script-src 'self'`를 걸기 위해 guide.html의 인라인 `<script>`와 `onclick` 10개를 `js/guide.js`로 분리 | `vercel.json` · `js/guide.js` |
-| **`javascript:` 스킴** — LH `DTL_URL`을 `href`에 그대로 삽입. `E()`는 속성 탈출만 막고 스킴은 못 막는다 | `safeUrl()` — `^https?://`만 링크로 렌더, 아니면 `<article>` 폴백 | `js/services.js` |
-| **에러 원문 유출** — `String(err.message)`·상위 응답 본문(`_raw`, `t.slice()`)을 그대로 반사 | `errorMessage()`로 통일. 원문은 `console.error`(Vercel 함수 로그)로만, 사용자에겐 고정 문구 | `lib/respond.js` + 전 핸들러 |
-| **죽은 sanitizer** — `sanitizeHtml()`·`dec()`가 호출처 없이 남아 있어 되살아나면 위험 | 제거 | `js/app.js` |
-| **`.env.example` 낙후** — 실제 쓰는 키 6종 중 3종 누락 | 6종 전부 + 용도·함정 명시 | `.env.example` |
+| 쿼터 소진(오픈 프록시) — `/api/realestate` 1요청=RTMS 최대 30회 등 | 서비스별 CDN 캐시(`s-maxage`) + LH 날짜창 366일 제한 + subway 월통계 `pool(…,6)` | `api/[service].js`·`lib/lh.js`·`lib/subway.js` |
+| CSP 부재 | `default-src 'self'` CSP + guide 인라인 스크립트 분리 | `vercel.json`·`js/guide.js` |
+| `javascript:` 스킴(LH DTL_URL) | `safeUrl()` — `^https?://`만 링크 | `js/services.js` |
+| 에러 원문·상위 본문 유출 | `errorMessage()`로 통일, 원문은 `console.error`만 | `lib/respond.js` + 전 핸들러 |
 
-> **확인된 안전 항목**: 키는 전부 `process.env`에서만 URL에 삽입되고 클라이언트 번들·에러에 없다. `git log` 전 이력에 실제 키 흔적 없음(`.env`는 미추적). SSRF 없음 — 모든 핸들러가 호스트를 상수로 고정하고 사용자 입력은 `encodeURIComponent`/`URLSearchParams`로만 넣는다.
->
-> **미적용(후속)**: IP 단위 rate limit. 서버리스라 인메모리 카운터는 부분적이고 `@vercel/kv` 또는 Vercel WAF가 필요하다. Origin/Referer 화이트리스트는 문서화된 `curl` 스모크 테스트를 깨뜨려 보류했다.
+> **안전 확인**: 키는 전부 `process.env`에서만 URL에 삽입, 클라이언트 번들·에러에 없음. 진단 응답도 불리언만(`seoulKey: Boolean(...)`). SSRF 없음(호스트 상수 고정). **미적용(후속)**: IP 단위 rate limit(서버리스라 `@vercel/kv`/WAF 필요).
 
 ---
 
@@ -223,68 +188,98 @@ VWORLD_API_KEY       # 지오코딩 (Vercel에선 차단 → Nominatim 폴백)
 
 | 증상 | 원인 | 해결 |
 |---|---|---|
-| 배포 `Error`, 신규 `/api/*` 전부 **404 NOT_FOUND** | **Vercel Hobby 함수 12개 초과**(api/에 13개) | 핸들러를 `lib/`로 옮기고 `api/[service].js` catch-all 1개로 통합 |
-| "필터 적용" 버튼이 세로로 찌그러져 카드 밖으로 잘림 | CSS 뷰포트 ~660px(DPR 1.5)에서 4열 그리드 **트랙 최소폭 합 > 카드 폭**. 그리드 아이템 기본 `min-width:auto`라 입력칸이 못 줄어듦 | ① `.controls .field`/입력에 `min-width:0` ② 641~800px 중간 브레이크포인트에서 2열 전환 |
-| 배포 직후 공유링크 복원이 반쪽만 됨(일부 필드만) | SW **stale-while-revalidate**가 index.html·favorites.js를 **서로 다른 배포 버전**으로 섞어 서빙(version skew). 실측(2026-07-16 Chrome MCP)에서 재현 → SW 캐시 지우니 정상 | **SW를 네트워크 우선으로 변경**(sw.js, v4). 온라인이면 항상 최신, 오프라인만 캐시 셸. skew 원인 제거 |
-| 고속버스(KOBUS) `fetch failed` → `connect ETIMEDOUT` *(탭 제거됨, 교훈 보존)* | KOBUS가 **Vercel 데이터센터 IP 차단**(TLS 아님). `node:https`로 바꾸니 진짜 원인이 드러남 | 해결 불가 → 도달 실패 감지 시 `{blocked:true}` 반환, 프론트는 **공식 예매 링크 카드**로 폴백 |
-| 로또 dhlottery 302 → 홈으로 | dhlottery가 해외/데이터센터 IP 차단 | **공개 CDN 미러**(smok95.github.io/lotto) 프록시로 우회 |
-| vworld 지오코딩 프로덕션 `fetch failed` | vworld도 Vercel IP 차단(로컬은 정상) | **Nominatim(OSM) 폴백** 추가. vworld 실패 시 자동 전환 |
-| 고속도로 EX API `400 Request Blocked` | EX 포털 **봇 차단** | **User-Agent + Referer** 헤더 추가하면 정상(Vercel IP는 허용됨) |
-| OPINET `aroundAll` 빈 결과 | 파라미터명이 `code`가 아니라 **`certkey`** | `certkey`로 수정. KATEC 좌표는 **proj4 + Opinet 공식 def**로 변환 |
-| 공단 주차 API `Error forwarding request to backend server` | ~~심의 승인 전~~ → **오진이었다.** 2026-07-08 승인 후에도 동일. 위조키는 `Unauthorized`, 정상키는 이 메시지 ⇒ 게이트웨이 인증은 통과하고 **제공기관 백엔드가 죽은 것** | 회복 대기. `lib/kotsa-parking.js`가 실패를 정상 경로로 취급(빈 스냅샷 + 실시간 null). `/api/parking?diag=1`로 회복 확인 |
-| 표준데이터 전량 수집이 `NODATA_ERROR`로 중단 | 좌표 없는 행(762건)을 버려서 `rows.length`가 `totalCount`에 영원히 도달 못 함 → 마지막 페이지를 넘어감 | 종료 조건을 **수신 건수**로 세고, `resultCode=03`은 정상 종료로 처리 |
-| 표준데이터 `numOfRows=1000` 페이지 타임아웃 | 응답이 30초를 넘김 | `PER_PAGE=500` + 3회 재시도(백오프) |
-| 서울 주차장이 118곳뿐 | 2,206행 중 **LAT/LOT가 0인 행이 대부분**. 좌표 보유 고유 PKLT_CD는 118곳 (문서의 "고유 852"는 좌표 없는 것 포함) | 정상. 나머지 서울 공영은 표준데이터가 좌표를 갖고 있어 병합으로 메움 |
-| (설계 함정) 서울 공영을 뭉텅이로 중복 제거하면 663곳 증발 | 표준데이터 서울 공영 762곳 중 서울 소스와 실제 충돌은 **99곳뿐** | "주소=서울 & 공영이면 버림" 규칙 폐기 → **이름(괄호·공백·접미어 제거) 일치 + 200m 이내**만 중복 처리 |
-| 주차장 "남대문 화물"이 4번 중복 | **노상주차장은 구획(1면)마다 행이 하나** (2,206행 / 고유 PKLT_CD 852) | `PKLT_CD`로 묶어 **TPKCT 합산**. 실측으로 다중행 그룹 65개가 전부 `TPKCT=1`, 큰값 중복 0임을 확인 후 적용 |
-| 주차장 잔여면수가 엉뚱하게 표시 | 실시간 123행 중 **14행은 갱신시각이 빈 값** | `NOW_PRK_VHCL_UPDT_TM`이 있는 **109곳만 실시간으로 신뢰** |
-| 마이홈 `code 30` / `fetch failed` | 키 미전파 + 마이홈이 Vercel IP 차단 | `{pending:true}` 안내로 degrade(화면 깨짐 방지). 전파 후 재확인 |
-| 티머니 `errorCont` 오류 페이지 *(탭 제거됨)* | `bef_Aft_Dvs=D`, `req_Rec_Num=10` 누락(사이트 JS가 붙임) | 두 파라미터 필수 포함 |
-| 실거래가 "전월세"가 한 덩어리 | API가 전세/월세를 `kind`로만 구분 | UI를 **매매/전세/월세/분양권**으로 분리, `kind`로 클라 필터 |
-| 실거래가·LH가 100건만 나옴 | 첫 페이지만 호출했다(`pageNo=1`, `PG_SZ=100`) | `totalCount`(RTMS) / 행의 `ALL_CNT`(LH)로 총 페이지를 계산해 **전량 수집** |
-| LH 전량 수집 시 7,590건 중 2,700건만 도착 | 40페이지를 `Promise.all`로 한 번에 던지면 **13페이지가 무응답**. `.catch(()=>[])`가 조용히 삼켜 데이터가 말없이 사라짐 | `lib/pool.js`(동시성 4 + 재시도 1회). 실패 페이지는 응답의 `failedPages`로 **드러낸다** |
-| 실거래가 응답이 10초 초과 | RTMS는 호출 1건이 5~9초. 17페이지면 기본 동시성으론 17초 | RTMS는 병렬에 강하므로 동시성 20. 더해 `vercel.json`에 `maxDuration: 60`(Hobby 기본 10초) |
-| 부천·화성·인천 서구가 **거래 0건** (오류 아님, `resultCode=000`) | **행정구역 개편으로 LAWD_CD가 바뀜.** RTMS는 과거 거래도 새 코드로 재색인한다 | 부천→41192/41194/41196, 화성→41591·41593·41595·41597(만세·효행·병점·동탄), 인천 서구→28275(서해구)·28290(검단구). 전부 실제 조회로 검증 |
-| 광주 5개 구 전부 0건 | 전남광주통합특별시 출범(2026-07-01)으로 **시도 프리픽스가 12로 신설**(29·46 폐기). 과거 스캔(46/53~57)은 "특별시=서울 11 다음 12"를 예상 못 함 | **해결(2026-07-16).** 미사용 프리픽스 전수×110 프로브로 12110(목포) 적중 → 12210~12330 광주 5구를 동 이름 대조로 확정. 옛 46110(목포)도 0건 ⇒ 46 전체 재색인됨 |
-| 코드 스캔 중 `API tok…` 응답 | 60개를 동시에 던져 data.go.kr **트래픽 제한** 발동 | 프로브는 소량·순차로 |
-| 지하철 실내공기질 등급이 미세먼지 탭과 어긋남 | `app.js`의 `airLevel()`이 **3단계**(나쁨>35), 나머지는 환경부 **4단계** ⇒ PM2.5 100이 한쪽은 "나쁨", 다른 쪽은 "매우나쁨" | 4단계로 통일(≤15/≤35/≤75/초과). 분포 카운터·`airFilter` 옵션도 함께 확장 |
-| 주차장 검색 버튼이 이벤트 객체를 페이지 번호로 넘김 | `addEventListener("click", searchParking)` — `searchParking(page)`의 첫 인자로 `PointerEvent`가 들어감 | `() => searchParking(1)`로 감쌈 |
-| 4.5MB 스냅샷이 **모든 탭** 콜드스타트에서 파싱 | 라우터가 13개 핸들러를 정적 import → `parking.js`가 스냅샷을 최상위 import | 라우터를 **동적 import**로, `parking.js`도 스냅샷을 호출 시 지연 로드 |
-| 주유소 "셀프" 칩이 항상 안 뜸 | Opinet `aroundAll`·`detailById` **어디에도 셀프 여부 필드가 없다**(`SELF_YN` 부재). 과거 `selfYn`은 늘 false | 셀프 칩·필드 제거. 대신 **브랜드 필터**(POLL_DIV_CD, 실제 존재)로 대체 |
-| 미세먼지 PM2.5 예보가 PM10과 뒤섞임 | 에어코리아 `getMinuDustFrcstDspth`가 **InformCode 필터를 무시**하고 PM10·PM2.5·O3를 한 응답에 섞어 준다(items[0]가 PM10일 수 있음) | 응답에서 `informCode` 일치 항목만 골라 `informData` 최신 발표 선택. `mkFc(j, code)` |
-| 로컬 dev-server 프로세스가 좀비로 누적 | bash `kill %1`이 Windows에서 detached node를 못 죽임 → stale 서버가 옛 코드로 응답 | 검증은 매번 새 포트로. 정리는 PowerShell `Win32_Process` CommandLine 필터로 `dev-server.mjs`만 종료 |
+| 배포 `Error`, 신규 `/api/*` 404 | Vercel Hobby 함수 12개 초과(api/에 13개) | 핸들러를 `lib/`로, `api/[service].js` catch-all 1개로 |
+| 야간진료 스냅샷 15MB로 과대 | 43,384곳 × 객체 키 반복 + 진료과 긴 문자열 | **컬럼형(배열의 배열)** + 진료과 3개 컷 + 좌표 5자리 → ≈10MB. `lib/clinic.js`가 컬럼 인덱스로 읽음 |
+| E-Gen 병의원 API가 Q0/Q1(지역) 무시 | 이 오퍼레이션은 지역·좌표 필터 미지원(전국 8만건 반환) | 주차장처럼 **빌드타임 스냅샷** 후 서버가 좌표 반경으로 필터 |
+| 배포 직후 공유링크 복원 반쪽 | SW stale-while-revalidate가 index.html·JS를 다른 배포 버전으로 섞음(version skew) | **SW 네트워크 우선 전환**(오프라인만 캐시) + 문서 no-cache 재검증 |
+| "필터 적용" 버튼 세로로 찌그러짐 | 4열 그리드 트랙 최소폭 합 > 카드 폭(grid item `min-width:auto`) | `.controls .field`에 `min-width:0` + 641~800px 2열 브레이크포인트 |
+| 조회 실패·needKey인데 스켈레톤 잔존 | `!d.ok`/`needKey` 경로가 결과영역을 안 지움 | 전 패널 `endEmpty`/`retryBox`로 전환(스켈레톤 제거+재시도) |
+| 광주 5개 구 전부 0건 | 전남광주통합특별시(2026-07-01)로 **시도 프리픽스 12 신설**(29·46 폐기) | 미사용 프리픽스×110 프로브로 12110(목포) 적중 → 광주 12210~12330 + 전남 5시 실증 복구 |
+| 부천·화성·인천서구 거래 0건(오류 아님) | 행정구역 개편으로 LAWD_CD 변경, RTMS는 과거도 새 코드 재색인 | 부천 41192/4/6, 화성 41591/3/5/7, 인천 서해28275·검단28290 실조회 검증 |
+| 미세먼지 예보 자주 빈 응답 | `getMinuDustFrcstDspth`는 `searchDate=오늘`이면 발표 전이라 0건 | 어제·오늘 발표 병합 후 대상일별 최신 발표 선택 |
+| 미세먼지 예보 PM10/PM2.5 뒤섞임 | API가 InformCode 필터 무시하고 혼합 반환 | 응답에서 `informCode` 일치만 골라 사용 |
+| 고속버스(KOBUS)·로또(dhlottery)·vworld·마이홈 `fetch failed` | **Vercel 데이터센터 IP 차단** | KOBUS 탭 제거·폴백 / 로또 CDN 미러 / vworld→Nominatim 폴백 / 마이홈 pending degrade |
+| 고속도로 EX `400 Request Blocked` | EX 포털 봇 차단 | **User-Agent + Referer** 헤더 추가(Vercel IP는 허용) |
+| OPINET `aroundAll` 빈 결과 | 파라미터명 `code` 아니라 **`certkey`** | `certkey` 수정 + KATEC proj4 변환. 좌표필드 `GIS_X_COOR`(D 없음) |
+| 공단 주차 `Error forwarding request to backend server` | 승인됐으나 제공기관 백엔드 죽음(위조키는 Unauthorized로 구분) | 회복 대기, 빈 스냅샷 degrade |
+| 표준데이터 전량수집 `NODATA_ERROR` 중단 | 좌표 없는 행 버려 `rows.length`가 `totalCount` 미달 | 종료조건을 수신건수로, `resultCode=03` 정상종료 |
+| LH 7,590건 중 2,700건만 도착 | 40p `Promise.all` 동시투척 시 무응답 + `.catch(()=>[])`가 삼킴 | `lib/pool.js`(동시성 4) + `failedPages`로 노출 |
+| 4.5MB 스냅샷이 모든 탭 콜드스타트 파싱 | 라우터 정적 import | 라우터 **동적 import** + 핸들러 내 지연 로드 |
+| 로컬 dev-server 좀비 누적 | bash `kill %1`이 Windows detached node 못 죽임 | 매번 새 포트 + PowerShell `Win32_Process` CommandLine 필터로 `dev-server.mjs`만 종료 |
+| 이 머신 `convert`가 ImageMagick 아님 | `C:\WINDOWS\system32\convert.exe`(NTFS 툴) | PNG 래스터화는 **sharp**로만(build-assets.mjs) |
 
 ---
 
 ## 8. API 구조
 
-모든 프론트 호출은 `/api/{service}?...` → **`api/[service].js`가 `lib/{service}.js`로 위임**.
+모든 프론트 호출 `/api/{service}?...` → `api/[service].js`가 `lib/{service}.js`로 위임.
 
-### 서비스별 엔드포인트
-
-| 경로 | 주요 파라미터 | 업스트림 |
+| 경로 | 주요 파라미터 | 업스트림 · 특이사항 |
 |---|---|---|
-| `/api/subway` | `kind=mapData\|arrival\|position\|firstlast\|accessibility\|elevatorLift\|stats\|timeStats\|airquality\|closure\|shortestPath` | 서울 열린데이터(정보 8088 / 실시간 swopenapi) |
-| `/api/density` | `area=강남역` | `citydata_ppltn` |
-| `/api/lotto` | `round=latest\|1231` | smok95.github.io/lotto |
-| `/api/gas` | `op=avg` \| `lat&lon&prodcd=B027&radius` | Opinet `avgAllPrice` / `aroundAll`+`detailById` (certkey, KATEC) |
-| `/api/bike` | `lat&lon` | 서울 `bikeList` 3페이지 + haversine |
-| `/api/highway` | `op=rest&q=죽전` \| `op=congest` | EX `restConvList`+`restBestfoodList`+`curStateStation` / `trafficAmountByCongest` (UA+Referer 필수) |
-| `/api/realestate` | `type=trade\|rent\|silv&lawd=11680&ym=202606` | 국토부 RTMS (rent는 `kind`로 전세/월세 구분) — **전량 수집**(동시성 20, 상한 30p=3,000건) |
-| `/api/air` | `sido=서울` \| `op=metro` | 에어코리아 `getCtprvnRltmMesureDnsty` + `getMinuDustFrcstDspth`(PM10·**PM2.5** 예보, 코드 필터링) (metro=서울·경기·인천 평균) |
-| `/api/citybus` | `op=near&lat&lon` \| `op=arrival&city&node` | TAGO `getCrdntPrxmtSttnList` / `getSttnAcctoArvlPrearngeInfoList` |
-| `/api/parking` | `lat&lon&live=1&free=1&limit` \| `diag=1` | 서울 `GetParkInfo`+`GetParkingInfo`(실시간) + 전국 스냅샷 + 공단 스냅샷(현재 빈값) — 이름+200m로 중복 제거 후 거리순 |
-| `/api/lh` | `name&region&status&type&from&to` | LH `B552555/lhLeaseNoticeInfo1` (응답이 배열/dsList 중첩 → 방어적 탐색) — **전량 수집**(동시성 4, 상한 40p) |
-| `/api/myhome` | `brtc=11&signgu&size` | 마이홈 `rentalHouseList` (LH+SH+지방) — **현재 pending** |
-| `/api/geocode` | `q=서울 강남구 테헤란로 152` | vworld `getcoord`(도로명→지번) → 실패 시 **Nominatim** |
+| `/api/subway` | `kind=mapData\|arrival\|position\|firstlast\|accessibility\|elevatorLift\|stats\|timeStats\|airquality\|closure\|shortestPath` | 서울 열린데이터(정보8088/실시간swopenapi). 열차위치는 1~9호선만 |
+| `/api/gas` | `op=avg\|recent` \| `lat&lon&prodcd&radius` | Opinet. `certkey` 필수, KATEC 좌표. `recent`=최근7일 추이 |
+| `/api/bike` | `lat&lon` | 서울 bikeList 3p + haversine |
+| `/api/highway` | `op=rest\|congest\|sms\|tollgates\|traveltime` | EX(data.ex.co.kr). UA+Referer 필수. `sms`=realTimeSms 돌발, `traveltime`=realUnitTrtm(영업소코드 필요→ex-tollgates 스냅샷) |
+| `/api/parking` | `lat&lon&live=1&free=1&page&size` \| `diag=1` | 서울 실시간 + 전국 스냅샷. 위치필터 없어 스냅샷 후 반경 |
+| `/api/clinic` | `lat&lon&radius&limit` | E-Gen 스냅샷 반경 필터. **지역/좌표 필터 없어 스냅샷 필수**. '지금진료중'은 프론트 계산 |
+| `/api/density` | `area=강남역` | citydata_ppltn(5분 주기, 새벽 미제공) |
+| `/api/air` | `sido=서울` \| `op=metro` | 에어코리아. 예보는 어제·오늘 발표 병합, informCode 필터 |
+| `/api/realestate` | `type=trade\|rent\|silv&lawd&ym` | RTMS 전량수집(동시성20, 상한30p). 행정개편 시 LAWD 하드코딩 갱신 |
+| `/api/citybus` | `op=near\|arrival` | TAGO |
+| `/api/lh` | `name&region&status&type&from&to` | LH(전량수집 동시성4, 상한40p) |
+| `/api/myhome` | `brtc&signgu&size` | 마이홈(현재 pending, Vercel IP 차단) |
+| `/api/geocode` | `q=주소` | vworld→실패시 Nominatim |
 
-### 핵심 구현 노트
-- **KATEC 변환(주유소)**: `proj4('WGS84', '+proj=tmerc +lat_0=38 +lon_0=128 +k=0.9999 +x_0=400000 +y_0=600000 +ellps=bessel +towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43', [lon,lat])`
-- **EX(고속도로)**: `data.ex.co.kr/openapi/...?key=&type=json` + **UA·Referer 헤더 필수**. `stdRestNm`/`serviceAreaName`은 **부분 매칭** 지원.
-- **주차장 집계**: 노상은 구획별 행 → `PKLT_CD` 그룹, `capacity = Σ TPKCT`, 좌표는 가장 가까운 구획 것 사용. 실시간은 `NOW_PRK_VHCL_UPDT_TM` 있는 행만.
-- **주차장 스냅샷**: 표준데이터·공단 API 모두 **위치 필터가 없어 전량 페이징만 가능**한데 일일 트래픽이 1,000회다(전량 1회 = 38페이지). 런타임 호출 시 콜드스타트 스물몇 번에 한도 소진 ⇒ 빌드 타임에 굽는다. 갱신은 `npm run build:parking` 후 재배포. 원본 갱신주기도 일 1회.
-- **공단 API 조인 불가**: 표준데이터 `prkplceNo`와 공단 `prk_center_id`는 **다른 체계**라 ID 조인이 안 된다. 공단 실시간(`PrkRealtimeInfo`)을 쓰려면 좌표를 가진 공단 시설정보(`PrkSttusInfo`)를 함께 스냅샷해야 한다.
-- **LH 기본 조회창은 최근 2개월**이다. 날짜를 안 주면 응답의 `dsSch`에 `PAN_ST_DT`/`PAN_ED_DT`가 2개월치로 찍혀 나온다(≈745건). `from`/`to`로 넓히면 2024-01-01부터 7,590건이지만 40페이지 상한에서 잘린다.
-- **전량 수집 동시성**: RTMS는 병렬에 강하고(20 동시) LH는 약하다(4 동시). 같은 data.go.kr이어도 제공기관 서버마다 다르다. 새 소스에 `pool()`을 붙일 땐 반드시 **누락 없는지 총 건수와 대조**할 것.
-- **TAGO 시내버스**: `arrtime`(초)→분, `arrprevstationcnt`=남은 정류장. `cityCode`+`nodeId`로 도착 조회.
-- **subwayId 코드**: 1001~1009=1~9호선, 1063 경의중앙, 1065 공항, 1067 경춘, 1075 수인분당, 1077 신분당, 1092 우이신설, 1093 서해, 1032 GTX-A
+> **외부 의존 공통 함정**: ①대부분 일일 트래픽 1,000회 → CDN 캐시가 유일 방어선 ②위치/지역 필터 없는 API(주차장·야간진료·영업소)는 **빌드타임 스냅샷** 패턴 ③data.go.kr는 API별 활용신청 필요하나 이 계정은 위 전부 승인됨(E-Gen도 기존 키로 됨) ④EX는 키 하나로 전 OpenAPI.
+
+---
+
+## 9. ⛔ 하지 말 것
+
+> 실행하면 되돌리기 어렵거나 데이터·키가 날아가는 것. 손대기 전 반드시 확인.
+
+1. **`api/` 폴더에 새 파일 만들지 말 것** — Vercel Hobby 함수 12개 제한. 핸들러는 `lib/`에 두고 `HANDLERS`에 등록. (§6-1)
+2. **API 키 절대 커밋 금지** — `.env`(gitignore) + `vercel env add`로만. env 변경 후 반드시 재배포. (§5)
+3. **cslis07 계정 외로 push 금지** — push 전 `gh auth status --active` 확인. (§6-2)
+4. **로컬만 검증하고 배포 금지** — 외부 API의 Vercel IP 차단이 흔함. 프로덕션 curl 필수. (§6-4, §7)
+5. **에러 원문·상위 응답 본문을 사용자에게 반사 금지** — 키 유출 위험. `errorMessage()` 통일, 원문은 `console.error`만. (§6.5)
+6. **미사용처럼 보여도 삭제 금지 파일**:
+   - `lib/kotsa-parking.js`, `data/parking-kotsa.js` — 공단 백엔드 회복 시 켜짐(빈값 degrade 중).
+   - `data/night-clinics.js`(10MB), `data/parking-nationwide.js`(4.5MB), `data/ex-tollgates.js` — **빌드 산출 스냅샷, 재생성 수분 소요**. 커밋 대상.
+   - `lib/respond.js`의 `redact()` — 정의만·미사용이나 상위 본문 인용 대비 잔존.
+   - **숨긴 탭 6개의 패널·핸들러**(citybus/realestate/lh/air/lotto/lost) — `data-off`로 숨김일 뿐. 삭제하면 복구 불가.
+7. **행정구역 코드(`js/services.js` `LAWD`) 임의 수정 금지** — 실조회 검증 없이 바꾸면 조회 0건. 개편 시 §7 방식(프로브)으로 검증 후 반영.
+
+---
+
+## 10. ❌ 보류 / 구조적 한계 (재시도 방지)
+
+- **공연 잔여석** — 인터파크 NOL 개편으로 이름검색이 SPA HTML만 반환, 유효 goodsCode 확보 불가. → 공개 API 없음.
+- **대중교통 길찾기(ODsay)** — 키 발급 + 호출 IP 화이트리스트 필요. Vercel IP 유동이라 불가.
+- **공공임대(마이홈)** — 마이홈이 Vercel 데이터센터 IP 차단(로컬만 됨). 키 전파 이슈까지 겹쳐 pending degrade.
+- **공단 실시간 주차면수** — 제공기관 백엔드 장애(승인은 됨). 우리 코드로 해결 불가, 회복 대기.
+- **IP 단위 rate limit** — 서버리스라 인메모리 카운터 부분적. `@vercel/kv`/WAF 필요해 보류(CDN 캐시로 대체 방어).
+- **일부 외부 API의 Vercel IP 차단**(KOBUS·dhlottery·vworld·마이홈) — 구조적. 폴백(CDN 미러/Nominatim/공식링크)으로만 우회.
+- **스냅샷 실시간성 한계** — 주차장·야간진료·영업소는 원본에 위치필터가 없어 스냅샷 방식. 진료시간·요금 등은 **빌드 시점 기준**(오래되면 부정확). UI에 기준일 표기, 갱신은 수동 `build:*`.
+
+---
+
+## 11. 디렉토리 구조
+
+```
+gong-medical-app/
+├─ api/
+│  └─ [service].js         # 단일 catch-all 라우터 (함수 1개)
+├─ lib/                    # API 핸들러 14 + 유틸 3(kotsa-parking·pool·respond)
+├─ js/                     # 프론트: app(지하철)·services(나머지)·favorites·map·pwa·theme·guide
+├─ data/                   # 빌드 산출 스냅샷 (parking-nationwide·night-clinics·ex-tollgates·parking-kotsa)
+├─ scripts/                # 스냅샷·자산 빌더 (build-parking/clinics/tollgates/assets)
+├─ vendor/leaflet/         # Leaflet 로컬 벤더링 (CSP 대응)
+├─ img/subway-map.png      # 지하철 노선도 이미지(4.2MB)
+├─ index.html · css/style.css · guide.html
+├─ sw.js · manifest.webmanifest · icon*.png · icon.svg · og-image.png · robots.txt · sitemap.xml
+├─ vercel.json             # 함수 maxDuration·보안헤더·CSP·favicon 리다이렉트
+├─ dev-server.mjs          # 로컬 서버(동일 라우터 경유)
+├─ package.json            # deps: proj4·fast-xml-parser / devDeps: sharp
+└─ .env                    # API 키 6종 (gitignore)
+```
