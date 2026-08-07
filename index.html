@@ -47,16 +47,20 @@
     </div>
   </header>
 
-  <!-- 상단 내비: 카테고리(교통·주거·생활) → 서브탭 -->
+  <!-- 상단 내비: 홈 → 카테고리(교통·주거·생활) → 서브탭
+       🏠 홈은 카테고리가 아니라 «허브 패널»이다. data-cat="__home" 은 어떤 .toptab 과도
+       맞지 않는 센티널이라 showCategory()가 자동으로 이 칩만 꺼준다(§홈 허브 주석 참고). -->
   <nav class="topnav wrap" aria-label="서비스 카테고리">
     <div class="catbar" role="tablist" aria-label="카테고리">
-      <button class="cattab active" data-cat="transit" role="tab" aria-selected="true">🚉 교통</button>
-      <button class="cattab" data-cat="home" role="tab" aria-selected="false">🏠 주거</button>
+      <button class="cattab active" data-cat="__home" role="tab" aria-selected="true">🏠 홈</button>
+      <button class="cattab" data-cat="transit" role="tab" aria-selected="false">🚉 교통</button>
+      <button class="cattab" data-cat="home" role="tab" aria-selected="false">🏘️ 주거</button>
       <button class="cattab" data-cat="life" role="tab" aria-selected="false">🌆 생활</button>
     </div>
-    <div class="subtabs" role="tablist" aria-label="서비스">
+    <!-- 첫 화면은 홈이라 서브탭 줄은 감춰 둔다(switchPanel 이 홈을 벗어날 때 편다) -->
+    <div class="subtabs" role="tablist" aria-label="서비스" hidden>
       <!-- 교통 -->
-      <button class="toptab active" data-panel="subway" data-cat="transit" role="tab" aria-selected="true">🚇 지하철</button>
+      <button class="toptab" data-panel="subway" data-cat="transit" role="tab" aria-selected="false">🚇 지하철</button>
       <button class="toptab" data-panel="citybus" data-cat="transit" role="tab" aria-selected="false" data-off="1">🚏 시내버스</button>
       <button class="toptab" data-panel="bike" data-cat="transit" role="tab" aria-selected="false">🚲 따릉이</button>
       <button class="toptab" data-panel="highway" data-cat="transit" role="tab" aria-selected="false">🛣️ 고속도로</button>
@@ -77,8 +81,38 @@
 
   <main class="wrap">
 
+    <!-- ============ 🏠 홈 (허브) ============
+         2026-08-07 리뉴얼 — 이전에는 첫 화면이 곧 지하철 탭이었고, 나머지 기능은
+         카테고리(교통·주거·생활)를 먼저 고른 뒤에야 보였다. 즉 «이 앱에 무엇이 있는지»가
+         첫 화면에 없어서, 주차장 하나 열려면 [주거]→[주차장] 두 번을 눌러야 했다.
+         홈을 별도 패널로 세워 살아 있는 탭 전부를 한 화면에 편다(전부 1클릭).
+         ⚠️ 카드는 여기 HTML 에 박지 않고 js/services.js 의 renderHub() 가 만든다 —
+            위 .toptab 목록이 유일한 원본이라, data-off 로 탭을 숨기면 홈 카드도 같이
+            사라지고 data-off 를 지우면 다시 나타난다(§9-6 «숨긴 탭 삭제 금지» 유지). -->
+    <section class="panel active" id="panel-home">
+      <div class="hub-brand">
+        <img class="hub-brand-ic" src="/icon.svg" alt="" width="52" height="52" />
+        <div class="hub-brand-tx">
+          <strong>서울 교통·생활 정보</strong>
+          <span>공공데이터로 보는 지하철·주차장·주유소·병원 — 가입 없이 무료</span>
+        </div>
+      </div>
+      <div class="hub-greet">
+        <strong>무엇을 찾으세요?</strong>
+        <span>누르면 바로 그 화면으로 갑니다</span>
+      </div>
+      <h2 class="hub-sec" id="hubHeroSec">자주 찾는 정보</h2>
+      <div id="hubHero" class="hub-hero"></div>
+      <h2 class="hub-sec">전체 서비스 <span class="opt" id="hubCount"></span></h2>
+      <div id="hubAll" class="hub-grid"></div>
+      <div class="hub-foot">
+        <button type="button" class="hub-foot-btn" id="hubFav">⭐ 즐겨찾기 모아보기</button>
+        <a class="hub-foot-btn" href="guide.html">📖 이용가이드</a>
+      </div>
+    </section>
+
     <!-- ============ 🚇 지하철 ============ -->
-    <section class="panel active" id="panel-subway">
+    <section class="panel" id="panel-subway">
       <div id="modes" class="modes" role="tablist"></div>
       <section class="controls">
         <div class="field subway-only sub-q" style="display:none">

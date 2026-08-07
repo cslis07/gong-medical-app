@@ -31,11 +31,14 @@ function kstTodayISO() { const d = new Date(Date.now() + 9 * 3600e3); return `${
 function kstClock() { const d = new Date(Date.now() + 9 * 3600e3); return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`; }
 const ymd = (iso) => String(iso || "").replace(/-/g, "");
 
-// ---------- 상단 내비: 카테고리(교통·주거·생활) → 서브탭 ----------
+// ---------- 상단 내비: 홈 → 카테고리(교통·주거·생활) → 서브탭 ----------
 // 탭을 location.hash에 반영해 새로고침 복원·링크 공유가 되게 한다(#parking 등).
 // data-off="1" 탭은 숨김 처리(비활성) — 네비·해시 이동 대상에서 제외
+// "home"은 .toptab 이 없는 특수 패널(허브)이라 목록에 손으로 넣는다. HOME_CAT 은
+// 어떤 .toptab 의 data-cat 과도 겹치지 않는 센티널(주거 카테고리가 "home"이라 구분 필요).
+const HOME = "home", HOME_CAT = "__home";
 const toptabEls = () => [...document.querySelectorAll(".toptab:not([data-off])")];
-const panelNames = () => toptabEls().map((b) => b.dataset.panel);
+const panelNames = () => [HOME, ...toptabEls().map((b) => b.dataset.panel)];
 const catOf = (name) => document.querySelector(`.toptab[data-panel="${name}"]`)?.dataset.cat || null;
 const firstTabOfCat = (cat) => document.querySelector(`.toptab[data-cat="${cat}"]:not([data-off])`)?.dataset.panel || null;
 
@@ -51,21 +54,95 @@ function showCategory(cat) {
 
 function switchPanel(name, { updateHash = true } = {}) {
   if (!panelNames().includes(name)) return;
-  const cat = catOf(name);
-  if (cat) showCategory(cat);
-  toptabEls().forEach((b) => {
-    const on = b.dataset.panel === name;
-    b.classList.toggle("active", on);
-    b.setAttribute("aria-selected", on ? "true" : "false");
-  });
+  const isHome = name === HOME;
+  // 홈에서는 서브탭 줄을 접는다 — 홈 화면 자체가 전체 목록이라 중복이다.
+  const subtabs = document.querySelector(".subtabs");
+  if (subtabs) subtabs.hidden = isHome;
+  if (isHome) {
+    document.querySelectorAll(".cattab").forEach((c) => {
+      const on = c.dataset.cat === HOME_CAT;
+      c.classList.toggle("active", on);
+      c.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    toptabEls().forEach((b) => { b.classList.remove("active"); b.setAttribute("aria-selected", "false"); });
+  } else {
+    const cat = catOf(name);
+    if (cat) showCategory(cat);   // 홈 칩은 어느 카테고리와도 안 맞아 여기서 자동으로 꺼진다
+    toptabEls().forEach((b) => {
+      const on = b.dataset.panel === name;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+  }
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === `panel-${name}`));
   if (updateHash && location.hash.slice(1) !== name) history.replaceState(null, "", `#${name}`);
   if (name === "gas") { loadGasAvg(); loadGasTrend(); }
+  // 노선도는 홈이 첫 화면이 되면서 «숨은 상태»로 그려질 수 있다(폭 0 → 최소값으로 굳음).
+  // 지하철 탭이 실제로 보이는 지금 다시 맞춘다. app.js initMapZoom 이 등록한다.
+  if (name === "subway") window.__refitSubwayMap?.();
 }
 
-// 카테고리 클릭 → 그 카테고리의 첫 서브탭으로 이동
+// 카테고리 클릭 → 그 카테고리의 첫 서브탭으로 이동 (홈은 허브 패널로)
 document.querySelectorAll(".cattab").forEach((c) =>
-  c.addEventListener("click", () => { const t = firstTabOfCat(c.dataset.cat); if (t) switchPanel(t); }));
+  c.addEventListener("click", () => {
+    if (c.dataset.cat === HOME_CAT) return switchPanel(HOME);
+    const t = firstTabOfCat(c.dataset.cat); if (t) switchPanel(t);
+  }));
+
+// ---------- 🏠 홈 허브 ----------
+// 카드에 붙일 설명·대표색. key = .toptab 의 data-panel.
+// ⚠️ 무엇을 뿌릴지 정하는 건 이 표가 아니라 index.html 의 .toptab 목록이다.
+//    data-off 로 숨긴 탭은 toptabEls()에서 빠지므로 홈 카드도 같이 사라진다
+//    (탭을 되살리면 카드도 저절로 돌아온다 — 양쪽을 따로 손댈 필요 없음).
+// hero: 1 이면 위쪽 «자주 찾는 정보» 큰 카드에도 함께 노출한다.
+const HUB = {
+  subway:     { hue: "#2f5fe0", hero: 1, desc: "노선도에서 역을 눌러 실시간 도착·첫차막차까지" },
+  nearby:     { hue: "#0f7a4d", hero: 1, desc: "현위치 기준 주유소·따릉이·주차장을 한 번에" },
+  parking:    { hue: "#7c3aed", hero: 1, desc: "가까운 주차장 · 서울 일부는 실시간 잔여면수" },
+  clinic:     { hue: "#c2410c", hero: 1, desc: "지금 문 연 병의원 · 거리·전화·지도" },
+  gas:        { hue: "#b45309", desc: "반경 내 최저가 주유소와 유가 추이" },
+  bike:       { hue: "#0891b2", desc: "주변 대여소의 남은 자전거·거치대" },
+  highway:    { hue: "#475569", desc: "휴게소·실시간 소통·돌발·구간 소요시간" },
+  density:    { hue: "#db2777", desc: "서울 주요 장소의 실시간 인구 혼잡도" },
+  citybus:    { hue: "#0d9488", desc: "주변 정류소의 버스 실시간 도착" },
+  realestate: { hue: "#9333ea", desc: "아파트 매매·전월세 실거래가와 시세 추이" },
+  lh:         { hue: "#0369a1", desc: "LH 공고와 공공임대 단지" },
+  air:        { hue: "#65a30d", desc: "측정소 미세먼지와 오늘·내일 예보" },
+  lotto:      { hue: "#ca8a04", desc: "회차별 당첨번호·등수 확인" },
+  lost:       { hue: "#78716c", desc: "분실물 조회처 안내" },
+};
+function renderHub() {
+  const hero = byId("hubHero"), all = byId("hubAll");
+  if (!hero || !all) return;
+  const tabs = toptabEls();
+  // 탭 라벨은 "🚇 지하철" 꼴 — 첫 공백 앞이 아이콘, 뒤가 이름.
+  const parts = (b) => {
+    const label = b.textContent.trim(), i = label.indexOf(" ");
+    return { ic: i > 0 ? label.slice(0, i) : "•", nm: i > 0 ? label.slice(i + 1).trim() : label };
+  };
+  const card = (b, big) => {
+    const p = b.dataset.panel, m = HUB[p] || {}, { ic, nm } = parts(b);
+    return `<button type="button" class="hub-card" data-panel="${E(p)}" style="--hue:${E(m.hue || "#3b6ef5")}">
+      <span class="hub-ic" aria-hidden="true">${E(ic)}</span>${big
+        ? `<span class="hub-tx"><span class="hub-nm">${E(nm)}</span><span class="hub-desc">${E(m.desc || "")}</span></span>`
+        : `<span class="hub-nm">${E(nm)}</span>`}
+    </button>`;
+  };
+  const heroTabs = tabs.filter((b) => HUB[b.dataset.panel]?.hero);
+  hero.innerHTML = heroTabs.map((b) => card(b, true)).join("");
+  // 히어로 4개가 전부 숨겨진 경우(전부 data-off) 제목까지 같이 감춘다
+  const sec = byId("hubHeroSec");
+  if (sec) sec.hidden = !heroTabs.length;
+  hero.hidden = !heroTabs.length;
+  all.innerHTML = tabs.map((b) => card(b, false)).join("");
+  const cnt = byId("hubCount"); if (cnt) cnt.textContent = `${tabs.length}개`;
+}
+byId("panel-home")?.addEventListener("click", (e) => {
+  const c = e.target.closest(".hub-card");
+  if (c) switchPanel(c.dataset.panel);
+});
+// 즐겨찾기 모아보기는 favorites.js가 푸터에 심는 버튼이 원본이다(로직 중복 없이 위임).
+byId("hubFav")?.addEventListener("click", () => byId("favDash")?.click());
 
 // 새로고침·뒤로가기·직접 링크로 들어온 경우 해당 탭을 연다.
 function applyHashPanel() {
@@ -834,9 +911,13 @@ async function loadDustBadge() {
     const el = byId("dustBadge");
     el.className = `dust-badge ${g.c}`;
     el.innerHTML = `😷 <b>${d.pm10}</b> <span>${g.t}</span>`;
+    // 미세먼지 탭이 data-off로 꺼져 있으면 눌러도 갈 곳이 없다 — 클릭을 달지 않고
+    // 안내 문구에서도 «클릭하면 탭» 약속을 뺀다(눌러도 아무 일 없는 배지 방지).
+    const airOn = panelNames().includes("air");
     el.title = `수도권 평균 · 미세먼지 ${d.pm10}㎍/㎥ (${g.t}) · 초미세 ${d.pm25 ?? "-"} · 측정소 ${d.stations}곳`;
     el.style.display = "";
-    el.addEventListener("click", () => switchPanel("air"));
+    el.style.cursor = airOn ? "" : "default";
+    if (airOn) el.addEventListener("click", () => switchPanel("air"));
   } catch { /* 배지는 실패해도 무시 */ }
 }
 // PM 수치 → 등급(환경부 기준)
@@ -1267,5 +1348,6 @@ byId("clRadius").addEventListener("change", () => { if (clinicCache.rows.length)
   syncReType();
   initAir();
   loadDustBadge();
-  applyHashPanel();   // #parking 등으로 들어온 경우 해당 탭을 연다
+  renderHub();        // 홈 허브 카드(살아 있는 탭 전부)를 먼저 만들고
+  applyHashPanel();   // #parking 등으로 들어온 경우 해당 탭을 연다(없으면 홈 유지)
 })();

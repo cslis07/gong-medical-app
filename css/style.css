@@ -167,6 +167,9 @@ button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
 .cattab:hover { color: var(--text); }
 .cattab.active { background: var(--card); color: var(--text); box-shadow: var(--shadow-sm); }
 .subtabs { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+/* 홈에서는 switchPanel 이 hidden 을 건다 — 작성자 스타일 display:flex 가 UA 의
+   [hidden]{display:none} 을 이기므로 여기서 명시적으로 다시 눌러야 실제로 감춰진다. */
+.subtabs[hidden] { display: none; }
 
 /* 탭 칩 (카테고리 내부 서브탭 + 구 .toptab) */
 .toptab {
@@ -180,6 +183,73 @@ button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
 .panel { display: none; }
 .panel.active { display: block; animation: panelIn .22s ease; }
 @keyframes panelIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ===== 🏠 홈 허브 =====
+   카드 색은 JS가 --hue(서비스별 대표색) 하나만 넘기고, 실제 표면은 항상
+   color-mix(…, var(--card))로 만든다 → 다크 테마에서도 자동으로 어두운 틴트가 된다.
+   (하드코딩 파스텔을 쓰면 다크에서 흰 카드가 튄다) */
+.hub-brand { display: flex; align-items: center; gap: 13px; margin: 24px 2px 20px; }
+.hub-brand-ic { width: 52px; height: 52px; border-radius: 16px; flex-shrink: 0; box-shadow: var(--shadow-sm); }
+.hub-brand-tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hub-brand-tx strong { font-size: 19px; font-weight: 800; letter-spacing: -.4px; color: var(--text); }
+.hub-brand-tx span { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+
+.hub-greet { display: flex; flex-direction: column; gap: 4px; margin: 0 2px 16px; }
+.hub-greet strong { font-size: 23px; font-weight: 800; letter-spacing: -.5px; color: var(--text); }
+.hub-greet span { font-size: 13.5px; color: var(--muted); }
+
+.hub-sec {
+  margin: 22px 2px 11px; font-size: 14px; font-weight: 800; color: var(--muted);
+  letter-spacing: .2px; display: flex; align-items: baseline; gap: 6px;
+}
+.hub-sec #hubCount { font-size: 12.5px; font-weight: 600; color: var(--muted); opacity: .8; }
+
+/* 공통 카드 */
+.hub-card {
+  position: relative; cursor: pointer; text-align: left; font-family: inherit;
+  border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--hue) 15%, var(--card)) 0%, var(--card) 78%);
+  transition: transform .16s, box-shadow .16s, border-color .16s;
+}
+.hub-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: color-mix(in srgb, var(--hue) 55%, var(--border)); }
+.hub-card:active { transform: translateY(0); }
+.hub-ic {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  background: color-mix(in srgb, var(--hue) 16%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--hue) 28%, var(--border));
+}
+
+/* 히어로 — 자주 찾는 정보 4칸 */
+.hub-hero { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.hub-hero .hub-card { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 17px 17px 15px; min-height: 132px; }
+.hub-hero .hub-ic { width: 48px; height: 48px; border-radius: 15px; font-size: 25px; margin-bottom: 5px; }
+.hub-hero .hub-tx { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.hub-hero .hub-nm { font-size: 16.5px; font-weight: 800; letter-spacing: -.3px; color: var(--text); }
+.hub-hero .hub-desc { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+/* 전체 서비스 — 살아 있는 탭 전부 */
+.hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 10px; }
+.hub-grid .hub-card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 15px 8px 13px; }
+.hub-grid .hub-ic { width: 44px; height: 44px; border-radius: 14px; font-size: 23px; }
+.hub-grid .hub-nm { font-size: 13.5px; font-weight: 700; color: var(--text); text-align: center; white-space: nowrap; }
+
+.hub-foot { display: flex; flex-wrap: wrap; gap: 10px; margin: 24px 2px 36px; }
+.hub-foot-btn {
+  padding: 11px 17px; border-radius: 999px; border: 1px solid var(--border); background: var(--card);
+  color: var(--text); font-size: 13.5px; font-weight: 700; cursor: pointer; text-decoration: none;
+  font-family: inherit; transition: .15s;
+}
+.hub-foot-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* 모바일: 히어로는 «아이콘 왼쪽 + 설명 오른쪽» 가로형으로 — 한글 설명이 3~4줄로
+   접히는 걸 막고 세로 길이도 줄인다. 전체 그리드는 2열로 자연히 떨어진다. */
+@media (max-width: 560px) {
+  .hub-hero { grid-template-columns: 1fr; gap: 10px; }
+  .hub-hero .hub-card { flex-direction: row; align-items: center; gap: 13px; min-height: 0; padding: 14px 15px; }
+  .hub-hero .hub-ic { width: 44px; height: 44px; font-size: 23px; margin-bottom: 0; }
+  .hub-greet strong { font-size: 21px; }
+  .hub-brand-ic { width: 46px; height: 46px; }
+}
 
 /* 구형 flat 탭 (혹시 남아있는 참조 대비) */
 .tabs { display: flex; gap: 8px; margin: 18px auto 0; }

@@ -4,16 +4,16 @@
 > - **위치(절대경로)**: `C:\Users\GB\Documents\gong-medical-app`
 > - **GitHub**: `cslis07/gong-medical-app` · 기본 브랜치 `main`
 > - **배포**: https://gong-medical-app.vercel.app · **Vercel(cslis07 계정)**, `vercel --prod --yes` CLI 직접 배포
-> - **규모**: 순수 HTML+vanilla JS(빌드툴 없음). 탭 **활성 8 / 숨김 6** · API 핸들러 `lib/*.js` 14종(단일 catch-all 함수 1개) · 프론트 `js/*.js` 7개 · 빌드 스냅샷 `data/*.js` 4개 · 빌드 스크립트 `scripts/*.mjs` 4개
+> - **규모**: 순수 HTML+vanilla JS(빌드툴 없음). 첫 화면 **🏠 홈 허브** + 탭 **활성 8 / 숨김 6** · API 핸들러 `lib/*.js` 14종(단일 catch-all 함수 1개) · 프론트 `js/*.js` 7개 · 빌드 스냅샷 `data/*.js` 4개 · 빌드 스크립트 `scripts/*.mjs` 4개
 
 ---
 
 ## 0. 지금 하던 일 (WIP)
 
-> **코드 최신 커밋 `0fbe387`까지 전부 push·배포 완료** (2026-08-07 확인). 이후 커밋은 이 문서 갱신뿐이라 **재배포 불필요**. 작업 재개 시 `git status`로 실제 상태를 한 번 더 확인할 것.
+> 작업 재개 시 `git status`로 실제 상태를 한 번 더 확인할 것(문서가 「깨끗」이라 적어도 문서 자신이 미커밋일 수 있다 — 2026-08-07에 실제로 그랬다).
 
-- **직전 세션 작업**: 사용자 요청으로 탭 6개 숨김 — 시내버스·미세먼지·로또·분실물(교통/생활) + 실거래가·LH청약(주거). `data-off="1"` 방식(삭제 아님). 그 직전엔 **🏥 야간진료 탭 신규 추가**.
-- **다음 채팅이 가장 먼저 할 한 가지**: 특별히 없음(깨끗). 굳이 꼽으면 **브라우저 육안 확인** — 숨긴 탭/야간진료 탭이 실제 화면에 의도대로 반영됐는지(SW 캐시 때문에 재방문 시 1회 새로고침 필요). Chrome 확장이 자주 끊겨 세션 내내 육안검증이 단속적이었음.
+- **직전 세션 작업(2026-08-07)**: **🏠 홈 허브 신설 — 첫 화면 리뉴얼**. 이전엔 첫 화면이 곧 지하철 탭이었고 나머지는 카테고리를 눌러야 보였다(주차장 = 2클릭, 무엇이 있는지 첫 화면에 없음). 이제 홈이 기본 패널이고 **살아 있는 탭 8개 전부가 1클릭**. 약보듬(`C:\Users\GB\Documents\yakbodeum`) 홈 허브 구조를 참고했다. 그 직전엔 탭 6개 숨김(`data-off`), 그 앞은 야간진료 탭 신규.
+- **다음 채팅이 가장 먼저 할 한 가지**: 특별히 없음. 굳이 꼽으면 **실기기(폰) 육안 확인** — 홈 히어로 카드는 560px 이하에서 가로형으로 바뀐다. 데스크톱 2열 히어로는 CSS만 확인했고 실측은 못 했다(이 머신 Chrome 확장이 뷰포트를 501px 위로 못 늘림 — 스크린샷도 자주 타임아웃).
 
 ---
 
@@ -29,6 +29,14 @@
 ---
 
 ## 2. 현재 구현된 기능
+
+### 🏠 홈 허브 (첫 화면, 2026-08-07 신설)
+
+`#home` = 기본 패널. 브랜드 → "무엇을 찾으세요?" → **자주 찾는 정보 4칸**(지하철·내주변·주차장·야간진료, 설명 포함 큰 카드) → **전체 서비스 그리드**(살아 있는 탭 전부) → 즐겨찾기 모아보기·이용가이드.
+
+- **카드는 HTML에 없다.** `js/services.js`의 `renderHub()`가 `index.html`의 `.toptab:not([data-off])` 목록에서 만든다 → **탭을 숨기면 홈 카드도 사라지고, `data-off`만 지우면 카드까지 함께 돌아온다.** 설명·대표색은 같은 파일 `HUB` 표(`hero:1`이면 위쪽 큰 카드에도 노출).
+- 내비는 `🏠 홈 | 🚉 교통 | 🏘️ 주거 | 🌆 생활`. 홈 칩의 `data-cat="__home"`은 어떤 `.toptab`과도 안 맞는 **센티널** — 다른 카테고리로 가면 `showCategory()`가 알아서 이 칩을 끈다. 홈에서는 서브탭 줄을 `hidden`으로 접는다(§7의 `.subtabs[hidden]` 주의).
+- 딥링크는 그대로다(`#gas` 등으로 들어오면 홈을 건너뛰고 해당 탭). 해시 없으면 홈.
 
 ### 탭 (활성 8 · 숨김 6)
 
@@ -72,8 +80,8 @@
 | `lib/kotsa-parking.js` | 공단 B553881 클라이언트(비핸들러, 백엔드 장애로 빈 스냅샷) |
 | `lib/pool.js` | 동시성 제한 + 재시도(전량수집용, 비핸들러) |
 | `lib/respond.js` | 에러 응답 정제(원문·키 유출 차단). `errorMessage()` 사용. `redact()`는 정의만·미사용(삭제 금지, §9) |
-| `js/app.js` | 지하철 전용 로직(노선도·역 종합 모달) |
-| `js/services.js` | 나머지 탭 로직 + 탭 전환(`switchPanel`) + 공용 `getLocation` |
+| `js/app.js` | 지하철 전용 로직(노선도·역 종합 모달). ★`initMapZoom`이 `window.__refitSubwayMap` 등록 |
+| ★ `js/services.js` | 나머지 탭 로직 + 탭 전환(`switchPanel`) + 공용 `getLocation` + **홈 허브(`HUB`·`renderHub`)** |
 | ★ `js/favorites.js` | 즐겨찾기·최근조회·공유·백업·대시보드 |
 | ★ `js/map.js` | 지도 뷰(`GongMap.set(panel, points, center)`) |
 | ★ `js/pwa.js` `sw.js` | 서비스워커 등록/업데이트 배너 · SW(네트워크 우선) |
@@ -207,6 +215,8 @@ curl -s "https://gong-medical-app.vercel.app/api/parking?lat=37.5663&lon=126.977
 | 4.5MB 스냅샷이 모든 탭 콜드스타트 파싱 | 라우터 정적 import | 라우터 **동적 import** + 핸들러 내 지연 로드 |
 | 로컬 dev-server 좀비 누적 | bash `kill %1`이 Windows detached node 못 죽임 | 매번 새 포트 + PowerShell `Win32_Process` CommandLine 필터로 `dev-server.mjs`만 종료 |
 | 이 머신 `convert`가 ImageMagick 아님 | `C:\WINDOWS\system32\convert.exe`(NTFS 툴) | PNG 래스터화는 **sharp**로만(build-assets.mjs) |
+| 홈인데 서브탭 줄이 그대로 보임 | `.subtabs{display:flex}`(작성자 스타일)가 UA의 `[hidden]{display:none}`을 이김 — JS로 `hidden=true`를 걸어도 화면엔 그대로 | CSS에 **`.subtabs[hidden]{display:none}`** 명시. ⚠️`el.hidden`만 JS로 읽으면 «감춰졌다»고 오판한다 — 반드시 `getComputedStyle().display`로 확인 |
+| 지하철 노선도가 쪼그라듦(320px) | 홈이 첫 화면이 되며 노선도가 **숨은 채** 그려짐 → `scroll.clientWidth`가 0이라 `baseW`가 최소값으로 굳음 | `initMapZoom`이 `window.__refitSubwayMap` 노출, `switchPanel("subway")`에서 호출해 폭 재계산(+`resize` 리스너, 재렌더 시 옛 리스너 제거) |
 
 ---
 
@@ -248,7 +258,8 @@ curl -s "https://gong-medical-app.vercel.app/api/parking?lat=37.5663&lon=126.977
    - `data/night-clinics.js`(10MB), `data/parking-nationwide.js`(4.5MB), `data/ex-tollgates.js` — **빌드 산출 스냅샷, 재생성 수분 소요**. 커밋 대상.
    - `lib/respond.js`의 `redact()` — 정의만·미사용이나 상위 본문 인용 대비 잔존.
    - **숨긴 탭 6개의 패널·핸들러**(citybus/realestate/lh/air/lotto/lost) — `data-off`로 숨김일 뿐. 삭제하면 복구 불가.
-7. **행정구역 코드(`js/services.js` `LAWD`) 임의 수정 금지** — 실조회 검증 없이 바꾸면 조회 0건. 개편 시 §7 방식(프로브)으로 검증 후 반영.
+7. **홈 허브 카드를 `index.html`에 손으로 박지 말 것** — `renderHub()`가 `.toptab` 목록에서 만든다. HTML에 박으면 탭을 숨겼는데 홈 카드는 남는 «유령 진입로»가 생긴다. 카드 문구·색만 `js/services.js`의 `HUB` 표에서 고칠 것. (§2 홈 허브)
+8. **행정구역 코드(`js/services.js` `LAWD`) 임의 수정 금지** — 실조회 검증 없이 바꾸면 조회 0건. 개편 시 §7 방식(프로브)으로 검증 후 반영.
 
 ---
 

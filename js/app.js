@@ -345,6 +345,14 @@ function initMapZoom() {
   else img.addEventListener("load", start, { once: true });
   start();
 
+  // 홈 허브가 첫 화면이 되면서 노선도가 «숨은 상태»로 그려질 수 있다 — 그때
+  // scroll.clientWidth 가 0이라 baseW 가 최소값(320px)으로 굳어 지도가 쪼그라든다.
+  // 지하철 탭이 보이는 순간 services.js switchPanel 이 이걸 불러 폭을 다시 맞춘다.
+  // (노선도는 모드 전환마다 다시 그려지므로 옛 resize 리스너는 먼저 떼어낸다)
+  if (window.__refitSubwayMap) window.removeEventListener("resize", window.__refitSubwayMap);
+  window.__refitSubwayMap = start;
+  window.addEventListener("resize", start);
+
   document.querySelectorAll(".map-zoom button").forEach((b) => {
     b.addEventListener("click", () => {
       const k = b.dataset.z;
