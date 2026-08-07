@@ -24,6 +24,12 @@
     citybus:    { fields: ["cbAddr"], run: () => searchCitybus(), empty: "내 위치", locKey: "cbAddr" },
     lh:         { fields: ["lhMode", "lhName", "lhRegion", "lhStatusF", "lhSido"], changeFields: ["lhMode"], run: () => (byId("lhMode").value === "rental" ? searchRental() : searchLH()), empty: "청약·임대" },
     parking:    { fields: ["pkAddr", "pkFilter"], run: () => searchParking(1), empty: "내 위치", locKey: "pkAddr" },
+    // 2026-08-07 추가 — 홈 허브에서 큰 카드로 내세운 둘인데 여기 없어서 ⭐저장·🔗공유만 빠져 있었다.
+    // clinic 의 select 4개는 changeFields 로 두지 않는다: 변경 리스너가 캐시 유무로 가드돼 있어
+    // (`if (clinicCache.rows.length)`) 값만 세팅하면 충분하고, 괜히 change 를 쏘면 clRadius 가
+    // searchClinic() → GPS 재요청으로 이어질 수 있다.
+    clinic:     { fields: ["clAddr", "clType", "clNight", "clRadius", "clOpen"], run: () => searchClinic(), empty: "내 위치", locKey: "clAddr" },
+    nearby:     { fields: ["nbAddr"], run: () => searchNearby(), empty: "내 위치", locKey: "nbAddr" },
   };
 
   const FAV_CAP = 200;   // 즐겨찾기 상한 — 무한 증가·용량 초과 방지
@@ -258,7 +264,7 @@
     r.readAsText(file);
   }
   // ---- 전 패널 즐겨찾기 모아보기(대시보드) ----
-  const PANEL_LABEL = { subway: "🚇 지하철", density: "👥 혼잡도", gas: "⛽ 주유소", bike: "🚲 따릉이", highway: "🛣️ 고속도로", realestate: "🏠 실거래가", air: "😷 미세먼지", citybus: "🚏 시내버스", lh: "🏘️ 청약·임대", parking: "🅿️ 주차장", lotto: "🎰 로또" };
+  const PANEL_LABEL = { subway: "🚇 지하철", density: "👥 혼잡도", gas: "⛽ 주유소", bike: "🚲 따릉이", highway: "🛣️ 고속도로", realestate: "🏠 실거래가", air: "😷 미세먼지", citybus: "🚏 시내버스", lh: "🏘️ 청약·임대", parking: "🅿️ 주차장", lotto: "🎰 로또", clinic: "🏥 야간진료", nearby: "📍 내주변" };
   let dashEl = null;
   function ensureDash() {
     if (dashEl) return dashEl;
