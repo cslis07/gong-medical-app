@@ -33,10 +33,11 @@ const ymd = (iso) => String(iso || "").replace(/-/g, "");
 
 // ---------- 상단 내비: 카테고리(교통·주거·생활) → 서브탭 ----------
 // 탭을 location.hash에 반영해 새로고침 복원·링크 공유가 되게 한다(#parking 등).
-const toptabEls = () => [...document.querySelectorAll(".toptab")];
+// data-off="1" 탭은 숨김 처리(비활성) — 네비·해시 이동 대상에서 제외
+const toptabEls = () => [...document.querySelectorAll(".toptab:not([data-off])")];
 const panelNames = () => toptabEls().map((b) => b.dataset.panel);
 const catOf = (name) => document.querySelector(`.toptab[data-panel="${name}"]`)?.dataset.cat || null;
-const firstTabOfCat = (cat) => document.querySelector(`.toptab[data-cat="${cat}"]`)?.dataset.panel || null;
+const firstTabOfCat = (cat) => document.querySelector(`.toptab[data-cat="${cat}"]:not([data-off])`)?.dataset.panel || null;
 
 // 카테고리 바만 갱신하고 그 안의 서브탭만 보이게 한다(패널 전환 없이).
 function showCategory(cat) {
@@ -1111,23 +1112,20 @@ async function searchNearby() {
     setBox("nbStatus", "주변 정보를 모으는 중…", "loading");
     byId("nbResults").innerHTML = "";
     const jget = (u) => fetch(u).then((r) => r.json()).catch(() => ({}));
-    const [gas, bike, cb, pk] = await Promise.all([
+    const [gas, bike, pk] = await Promise.all([
       jget(`/api/gas?lat=${lat}&lon=${lon}&prodcd=B027&radius=2000`),
       jget(`/api/bike?lat=${lat}&lon=${lon}`),
-      jget(`/api/citybus?op=near&lat=${lat}&lon=${lon}`),
       jget(`/api/parking?lat=${lat}&lon=${lon}&page=1&size=3`),
     ]);
     const gasItems = (gas.rows || []).slice(0, 3).map((s) => ({ name: s.name, meta: `${s.price ? s.price.toLocaleString() + "원/L" : "-"} · ${nbDist(s.distance)}` }));
     const bikeItems = (bike.rows || []).slice(0, 3).map((s) => ({ name: s.name, meta: `자전거 ${s.bikes}대 · ${nbDist(s.distance)}` }));
-    const cbItems = (cb.stops || []).slice(0, 3).map((s) => ({ name: s.name, meta: `${s.arsno ? s.arsno + " · " : ""}${nbDist(s.distance)}` }));
     const pkItems = (pk.rows || []).slice(0, 3).map((p) => ({ name: p.name, meta: `${p.available != null ? "잔여 " + p.available + " · " : ""}${nbDist(p.distance)}` }));
-    const total = gasItems.length + bikeItems.length + cbItems.length + pkItems.length;
+    const total = gasItems.length + bikeItems.length + pkItems.length;
     if (!total) return endEmpty("nbResults", "nbStatus", "주변 정보를 찾지 못했습니다. 주소를 입력해보세요.", "warn");
     setBox("nbStatus", `내 주변 요약 · ${kstClock()} 기준`, "ok");
     byId("nbResults").innerHTML =
       nbGroup("⛽", "주유소(휘발유 최저가)", "gas", gasItems) +
       nbGroup("🚲", "따릉이 대여소", "bike", bikeItems) +
-      nbGroup("🚏", "버스 정류소", "citybus", cbItems) +
       nbGroup("🅿️", "주차장", "parking", pkItems);
   } catch (e) { setBox("nbStatus", `오류: ${e.message}`, "error"); retryBox("nbResults", e.message, searchNearby); }
 }

@@ -18,6 +18,10 @@
 
 ---
 
+## 🙈 현재 숨긴 탭 (2026-08 사용자 요청, 삭제 아님)
+
+시내버스·미세먼지·로또·분실물은 **`data-off="1"` + CSS `.toptab[data-off]{display:none}`**로 숨김. `panelNames()`·`firstTabOfCat()`가 `:not([data-off])`로 걸러 네비·해시 이동에서도 제외. 내주변 통합뷰에서 버스 그룹도 제거. **되살리려면 index.html 해당 `<button>`의 `data-off` 제거만** 하면 됨(패널·핸들러·favorites/map/refresh 등록은 그대로 살아 있음).
+
 ## ⛔ 하지 말 것
 
 > 반복해서 사고가 났던 지점. 손대기 전에 반드시 확인.

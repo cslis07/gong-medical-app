@@ -174,6 +174,7 @@ button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
   border-radius: 999px; font-size: 14px; font-weight: 600; color: var(--muted);
   cursor: pointer; transition: .15s; white-space: nowrap;
 }
+.toptab[data-off] { display: none !important; }   /* 비활성 탭(시내버스·미세먼지·로또·분실물) 숨김 */
 .toptab:hover { border-color: var(--accent); color: var(--accent); }
 .toptab.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .panel { display: none; }
