@@ -35,7 +35,7 @@ const ymd = (iso) => String(iso || "").replace(/-/g, "");
 // 탭을 location.hash에 반영해 새로고침 복원·링크 공유가 되게 한다(#parking 등).
 // data-off="1" 탭은 숨김 처리(비활성) — 네비·해시 이동 대상에서 제외
 // "home"은 .toptab 이 없는 특수 패널(허브)이라 목록에 손으로 넣는다.
-// ⚠️ .toptab 줄은 2026-08-07부터 화면에 없다(카테고리 바·서브탭 줄 제거). 그래도
+// ⚠️ .toptab 줄은 2026-08-12부터 화면에 없다(카테고리 바·서브탭 줄 제거). 그래도
 //    이 셀렉터가 홈 카드·data-off 계약의 원본이라 DOM 에는 그대로 살아 있다.
 const HOME = "home";
 const toptabEls = () => [...document.querySelectorAll(".toptab:not([data-off])")];
@@ -45,7 +45,7 @@ const catOf = (name) => document.querySelector(`.toptab[data-panel="${name}"]`)?
 const firstTabOfCat = (cat) => document.querySelector(`.toptab[data-cat="${cat}"]:not([data-off])`)?.dataset.panel || null;
 
 // 카테고리 바만 갱신하고 그 안의 서브탭만 보이게 한다(패널 전환 없이).
-// 2026-08-07 카테고리 바·서브탭 줄 제거로 «현재 미사용» — 되살릴 때 필요해 남겨 둔다.
+// 2026-08-12 카테고리 바·서브탭 줄 제거로 «현재 미사용» — 되살릴 때 필요해 남겨 둔다.
 function showCategory(cat) {
   document.querySelectorAll(".cattab").forEach((c) => {
     const on = c.dataset.cat === cat;

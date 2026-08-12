@@ -24,7 +24,7 @@
     citybus:    { fields: ["cbAddr"], run: () => searchCitybus(), empty: "내 위치", locKey: "cbAddr" },
     lh:         { fields: ["lhMode", "lhName", "lhRegion", "lhStatusF", "lhSido"], changeFields: ["lhMode"], run: () => (byId("lhMode").value === "rental" ? searchRental() : searchLH()), empty: "청약·임대" },
     parking:    { fields: ["pkAddr", "pkFilter"], run: () => searchParking(1), empty: "내 위치", locKey: "pkAddr" },
-    // 2026-08-07 추가 — 홈 허브에서 큰 카드로 내세운 둘인데 여기 없어서 ⭐저장·🔗공유만 빠져 있었다.
+    // 2026-08-12 추가 — 홈 허브에서 큰 카드로 내세운 둘인데 여기 없어서 ⭐저장·🔗공유만 빠져 있었다.
     // clinic 의 select 4개는 changeFields 로 두지 않는다: 변경 리스너가 캐시 유무로 가드돼 있어
     // (`if (clinicCache.rows.length)`) 값만 세팅하면 충분하고, 괜히 change 를 쏘면 clRadius 가
     // searchClinic() → GPS 재요청으로 이어질 수 있다.

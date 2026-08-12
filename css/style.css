@@ -139,7 +139,7 @@ button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
 .app-header .sub { margin: 7px 0 0; opacity: .9; font-size: 14px; }
 .app-header .header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .app-header .header-links { flex-shrink: 0; align-self: center; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; }
-/* 제목 없는 슬림 헤더(2026-08-07) — 버튼줄만 남는다. 워터마크도 같이 줄여야
+/* 제목 없는 슬림 헤더(2026-08-12) — 버튼줄만 남는다. 워터마크도 같이 줄여야
    헤더가 얇아졌을 때 잘린 조각만 삐죽 보이지 않는다. */
 .app-header.slim { padding: 12px 0 16px; border-radius: 0 0 22px 22px; }
 .app-header.slim .header-row { justify-content: flex-end; }
@@ -165,7 +165,7 @@ button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
 .icon-btn:hover { background: rgba(255,255,255,.28); }
 
 /* ===== 상단 내비 =====
-   2026-08-07: 카테고리 바·서브탭 줄 제거 → 탭 안에서는 «← 홈» 하나만 남는다.
+   2026-08-12: 카테고리 바·서브탭 줄 제거 → 탭 안에서는 «← 홈» 하나만 남는다.
    결과가 길어도 홈으로 못 돌아가는 일이 없게 탭에서는 이 줄을 sticky 로 띄운다
    (홈에서는 .nav-bar 가 빠져 그냥 빈 줄 — sticky 도, 배경도 없다). */
 .topnav { margin: 14px auto 0; }
