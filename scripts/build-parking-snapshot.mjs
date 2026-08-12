@@ -36,11 +36,17 @@ async function fetchPage(pageNo, attempt = 1) {
     const t = await r.text();
     let j;
     try { j = JSON.parse(t); } catch { throw new Error(`JSON 아님 — ${t.slice(0, 200)}`); }
-    const head = j?.response?.header;
+    // ⚠️ 2026-08 경 data.go.kr 표준데이터가 봉투를 바꿨다: {response:{header,body}} → {header,body}.
+    //    옛 경로만 보던 탓에 head 가 undefined 가 되어 "undefined undefined"로 죽었다(빌드 불가).
+    //    되돌릴 수도 있으니 둘 다 받는다.
+    const root = j?.response ?? j;
+    const head = root?.header;
     if (head?.resultCode === "03") return { items: [], total: 0, done: true };  // NODATA — 마지막 페이지 다음
-    if (head?.resultCode !== "00") throw new Error(`${head?.resultCode} ${head?.resultMsg}`);
-    const body = j.response.body;
-    return { items: body.items || [], total: Number(body.totalCount) || 0 };
+    if (head?.resultCode !== "00") throw new Error(`${head?.resultCode ?? "?"} ${head?.resultMsg ?? "응답 형식 불명"}`);
+    const body = root.body;
+    // items 도 배열 → {item:[...]} 로 한 겹 깊어졌다. 1건일 땐 배열이 아닐 수 있어 감싼다.
+    const raw = Array.isArray(body?.items) ? body.items : (body?.items?.item ?? []);
+    return { items: Array.isArray(raw) ? raw : [raw], total: Number(body?.totalCount) || 0 };
   } catch (e) {
     if (attempt >= 3) throw new Error(`page ${pageNo} 실패(${attempt}회): ${e.message}`);
     console.warn(`  page ${pageNo} 재시도 ${attempt} — ${e.message}`);

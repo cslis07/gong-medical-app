@@ -6,8 +6,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const env = await readFile(join(root, ".env"), "utf8");
-const KEY = (env.match(/^EX_API_KEY=(.*)$/m) || [])[1]?.trim();
+// 환경변수 우선, 없으면 로컬 .env (CI 에는 .env 가 없다 — build-night-clinics 와 동일 규칙)
+const KEY = process.env.EX_API_KEY?.trim()
+  || (await readFile(join(root, ".env"), "utf8").catch(() => "").then((e) => (e.match(/^EX_API_KEY=(.*)$/m) || [])[1]?.trim()));
 if (!KEY) throw new Error("EX_API_KEY 없음");
 
 const EX = "https://data.ex.co.kr/openapi";

@@ -1,0 +1,104 @@
+# 빌드타임 스냅샷 자동 갱신
+#
+# 왜 필요한가: data/*.js 는 원본 API 에 «위치·지역 필터가 없어» 빌드 때 통째로 구워 둔 것이다.
+# 즉 화면에 나오는 진료시간·요금·운영시간은 «구운 시점» 기준이라, 손으로 다시 굽지 않으면
+# 시간이 갈수록 실제와 어긋난다. 특히 야간진료는 틀리면 밤에 헛걸음하는 정보라 방치하면 안 된다.
+#
+# 무엇을 하나: 매월 1회(+수동 실행) 스냅샷을 다시 굽고, 바뀌었을 때만 커밋한다.
+#
+# ⚠️ 이 저장소는 Vercel 이 Git 에 연결돼 있지 않다(CLI 수동 배포). 그래서 커밋만으로는
+#    운영에 반영되지 않는다. VERCEL_TOKEN 시크릿이 있으면 배포까지 하고,
+#    없으면 커밋만 하고 경고를 남긴다 — 그때는 로컬에서 `vercel --prod --yes` 를 한 번 돌린다.
+#
+# 필요한 시크릿 (Settings → Secrets and variables → Actions)
+#   DATA_API_KEY  (필수) 주차장 표준데이터 · 야간진료 E-Gen
+#   EX_API_KEY    (선택) 고속도로 영업소 목록
+#   VERCEL_TOKEN  (선택) 있으면 갱신 후 프로덕션 배포까지
+#
+# ⚠️ 시크릿은 반드시 job 레벨 env 로 받는다 — 스텝 «자신의» env 는 그 스텝의 if 에서 안 보이고,
+#    secrets 컨텍스트도 if 에서 직접 못 쓴다. 이걸 어기면 조건이 조용히 항상 false 가 된다.
+
+name: 스냅샷 갱신
+
+on:
+  schedule:
+    - cron: "0 18 1 * *"   # 매월 1일 18:00 UTC = 2일 03:00 KST
+  workflow_dispatch:        # 수동 실행 (원본이 크게 바뀌었을 때)
+
+permissions:
+  contents: write           # 갱신된 data/*.js 를 커밋하려면 필요
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60     # 야간진료는 E-Gen 전 페이지 스캔이라 수십 분 걸릴 수 있다
+    env:
+      DATA_API_KEY: ${{ secrets.DATA_API_KEY }}
+      EX_API_KEY: ${{ secrets.EX_API_KEY }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: 키 확인
+        run: |
+          if [ -z "$DATA_API_KEY" ]; then
+            echo "::error::DATA_API_KEY 시크릿이 없습니다. Settings → Secrets and variables → Actions 에 추가하세요."
+            exit 1
+          fi
+
+      # 개별 실패가 전체를 막지 않게 한다 — 하나라도 갱신되면 그만큼 신선해진다.
+      - name: 주차장(전국 표준데이터)
+        continue-on-error: true
+        run: npm run build:parking
+
+      - name: 야간진료 병의원
+        continue-on-error: true
+        run: npm run build:clinics
+
+      - name: 고속도로 영업소
+        if: env.EX_API_KEY != ''
+        continue-on-error: true
+        run: npm run build:tollgates
+
+      # 깨진 스냅샷을 커밋해 앱을 죽이는 것보다는 갱신을 건너뛰는 게 낫다.
+      - name: 문법 검사
+        run: |
+          for f in data/*.js; do node --check "$f" || exit 1; done
+
+      - name: 변경분 확인
+        id: diff
+        run: |
+          if git diff --quiet -- data/; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "변경 없음 — 커밋 생략"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat -- data/
+          fi
+
+      - name: 커밋 & 푸시
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git commit -m "[DATA] 스냅샷 자동 갱신 ($(date -u +%Y-%m-%d))" \
+                     -m "scripts/build-*.mjs 재실행 결과. 원본(공공데이터포털·E-Gen·EX)이 바뀐 만큼만 반영된다. .github/workflows/refresh-snapshots.yml 참고."
+          git push
+
+      # Vercel 이 Git 에 연결돼 있지 않아 push 만으로는 운영에 안 붙는다.
+      - name: 프로덕션 배포
+        if: steps.diff.outputs.changed == 'true' && env.VERCEL_TOKEN != ''
+        run: npx --yes vercel@latest --prod --yes --token "$VERCEL_TOKEN"
+
+      - name: 배포 안내
+        if: steps.diff.outputs.changed == 'true' && env.VERCEL_TOKEN == ''
+        run: echo "::warning::스냅샷은 갱신·커밋됐지만 VERCEL_TOKEN 이 없어 배포는 못 했습니다. 로컬에서 'vercel --prod --yes' 를 실행하세요."

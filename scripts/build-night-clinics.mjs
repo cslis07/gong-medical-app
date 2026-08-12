@@ -7,9 +7,17 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const env = await readFile(join(root, ".env"), "utf8");
-const KEY = (env.match(/^DATA_API_KEY=(.*)$/m) || [])[1]?.trim();
-if (!KEY) throw new Error("DATA_API_KEY 없음");
+// 키는 환경변수 우선, 없으면 로컬 .env 파일. CI(GitHub Actions)에는 .env 가 없고
+// 있어서도 안 되므로(키 커밋 금지, §9-2) 환경변수 경로가 반드시 살아 있어야 한다.
+async function readKey() {
+  if (process.env.DATA_API_KEY) return process.env.DATA_API_KEY.trim();
+  try {
+    const env = await readFile(join(root, ".env"), "utf8");
+    return (env.match(/^DATA_API_KEY=(.*)$/m) || [])[1]?.trim();
+  } catch { return ""; }
+}
+const KEY = await readKey();
+if (!KEY) throw new Error("DATA_API_KEY 없음 — 환경변수나 .env 에 설정하세요.");
 
 const BASE = "https://apis.data.go.kr/B552657/HsptlAsembySearchService/getHsptlBassInfoInqire";
 const NIGHT_END = 1830;                 // 이 시각 이후 종료면 '야간(퇴근후)' 진료로 간주

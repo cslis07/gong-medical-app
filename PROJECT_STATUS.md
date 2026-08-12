@@ -16,7 +16,9 @@
 
 - **직전 세션 작업(2026-08-12)**: **🏠 홈 허브 신설 + 상단 군더더기 제거 — 첫 화면 리뉴얼**. 이전엔 첫 화면이 곧 지하철 탭이었고 나머지는 카테고리를 눌러야 보였다(주차장 = 2클릭, 무엇이 있는지 첫 화면에 없음). 이제 홈이 기본 패널이고 **살아 있는 탭 8개 전부가 1클릭**. 약보듬(`C:\Users\GB\Documents\yakbodeum`) 홈 허브 구조를 참고했다. 이어서 사용자 요청으로 **헤더 큰 제목·소개문구 + 카테고리 바·서브탭 줄을 제거**(홈 브랜드 블록과 중복 + 모바일 첫 화면 잠식). 첫 화면 기준 헤더 161→68px, 본문 시작 245→96px. 그 직전엔 탭 6개 숨김(`data-off`), 그 앞은 야간진료 탭 신규.
 - **이어서(3차)**: 리뉴얼이 어긋나게 만든 주변 3건 정리 — ①`guide.html`이 없어진 카테고리 UI를 안내하고 있었음(화면 구성 전면 교체 + 🏥야간진료 가이드 신설 + 옛 앱 이름 정리) ②`favorites.js` `PANELS`에 `clinic`·`nearby`가 없어 홈 히어로 4개 중 2개에 ⭐·🔗가 안 떴음 ③`title`·`og`가 꺼진 기능(실거래가·미세먼지·시내버스·LH청약)을 광고하고 있었음. **탭을 다시 켜면 §SEO 문구도 같이 되돌릴 것.**
-- **다음 채팅이 가장 먼저 할 한 가지**: 특별히 없음. 굳이 꼽으면 **실기기(폰) 육안 확인** — 홈 히어로 카드는 560px 이하에서 가로형으로 바뀐다. 데스크톱 2열 히어로는 CSS만 확인했고 실측은 못 했다(이 머신 Chrome 확장이 뷰포트를 501px 위로 못 늘림 — 스크린샷도 자주 타임아웃).
+- **이어서(4차)**: ①**공단 실시간 주차면수 접음** — 백엔드는 회복했으나 데이터 규모·필터 부재로 구조적 불가(§10에 실측 근거). ②`build:parking` 이 **깨져 있던 걸 발견해 고침**(data.go.kr 봉투 변경, §7) → 전국 주차장 17,768 → **18,117곳**으로 갱신. ③**스냅샷 자동 갱신 워크플로 신설**(월 1회, §4·`.github/workflows/refresh-snapshots.yml`).
+- **모바일 실기기 확인 완료**(사용자, 2026-08-12) — 560px 이하 히어로 가로형·2열 그리드 정상. 더 볼 것 없음.
+- **다음 채팅이 가장 먼저 할 한 가지**: 특별히 없음. 굳이 꼽으면 **`VERCEL_TOKEN` 시크릿 등록**(§4 선택) — 없으면 매월 스냅샷 커밋 후 `vercel --prod --yes` 를 손으로 한 번 돌려야 한다.
 
 ---
 
@@ -111,16 +113,15 @@
 ## 4. 남은 작업
 
 ### 진행 대기 (외부 요인)
-- [ ] **공단 실시간 주차면수** — 활용신청 승인(2026-07-08)에도 제공기관 백엔드 죽음(`Error forwarding request to backend server`). 코드·스냅샷 이미 붙어 있어(`lib/kotsa-parking.js`, `data/parking-kotsa.js`) 회복 시 `npm run build:parking` + `KOTSA_PARKING=1` 재배포만. 회복확인 `/api/parking?diag=1`. *왜 아직 안 함: 우리 코드 아닌 제공기관 장애.*
 - [ ] **공공임대 단지(SH 포함)** — `myhome/rentalHouseList` 구현 완료했으나 ①키 미전파(code 30) ②마이홈이 Vercel IP 차단. 현재 `{pending:true}` degrade. *왜: 키 전파+IP 이슈 미해결. LH청약 탭 숨김 상태라 우선순위 낮음.*
 
 ### 선택 (여력 될 때)
-- [ ] **스냅샷 신선도 자동화** — `night-clinics`·`parking-nationwide`·`ex-tollgates`는 수동 `npm run build:*`만 있고 크론 없음. GitHub Actions 월 1회 리빌드 검토. *왜: 원본 갱신주기 낮아 급하지 않음.*
+- [ ] **`VERCEL_TOKEN` 시크릿 등록** — 스냅샷 자동 갱신(§4 완료)이 커밋까지는 하는데, 이 저장소는 Vercel 이 Git 에 안 붙어 있어 **배포는 못 한다**. 토큰을 넣으면 워크플로가 배포까지 한다. 안 넣으면 매월 커밋 후 로컬에서 `vercel --prod --yes` 한 번. *왜 아직 안 함: 토큰 발급은 사용자 계정 작업.*
 - [ ] **택배 조회(CJ 무응답)·공공와이파이·관광 TourAPI·날씨(기상청)** — 활용신청 시 추가 가능. *왜: 신규 소스 우선순위 밀림.*
 - [ ] **미사용 dead CSS 정리** — 숨긴 탭 관련 스타일 등. *왜: 기능 영향 없어 후순위.*
 
 ### 완료(기록 보존)
-- [x] 주차장 전국 확대(2026-07-10) · 광주 지역코드 복구(2026-07-16, §7) · 야간진료 탭(2026-08) · 탭 6개 숨김(2026-08)
+- [x] 주차장 전국 확대(2026-07-10) · 광주 지역코드 복구(2026-07-16, §7) · 야간진료 탭(2026-08) · 탭 6개 숨김(2026-08) · 홈 허브 리뉴얼(2026-08-12) · **스냅샷 신선도 자동화(2026-08-12, `.github/workflows/refresh-snapshots.yml` 월 1회)**
 
 ---
 
@@ -133,10 +134,13 @@ cd C:\Users\GB\Documents\gong-medical-app
 node dev-server.mjs                 # → http://localhost:3005
 PORT=3010 node dev-server.mjs
 
-# 스냅샷 재생성 (원본 갱신·행정개편 시) → data/*.js 갱신 후 재배포 필요
-npm run build:parking      # 전국 주차장
-npm run build:clinics      # 야간진료 병의원 (E-Gen 전 페이지 스캔, 수분 소요)
-npm run build:tollgates    # 고속도로 영업소 목록
+# 스냅샷 재생성 → data/*.js 갱신 후 재배포 필요
+# 평소엔 손댈 필요 없다 — 매월 1일 GitHub Actions가 자동으로 굽는다(§4).
+# 손으로 돌릴 땐 키를 환경변수로 주거나(.env 폴백도 있음) PowerShell에서 .env를 로드한다:
+#   Get-Content .env | % { if ($_ -match '^([A-Z_]+)=(.+)$') { Set-Item "env:$($matches[1])" $matches[2] } }
+npm run build:parking      # 전국 주차장 (DATA_API_KEY, 38페이지 ~2분)
+npm run build:clinics      # 야간진료 병의원 (DATA_API_KEY, E-Gen 전 페이지 스캔 — 10분 이상)
+npm run build:tollgates    # 고속도로 영업소 목록 (EX_API_KEY)
 npm run build:assets       # PWA 아이콘 + OG PNG (sharp)
 
 # 문법 검사 (커밋 전 필수)
@@ -219,6 +223,8 @@ curl -s "https://gong-medical-app.vercel.app/api/parking?lat=37.5663&lon=126.977
 | 4.5MB 스냅샷이 모든 탭 콜드스타트 파싱 | 라우터 정적 import | 라우터 **동적 import** + 핸들러 내 지연 로드 |
 | 로컬 dev-server 좀비 누적 | bash `kill %1`이 Windows detached node 못 죽임 | 매번 새 포트 + PowerShell `Win32_Process` CommandLine 필터로 `dev-server.mjs`만 종료 |
 | 이 머신 `convert`가 ImageMagick 아님 | `C:\WINDOWS\system32\convert.exe`(NTFS 툴) | PNG 래스터화는 **sharp**로만(build-assets.mjs) |
+| `npm run build:parking` 이 `page 1 실패: undefined undefined` 로 죽음 | data.go.kr 표준데이터가 **JSON 봉투를 바꿨다** — `{response:{header,body}}` → `{header,body}`, `body.items` 배열 → `{item:[…]}`. 옛 경로만 보던 탓에 `header` 가 undefined | `const root = j?.response ?? j` + items 이중 대응(둘 다 받게). **스냅샷을 오래 안 구우면 이런 변경을 못 알아챈다** — 자동 갱신(§4)을 넣은 이유 |
+| 빌드 스크립트가 CI 에서 `DATA_API_KEY 없음` | `build-night-clinics`·`build-ex-tollgates` 가 `process.env` 가 아니라 **`.env` 파일을 직접 읽고 있었다**. CI 에는 그 파일이 없고 있어서도 안 됨(§9-2) | 환경변수 우선 → 없으면 `.env` 폴백으로 양쪽 지원 |
 | 홈인데 서브탭 줄이 그대로 보임 | `.subtabs{display:flex}`(작성자 스타일)가 UA의 `[hidden]{display:none}`을 이김 — JS로 `hidden=true`를 걸어도 화면엔 그대로 | CSS에 **`.subtabs[hidden]{display:none}`** 명시. ⚠️`el.hidden`만 JS로 읽으면 «감춰졌다»고 오판한다 — 반드시 `getComputedStyle().display`로 확인 |
 | 지하철 노선도가 쪼그라듦(320px) | 홈이 첫 화면이 되며 노선도가 **숨은 채** 그려짐 → `scroll.clientWidth`가 0이라 `baseW`가 최소값으로 굳음 | `initMapZoom`이 `window.__refitSubwayMap` 노출, `switchPanel("subway")`에서 호출해 폭 재계산(+`resize` 리스너, 재렌더 시 옛 리스너 제거) |
 
@@ -258,7 +264,7 @@ curl -s "https://gong-medical-app.vercel.app/api/parking?lat=37.5663&lon=126.977
 4. **로컬만 검증하고 배포 금지** — 외부 API의 Vercel IP 차단이 흔함. 프로덕션 curl 필수. (§6-4, §7)
 5. **에러 원문·상위 응답 본문을 사용자에게 반사 금지** — 키 유출 위험. `errorMessage()` 통일, 원문은 `console.error`만. (§6.5)
 6. **미사용처럼 보여도 삭제 금지 파일**:
-   - `lib/kotsa-parking.js`, `data/parking-kotsa.js` — 공단 백엔드 회복 시 켜짐(빈값 degrade 중).
+   - `lib/kotsa-parking.js`, `data/parking-kotsa.js` — 진단(`/api/parking?diag=1`)에 쓰인다. **켜지는 일은 없다**(§10 참고 — 백엔드는 회복했으나 데이터 규모 때문에 구조적으로 불가).
    - `data/night-clinics.js`(10MB), `data/parking-nationwide.js`(4.5MB), `data/ex-tollgates.js` — **빌드 산출 스냅샷, 재생성 수분 소요**. 커밋 대상.
    - `lib/respond.js`의 `redact()` — 정의만·미사용이나 상위 본문 인용 대비 잔존.
    - **숨긴 탭 6개의 패널·핸들러**(citybus/realestate/lh/air/lotto/lost) — `data-off`로 숨김일 뿐. 삭제하면 복구 불가.
@@ -273,7 +279,11 @@ curl -s "https://gong-medical-app.vercel.app/api/parking?lat=37.5663&lon=126.977
 - **공연 잔여석** — 인터파크 NOL 개편으로 이름검색이 SPA HTML만 반환, 유효 goodsCode 확보 불가. → 공개 API 없음.
 - **대중교통 길찾기(ODsay)** — 키 발급 + 호출 IP 화이트리스트 필요. Vercel IP 유동이라 불가.
 - **공공임대(마이홈)** — 마이홈이 Vercel 데이터센터 IP 차단(로컬만 됨). 키 전파 이슈까지 겹쳐 pending degrade.
-- **공단 실시간 주차면수** — 제공기관 백엔드 장애(승인은 됨). 우리 코드로 해결 불가, 회복 대기.
+- **공단 실시간 주차면수 — 접음(2026-08-12 실측 후 결론)**. 백엔드는 **회복했다**(`/api/parking?diag=1` → `backend.alive:true`, 세 오퍼레이션 모두 응답). 문제는 다른 데 있었다.
+  - `PrkSttusInfo`(시설) **totalCount 1,767,934** · `PrkRealtimeInfo` 787,235. 1페이지 1,000건 × ~0.6초 → 전량 1,400페이지 이상, **한 번 굽는 데 15분+ · 파일 수십 MB**. 커밋도 배포도 불가한 크기.
+  - **서버측 필터가 없다.** `prk_plce_adres_sido`·`sigungu`·`prk_center_id` 를 붙여도 `totalCount` 가 1,767,934 로 **불변**(전부 무시됨). 지역만 뽑아 줄일 방법이 없다.
+  - 표준데이터의 `prkplceNo` 와 `prk_center_id` 는 **다른 체계**라 join 불가 → 실시간만 받아도 좌표가 없어 못 쓴다(`lib/kotsa-parking.js` 상단 주석).
+  - ⇒ 「백엔드 회복 대기」가 아니라 **구조적 한계**다. 서울 실시간 잔여면수는 이미 서울 열린데이터로 동작 중이라 실사용 손실도 작다. `KOTSA_PARKING` 은 계속 off.
 - **IP 단위 rate limit** — 서버리스라 인메모리 카운터 부분적. `@vercel/kv`/WAF 필요해 보류(CDN 캐시로 대체 방어).
 - **일부 외부 API의 Vercel IP 차단**(KOBUS·dhlottery·vworld·마이홈) — 구조적. 폴백(CDN 미러/Nominatim/공식링크)으로만 우회.
 - **스냅샷 실시간성 한계** — 주차장·야간진료·영업소는 원본에 위치필터가 없어 스냅샷 방식. 진료시간·요금 등은 **빌드 시점 기준**(오래되면 부정확). UI에 기준일 표기, 갱신은 수동 `build:*`.
