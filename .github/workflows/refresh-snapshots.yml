@@ -4,11 +4,14 @@
 # 즉 화면에 나오는 진료시간·요금·운영시간은 «구운 시점» 기준이라, 손으로 다시 굽지 않으면
 # 시간이 갈수록 실제와 어긋난다. 특히 야간진료는 틀리면 밤에 헛걸음하는 정보라 방치하면 안 된다.
 #
-# 무엇을 하나: 매월 1회(+수동 실행) 스냅샷을 다시 굽고, 바뀌었을 때만 커밋한다.
+# 무엇을 하나: 매월 1회(+수동 실행) 스냅샷을 다시 굽고, 바뀌었을 때만 «커밋»한다.
 #
-# ⚠️ 이 저장소는 Vercel 이 Git 에 연결돼 있지 않다(CLI 수동 배포). 그래서 커밋만으로는
-#    운영에 반영되지 않는다. VERCEL_TOKEN 시크릿이 있으면 배포까지 하고,
-#    없으면 커밋만 하고 경고를 남긴다 — 그때는 로컬에서 `vercel --prod --yes` 를 한 번 돌린다.
+# ⚠️ 배포는 이 워크플로가 «안» 한다(2026-08-13 결정). 이유:
+#    ① 이 저장소는 Vercel 이 Git 에 연결돼 있지 않다(CLI 수동 배포, .vercel 링크도 gitignore).
+#    ② CI 에서 `vercel --prod --token` 은 org/project ID 까지 맞물려야 하고 토큰 검증도 걸린다
+#       (실측: 유효하지 않은 토큰이면 "User not found" 로 죽는다). 취약한 고리라 CI 에 두지 않는다.
+#    → 스냅샷은 여기서 갱신·커밋만. 운영 반영은 Claude 가 세션에서 `vercel --prod --yes` 로 한다.
+#      (사용자 방침: "배포는 너가해".) 자동 배포까지 원하면 유효 토큰+프로젝트 ID 로 별도 배선 필요.
 #
 # 무엇을 굽나: 실제로 낡아서 문제되는 둘 — 주차장·야간진료 — 만 매달 굽는다.
 #   고속도로 영업소(build:tollgates)는 «거의 불변»인데 realUnitTrtm OD 쌍을 수백 페이지
@@ -17,8 +20,7 @@
 # 필요한 시크릿 (Settings → Secrets and variables → Actions)
 #   DATA_API_KEY  주차장 표준데이터 · 야간진료 E-Gen.
 #                 ⚠️ 없으면 «조용히 건너뛴다»(실패 아님, 알림 메일 없음). 넣는 순간 그달부터 동작.
-#   VERCEL_TOKEN  (선택) 있으면 갱신 후 프로덕션 배포까지. 안 넣으면 커밋만 하고 배포는 수동.
-#   (EX_API_KEY 는 이 워크플로에선 안 쓴다 — 톨게이트를 뺐으므로. 시크릿에 있어도 무해.)
+#   (EX_API_KEY·VERCEL_TOKEN 은 이 워크플로가 안 쓴다. 시크릿에 남아 있어도 무해 — 지워도 됨.)
 #
 # ⚠️ 시크릿은 반드시 job 레벨 env 로 받는다 — 스텝 «자신의» env 는 그 스텝의 if 에서 안 보이고,
 #    secrets 컨텍스트도 if 에서 직접 못 쓴다. 이걸 어기면 조건이 조용히 항상 false 가 된다.
@@ -39,7 +41,6 @@ jobs:
     timeout-minutes: 60     # 야간진료는 E-Gen 전 페이지 스캔이라 수십 분 걸릴 수 있다
     env:
       DATA_API_KEY: ${{ secrets.DATA_API_KEY }}
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
@@ -97,14 +98,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/
           git commit -m "[DATA] 스냅샷 자동 갱신 ($(date -u +%Y-%m-%d))" \
-                     -m "scripts/build-*.mjs 재실행 결과. 원본(공공데이터포털·E-Gen·EX)이 바뀐 만큼만 반영된다. .github/workflows/refresh-snapshots.yml 참고."
+                     -m "scripts/build-*.mjs 재실행 결과. 원본(공공데이터포털·E-Gen)이 바뀐 만큼만 반영된다. .github/workflows/refresh-snapshots.yml 참고."
           git push
-
-      # Vercel 이 Git 에 연결돼 있지 않아 push 만으로는 운영에 안 붙는다.
-      - name: 프로덕션 배포
-        if: steps.diff.outputs.changed == 'true' && env.VERCEL_TOKEN != ''
-        run: npx --yes vercel@latest --prod --yes --token "$VERCEL_TOKEN"
-
-      - name: 배포 안내
-        if: steps.diff.outputs.changed == 'true' && env.VERCEL_TOKEN == ''
-        run: echo "::warning::스냅샷은 갱신·커밋됐지만 VERCEL_TOKEN 이 없어 배포는 못 했습니다. 로컬에서 'vercel --prod --yes' 를 실행하세요."
+          echo "::notice::스냅샷을 갱신·커밋했습니다. 운영 반영은 Claude 가 세션에서 'vercel --prod --yes' 로 배포합니다(이 워크플로는 배포 안 함)."
