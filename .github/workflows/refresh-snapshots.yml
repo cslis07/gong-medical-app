@@ -10,11 +10,15 @@
 #    운영에 반영되지 않는다. VERCEL_TOKEN 시크릿이 있으면 배포까지 하고,
 #    없으면 커밋만 하고 경고를 남긴다 — 그때는 로컬에서 `vercel --prod --yes` 를 한 번 돌린다.
 #
+# 무엇을 굽나: 실제로 낡아서 문제되는 둘 — 주차장·야간진료 — 만 매달 굽는다.
+#   고속도로 영업소(build:tollgates)는 «거의 불변»인데 realUnitTrtm OD 쌍을 수백 페이지
+#   훑어야 해 한 번에 10분+ 걸린다 → 월간 자동에서 뺐다. 새 IC 생기면 수동 `npm run build:tollgates`.
+#
 # 필요한 시크릿 (Settings → Secrets and variables → Actions)
 #   DATA_API_KEY  주차장 표준데이터 · 야간진료 E-Gen.
 #                 ⚠️ 없으면 «조용히 건너뛴다»(실패 아님, 알림 메일 없음). 넣는 순간 그달부터 동작.
-#   EX_API_KEY    (선택) 고속도로 영업소 목록
 #   VERCEL_TOKEN  (선택) 있으면 갱신 후 프로덕션 배포까지. 안 넣으면 커밋만 하고 배포는 수동.
+#   (EX_API_KEY 는 이 워크플로에선 안 쓴다 — 톨게이트를 뺐으므로. 시크릿에 있어도 무해.)
 #
 # ⚠️ 시크릿은 반드시 job 레벨 env 로 받는다 — 스텝 «자신의» env 는 그 스텝의 if 에서 안 보이고,
 #    secrets 컨텍스트도 if 에서 직접 못 쓴다. 이걸 어기면 조건이 조용히 항상 false 가 된다.
@@ -35,7 +39,6 @@ jobs:
     timeout-minutes: 60     # 야간진료는 E-Gen 전 페이지 스캔이라 수십 분 걸릴 수 있다
     env:
       DATA_API_KEY: ${{ secrets.DATA_API_KEY }}
-      EX_API_KEY: ${{ secrets.EX_API_KEY }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
     steps:
@@ -70,11 +73,6 @@ jobs:
         if: steps.keycheck.outputs.have_key == 'true'
         continue-on-error: true
         run: npm run build:clinics
-
-      - name: 고속도로 영업소
-        if: steps.keycheck.outputs.have_key == 'true' && env.EX_API_KEY != ''
-        continue-on-error: true
-        run: npm run build:tollgates
 
       # 깨진 스냅샷을 커밋해 앱을 죽이는 것보다는 갱신을 건너뛰는 게 낫다.
       - name: 문법 검사
