@@ -4,7 +4,8 @@
 > - **위치(절대경로)**: `C:\Users\GB\Documents\gong-medical-app`
 > - **GitHub**: `cslis07/gong-medical-app` · 기본 브랜치 `main`
 > - **배포**: https://gong-medical-app.vercel.app · **Vercel(cslis07 계정)**, `vercel --prod --yes` CLI 직접 배포
-> - **규모**: 순수 HTML+vanilla JS(빌드툴 없음). 첫 화면 **🏠 홈 허브** + 탭 **활성 8 / 숨김 6** · API 핸들러 `lib/*.js` 14종(단일 catch-all 함수 1개) · 프론트 `js/*.js` 7개 · 빌드 스냅샷 `data/*.js` 4개 · 빌드 스크립트 `scripts/*.mjs` 4개
+> - **규모**: 순수 HTML+vanilla JS(빌드툴 없음). 첫 화면 **🏠 홈 허브** + 탭 **활성 10 / 숨김 6** · API 핸들러 `lib/*.js` 16종(단일 catch-all 함수 1개) · 프론트 `js/*.js` 7개 · 빌드 스냅샷 `data/*.js` 4개 · 빌드 스크립트 `scripts/*.mjs` 4개
+> - ⚠️ **날짜**: 이 머신 git 시계가 실제보다 **~20일 뒤처짐**. 실제 오늘 = **2026-09-02**(Vercel 헤더·E-Gen 실시간 확인). 문서의 08월 날짜는 기계 시계 탓 — 실제는 09-02 무렵. 날짜는 외부 시계 기준으로 적을 것([[env-git-clock-behind]]).
 
 ---
 
@@ -16,6 +17,7 @@
 
 - **직전 세션 작업(2026-08-12)**: **🏠 홈 허브 신설 + 상단 군더더기 제거 — 첫 화면 리뉴얼**. 이전엔 첫 화면이 곧 지하철 탭이었고 나머지는 카테고리를 눌러야 보였다(주차장 = 2클릭, 무엇이 있는지 첫 화면에 없음). 이제 홈이 기본 패널이고 **살아 있는 탭 8개 전부가 1클릭**. 약보듬(`C:\Users\GB\Documents\yakbodeum`) 홈 허브 구조를 참고했다. 이어서 사용자 요청으로 **헤더 큰 제목·소개문구 + 카테고리 바·서브탭 줄을 제거**(홈 브랜드 블록과 중복 + 모바일 첫 화면 잠식). 첫 화면 기준 헤더 161→68px, 본문 시작 245→96px. 그 직전엔 탭 6개 숨김(`data-off`), 그 앞은 야간진료 탭 신규.
 - **이어서(3차)**: 리뉴얼이 어긋나게 만든 주변 3건 정리 — ①`guide.html`이 없어진 카테고리 UI를 안내하고 있었음(화면 구성 전면 교체 + 🏥야간진료 가이드 신설 + 옛 앱 이름 정리) ②`favorites.js` `PANELS`에 `clinic`·`nearby`가 없어 홈 히어로 4개 중 2개에 ⭐·🔗가 안 떴음 ③`title`·`og`가 꺼진 기능(실거래가·미세먼지·시내버스·LH청약)을 광고하고 있었음. **탭을 다시 켜면 §SEO 문구도 같이 되돌릴 것.**
+- **이어서(5차, 2026-09-02)**: **💊 문 연 약국 · 🚑 응급실 실시간 신규 탭 2개**("더 좋은 기능 발굴" → 지금 키로 되는 것만 검증해 선택). 약국은 E-Gen 좌표 API 라 **스냅샷 없이** 거리순+오늘 영업시간(야간진료보다 깔끔). 응급실은 좌표 근처 + 시도 실시간 병상을 hpid 조인, `hvec` 음수=포화. 둘 다 「밤에 아플 때」 흐름 완성. 세부는 CHANGELOG 2026-09-02.
 - **이어서(4차)**: ①**공단 실시간 주차면수 접음** — 백엔드는 회복했으나 데이터 규모·필터 부재로 구조적 불가(§10에 실측 근거). ②`build:parking` 이 **깨져 있던 걸 발견해 고침**(data.go.kr 봉투 변경, §7) → 전국 주차장 17,768 → **18,117곳**으로 갱신. ③**스냅샷 자동 갱신 워크플로 신설**(월 1회, §4·`.github/workflows/refresh-snapshots.yml`).
 - **모바일 실기기 확인 완료**(사용자, 2026-08-12) — 560px 이하 히어로 가로형·2열 그리드 정상. 더 볼 것 없음.
 - **배포 방식(2026-08-12 사용자 결정)**: `VERCEL_TOKEN` 안 씀 → 배포는 **세션마다 Claude가 `vercel --prod --yes` 수동**. 자동 갱신 워크플로는 스냅샷을 커밋만 하고 배포는 안 한다.
@@ -58,6 +60,8 @@
 | 📍 내주변 | 활성 | 현위치 기준 주유소·따릉이·주차장 상위3 통합(버스 그룹은 시내버스 숨김에 맞춰 제거) | 위 소스 병렬 | 상동 |
 | 🅿️ 주차장 | 활성 | 전국 17,768곳 가까운 순 + 서울 일부 실시간 잔여면수 · 서버 페이지네이션 | 서울 GetParkInfo/Info · 표준데이터 스냅샷 | SEOUL_API_KEY / DATA_API_KEY |
 | 🏥 야간진료 | 활성 | 반경 내 야간(오늘 종료 ≥선택시각) 병의원 · 지금진료중·거리·전화·지도 · 종류(일반의원/치과/한의원)·야간기준·반경 필터 | 국립중앙의료원 E-Gen 스냅샷 | DATA_API_KEY |
+| 💊 문연약국 | 활성 | 내 주변 약국 거리순 · 오늘 영업시간·지금 열림 우선·전화·지도(공휴일 지킴이약국 포함) | E-Gen `getParmacyLcinfoInqire`(좌표 실시간, **스냅샷 없음**) | DATA_API_KEY |
+| 🚑 응급실 | 활성 | 가까운 응급실 + **실시간 가용병상**(음수=포화)·CT·MRI·인공호흡기·갱신시각 · 여유만 필터 | E-Gen `getEgytLcinfoInqire`+`getEmrrmRltm…`(hpid 조인) | DATA_API_KEY |
 | 👥 혼잡도 | 활성 | 서울 핫스팟 120여곳 실시간 인구·혼잡도·성별/연령 | citydata_ppltn | SEOUL_API_KEY |
 | ⛽ 주유소 | 활성 | 반경 최저가(정렬: 가격/거리) + 전국 평균유가 바 + **최근 7일 유가추이 스파크라인** | Opinet | OPINET_API_KEY |
 | 🚏 시내버스 | **숨김** | 주변 정류소→실시간 도착 | 국토부 TAGO | DATA_API_KEY |
@@ -87,6 +91,8 @@
 | `api/[service].js` | 단일 catch-all 라우터(Vercel 함수 1개) → `lib/` 동적 import 위임 + 서비스별 CDN 캐시 표 |
 | `lib/subway.js` `density.js` `lotto.js` `gas.js` `bike.js` `highway.js` `realestate.js` `air.js` `citybus.js` `parking.js` `lh.js` `myhome.js` `geocode.js` | 서비스별 API 핸들러 |
 | ★ `lib/clinic.js` | 야간진료 병의원 — 스냅샷 좌표 반경 필터, HANDLERS에 `clinic` 등록 |
+| ★ `lib/pharmacy.js` | 문 연 약국 — E-Gen 좌표 API(거리순+오늘 영업시간). **스냅샷 없음** |
+| ★ `lib/emergency.js` | 응급실 실시간 — 좌표 근처(Egyt)+시도 실시간병상(Rltm) hpid 조인 |
 | `lib/kotsa-parking.js` | 공단 B553881 클라이언트(비핸들러, 백엔드 장애로 빈 스냅샷) |
 | `lib/pool.js` | 동시성 제한 + 재시도(전량수집용, 비핸들러) |
 | `lib/respond.js` | 에러 응답 정제(원문·키 유출 차단). `errorMessage()` 사용. `redact()`는 정의만·미사용(삭제 금지, §9) |
@@ -247,6 +253,8 @@ curl -s "https://gong-medical-app.vercel.app/api/parking?lat=37.5663&lon=126.977
 | `/api/highway` | `op=rest\|congest\|sms\|tollgates\|traveltime` | EX(data.ex.co.kr). UA+Referer 필수. `sms`=realTimeSms 돌발, `traveltime`=realUnitTrtm(영업소코드 필요→ex-tollgates 스냅샷) |
 | `/api/parking` | `lat&lon&live=1&free=1&page&size` \| `diag=1` | 서울 실시간 + 전국 스냅샷. 위치필터 없어 스냅샷 후 반경 |
 | `/api/clinic` | `lat&lon&radius&limit` | E-Gen 스냅샷 반경 필터. **지역/좌표 필터 없어 스냅샷 필수**. '지금진료중'은 프론트 계산 |
+| `/api/pharmacy` | `lat&lon&limit` | E-Gen getParmacyLcinfoInqire — 거리순+오늘 영업시간(start/end). '지금 열림'은 프론트 계산 |
+| `/api/emergency` | `lat&lon&limit` | Egyt(좌표 근처)+Rltm(시도 실시간병상) hpid 조인. `hvec` 음수=포화 |
 | `/api/density` | `area=강남역` | citydata_ppltn(5분 주기, 새벽 미제공) |
 | `/api/air` | `sido=서울` \| `op=metro` | 에어코리아. 예보는 어제·오늘 발표 병합, informCode 필터 |
 | `/api/realestate` | `type=trade\|rent\|silv&lawd&ym` | RTMS 전량수집(동시성20, 상한30p). 행정개편 시 LAWD 하드코딩 갱신 |

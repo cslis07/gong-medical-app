@@ -21,6 +21,8 @@ const HANDLERS = {
   myhome: () => import("../lib/myhome.js"),
   parking: () => import("../lib/parking.js"),
   clinic: () => import("../lib/clinic.js"),
+  pharmacy: () => import("../lib/pharmacy.js"),
+  emergency: () => import("../lib/emergency.js"),
 };
 
 // Vercel Edge 캐시(s-maxage)는 **사용자 간에 공유**된다.
@@ -50,6 +52,10 @@ const CACHE = {
   density: () => [120, 300],
   // 야간진료: 좌표 같으면 같은 답(스냅샷). '지금 진료중'은 프론트가 계산해 stale 무관
   clinic: () => [300, 900],
+  // 약국: 오늘 영업시간은 하루 동안 불변, '지금 열림'은 프론트 계산 → 넉넉히 캐시
+  pharmacy: () => [300, 900],
+  // 응급실: 실시간 병상이 응답에 실려 있어 오래 캐시하면 stale — 짧게
+  emergency: () => [30, 120],
 };
 
 export default async function handler(req, res) {

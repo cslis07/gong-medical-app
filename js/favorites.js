@@ -30,6 +30,8 @@
     // searchClinic() → GPS 재요청으로 이어질 수 있다.
     clinic:     { fields: ["clAddr", "clType", "clNight", "clRadius", "clOpen"], run: () => searchClinic(), empty: "내 위치", locKey: "clAddr" },
     nearby:     { fields: ["nbAddr"], run: () => searchNearby(), empty: "내 위치", locKey: "nbAddr" },
+    pharmacy:   { fields: ["phAddr", "phOpen"], run: () => searchPharmacy(), empty: "내 위치", locKey: "phAddr" },
+    emergency:  { fields: ["emAddr", "emFilter"], run: () => searchEmergency(), empty: "내 위치", locKey: "emAddr" },
   };
 
   const FAV_CAP = 200;   // 즐겨찾기 상한 — 무한 증가·용량 초과 방지
@@ -264,7 +266,7 @@
     r.readAsText(file);
   }
   // ---- 전 패널 즐겨찾기 모아보기(대시보드) ----
-  const PANEL_LABEL = { subway: "🚇 지하철", density: "👥 혼잡도", gas: "⛽ 주유소", bike: "🚲 따릉이", highway: "🛣️ 고속도로", realestate: "🏠 실거래가", air: "😷 미세먼지", citybus: "🚏 시내버스", lh: "🏘️ 청약·임대", parking: "🅿️ 주차장", lotto: "🎰 로또", clinic: "🏥 야간진료", nearby: "📍 내주변" };
+  const PANEL_LABEL = { subway: "🚇 지하철", density: "👥 혼잡도", gas: "⛽ 주유소", bike: "🚲 따릉이", highway: "🛣️ 고속도로", realestate: "🏠 실거래가", air: "😷 미세먼지", citybus: "🚏 시내버스", lh: "🏘️ 청약·임대", parking: "🅿️ 주차장", lotto: "🎰 로또", clinic: "🏥 야간진료", nearby: "📍 내주변", pharmacy: "💊 문연약국", emergency: "🚑 응급실" };
   let dashEl = null;
   function ensureDash() {
     if (dashEl) return dashEl;

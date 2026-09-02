@@ -74,6 +74,8 @@
       <button class="toptab" data-panel="parking" data-cat="home" role="tab" aria-selected="false" hidden>🅿️ 주차장</button>
       <!-- 생활 -->
       <button class="toptab" data-panel="clinic" data-cat="life" role="tab" aria-selected="false" hidden>🏥 야간진료</button>
+      <button class="toptab" data-panel="pharmacy" data-cat="life" role="tab" aria-selected="false" hidden>💊 문연약국</button>
+      <button class="toptab" data-panel="emergency" data-cat="life" role="tab" aria-selected="false" hidden>🚑 응급실</button>
       <button class="toptab" data-panel="air" data-cat="life" role="tab" aria-selected="false" hidden data-off="1">😷 미세먼지</button>
       <button class="toptab" data-panel="density" data-cat="life" role="tab" aria-selected="false" hidden>👥 혼잡도</button>
       <button class="toptab" data-panel="gas" data-cat="life" role="tab" aria-selected="false" hidden>⛽ 주유소</button>
@@ -397,6 +399,48 @@
       <p class="hint">현재 위치 기준으로 <strong>오늘 야간 기준 시각 이후까지 진료</strong>하는 병의원을 <strong>지금 진료중 우선·가까운 순</strong>으로 보여줍니다. 종류·야간 기준·반경을 조절할 수 있습니다. (국립중앙의료원 응급의료정보)</p>
       <div id="clStatus" class="status"></div>
       <div id="clResults" class="results"></div>
+    </section>
+
+    <!-- ============ 💊 문 연 약국 ============ -->
+    <section class="panel" id="panel-pharmacy">
+      <section class="controls">
+        <div class="field grow">
+          <label for="phAddr">주소 <span class="opt">(선택 — 비우면 내 위치)</span></label>
+          <input type="text" id="phAddr" placeholder="예: 서울 강남구 테헤란로 152" />
+        </div>
+        <div class="field">
+          <label for="phOpen">영업</label>
+          <select id="phOpen">
+            <option value="">전체</option>
+            <option value="now">지금 열림만</option>
+          </select>
+        </div>
+        <button id="phBtn" class="search-btn">📍 주변 약국</button>
+      </section>
+      <p class="hint">현재 위치에서 <strong>가까운 약국</strong>을 <strong>지금 열림 우선·가까운 순</strong>으로 보여줍니다. 오늘 영업시간·전화·지도 포함(공휴일 지킴이약국도 반영). (국립중앙의료원 응급의료정보)</p>
+      <div id="phStatus" class="status"></div>
+      <div id="phResults" class="results"></div>
+    </section>
+
+    <!-- ============ 🚑 응급실 실시간 ============ -->
+    <section class="panel" id="panel-emergency">
+      <section class="controls">
+        <div class="field grow">
+          <label for="emAddr">주소 <span class="opt">(선택 — 비우면 내 위치)</span></label>
+          <input type="text" id="emAddr" placeholder="예: 서울 강남구 테헤란로 152" />
+        </div>
+        <div class="field">
+          <label for="emFilter">병상</label>
+          <select id="emFilter">
+            <option value="">전체</option>
+            <option value="free">여유 있는 곳만</option>
+          </select>
+        </div>
+        <button id="emBtn" class="search-btn">📍 주변 응급실</button>
+      </section>
+      <p class="hint">현재 위치에서 <strong>가까운 응급실</strong>과 <strong>실시간 가용 병상</strong>을 보여줍니다. 병상 숫자가 <strong>음수면 포화(정원 초과)</strong>입니다. ⚠️ 실제 수용 여부는 <strong>전화로 확인</strong>하세요. 위급하면 119. (국립중앙의료원 응급의료정보)</p>
+      <div id="emStatus" class="status"></div>
+      <div id="emResults" class="results"></div>
     </section>
 
     <!-- ============ 🏠 아파트 실거래가 ============ -->

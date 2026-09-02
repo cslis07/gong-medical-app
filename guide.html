@@ -369,6 +369,8 @@ kbd{
       </a>
       <div class="sidebar-sub">
         <a href="#feat-clinic">야간진료 병의원</a>
+        <a href="#feat-pharmacy">문 연 약국</a>
+        <a href="#feat-emergency">응급실 실시간</a>
         <a href="#feat-density">실시간 혼잡도</a>
       </div>
     </div>
@@ -421,8 +423,21 @@ kbd{
 
           <div class="update-card new">
             <div class="update-head">
-              <span class="update-date">2026.08.12</span>
+              <span class="update-date">2026.09.02</span>
               <span class="update-badge">NEW</span>
+            </div>
+            <div class="update-title">💊 문 연 약국 · 🚑 응급실 실시간 추가</div>
+            <div class="update-body">
+              "밤에 아플 때" 흐름을 넓혔습니다. <strong>💊 문 연 약국</strong>은 내 주변 약국을 오늘 영업시간·지금
+              열림 우선으로(공휴일 지킴이약국 포함), <strong>🚑 응급실</strong>은 가까운 응급실의 <strong>실시간 가용
+              병상</strong>과 CT·MRI·인공호흡기 가용까지 보여줍니다. 병상이 음수면 포화입니다. 둘 다 국립중앙의료원
+              응급의료정보 기반이며, 방문·이송 전 전화 확인을 권합니다(위급 시 119).
+            </div>
+          </div>
+
+          <div class="update-card">
+            <div class="update-head">
+              <span class="update-date">2026.09.02</span>
             </div>
             <div class="update-title">🏠 홈 화면 신설 — 모든 서비스를 한 번에</div>
             <div class="update-body">
@@ -588,6 +603,8 @@ kbd{
             <tr><td><strong>📍 내주변</strong></td><td>현위치 기준 주유소·따릉이·주차장 상위 3곳 통합</td><td>지금 여기서 뭐가 가까운지</td></tr>
             <tr><td><strong>🅿️ 주차장</strong></td><td>전국 주차장 거리순 · 요금·운영시간 (서울 일부 실시간 잔여면수)</td><td>지금 차 댈 곳 찾기</td></tr>
             <tr><td><strong>🏥 야간진료</strong></td><td>오늘 야간까지 진료하는 병의원 · 지금 진료중·거리·전화·지도</td><td>밤에 갑자기 아플 때</td></tr>
+            <tr><td><strong>💊 문연약국</strong></td><td>내 주변 약국 · 오늘 영업시간·지금 열림·전화·지도(공휴일 지킴이약국 포함)</td><td>밤·주말에 약 필요할 때</td></tr>
+            <tr><td><strong>🚑 응급실</strong></td><td>가까운 응급실 + 실시간 가용 병상·CT·MRI·인공호흡기</td><td>응급 상황에 갈 곳 찾기</td></tr>
             <tr><td><strong>⛽ 주유소</strong></td><td>반경 내 최저가 · 전국 평균유가 · 최근 7일 추이</td><td>기름 싸게 넣을 곳 찾기</td></tr>
             <tr><td><strong>🚲 따릉이</strong></td><td>주변 대여소 실시간 자전거·거치대 수</td><td>탈 자전거가 있는 대여소 찾기</td></tr>
             <tr><td><strong>🛣️ 고속도로</strong></td><td>휴게소 · 실시간 소통 · 돌발상황 · 구간 소요시간</td><td>장거리 출발 전 확인</td></tr>
@@ -670,6 +687,18 @@ kbd{
             <li><strong>진료</strong> — “지금 진료중만”으로 좁히기</li>
           </ul>
           <div class="tip tip-warn">⚠️ 진료시간은 <strong>국립중앙의료원 응급의료정보에 신고된 값</strong>이라 실제와 다를 수 있습니다. <strong>가기 전에 반드시 전화로 확인</strong>하세요. 응급상황이라면 119 또는 응급실을 이용하세요.</div>
+        </div>
+
+        <div class="feature" id="feat-pharmacy">
+          <h3>💊 문 연 약국</h3>
+          <p>밤·주말에 약이 필요할 때, 현위치(또는 주소) 기준으로 <strong>가까운 약국</strong>을 <strong>지금 열림 우선·가까운 순</strong>으로 보여줍니다. 각 약국의 <strong>오늘 영업시간·전화·지도</strong>가 함께 나오고, <strong>공휴일 지킴이약국</strong>도 반영됩니다. 야간진료와 짝을 이뤄 "병원 찾고 → 약 사기"까지 이어집니다. “지금 열림만” 필터로 좁힐 수 있어요.</p>
+          <div class="tip tip-warn">⚠️ 영업시간은 신고값이라 실제와 다를 수 있습니다. 방문 전 전화로 확인하세요.</div>
+        </div>
+
+        <div class="feature" id="feat-emergency">
+          <h3>🚑 응급실 실시간</h3>
+          <p>현위치에서 <strong>가까운 응급실</strong>과 <strong>실시간 가용 병상</strong>을 보여줍니다. 병상 숫자가 <strong>음수면 포화(정원 초과)</strong>, 양수면 여유입니다. <strong>CT·MRI·인공호흡기</strong> 가용 여부와 갱신 시각도 표시합니다. “여유 있는 곳만” 필터 제공.</p>
+          <div class="tip tip-warn">⚠️ 실시간 병상은 참고용입니다. <strong>이송 전 반드시 전화로 수용 가능 여부를 확인</strong>하세요. 위급하면 즉시 <strong>119</strong>.</div>
         </div>
 
         <div class="feature" id="feat-density">
@@ -890,7 +919,7 @@ kbd{
           <h3>🔒 개인정보 · 위치정보 처리 안내</h3>
           <p>본 앱은 <strong>회원가입·로그인이 없고, 이름·연락처 등 개인정보를 수집하지 않습니다.</strong> 수집·이용 범위를 정직하게 밝히면 다음과 같습니다.</p>
           <ul>
-            <li><strong>위치정보(GPS)</strong>: 주변 조회(주유소·따릉이·주차장·야간진료·내주변)를 눌렀을 때만 브라우저가 좌표를 얻어 해당 조회에 사용합니다. <strong>서버에 저장하지 않습니다.</strong></li>
+            <li><strong>위치정보(GPS)</strong>: 주변 조회(주유소·따릉이·주차장·야간진료·문연약국·응급실·내주변)를 눌렀을 때만 브라우저가 좌표를 얻어 해당 조회에 사용합니다. <strong>서버에 저장하지 않습니다.</strong></li>
             <li><strong>주소 입력</strong>: 주소로 조회하면 그 주소가 좌표 변환(지오코딩) 요청에 사용됩니다. 조회 목적 외 보관은 없습니다.</li>
             <li><strong>즐겨찾기·최근 조회</strong>: 저장한 검색 조건은 <strong>이 브라우저의 localStorage에만</strong> 남고 서버로 전송되지 않으며, 다른 기기와 동기화되지 않습니다. 언제든 칩의 ✕로 삭제할 수 있습니다.</li>
             <li><strong>외부 데이터</strong>: 모든 정보는 공공/공식 API를 서버가 대신 호출(프록시)해 보여주는 것이며, 예매·결제·개인정보 입력은 하지 않습니다.</li>

@@ -95,6 +95,8 @@ const HUB = {
   nearby:     { hue: "#0f7a4d", hero: 1, desc: "현위치 기준 주유소·따릉이·주차장을 한 번에" },
   parking:    { hue: "#7c3aed", hero: 1, desc: "가까운 주차장 · 서울 일부는 실시간 잔여면수" },
   clinic:     { hue: "#c2410c", hero: 1, desc: "지금 문 연 병의원 · 거리·전화·지도" },
+  pharmacy:   { hue: "#0d9488", desc: "지금 문 연 약국 · 오늘 영업시간·전화" },
+  emergency:  { hue: "#dc2626", desc: "가까운 응급실 실시간 가용 병상" },
   gas:        { hue: "#b45309", desc: "반경 내 최저가 주유소와 유가 추이" },
   bike:       { hue: "#0891b2", desc: "주변 대여소의 남은 자전거·거치대" },
   highway:    { hue: "#475569", desc: "휴게소·실시간 소통·돌발·구간 소요시간" },
@@ -1290,10 +1292,108 @@ byId("clType").addEventListener("change", () => { if (clinicCache.rows.length) a
 byId("clNight").addEventListener("change", () => { if (clinicCache.rows.length) applyClinicFilter(); });
 byId("clRadius").addEventListener("change", () => { if (clinicCache.rows.length) searchClinic(); });
 
+// ==================== 💊 문 연 약국 ====================
+// /api/pharmacy 가 거리순 + 오늘 영업시간(start/end, HHMM)을 주므로 '지금 열림'은 프론트 계산.
+function phOpenState(p) {
+  if (p.start == null || p.end == null) return { label: "시간 정보 없음", cls: "warn", open: false, unknown: true };
+  const now = new Date(); const cur = now.getHours() * 100 + now.getMinutes();
+  // 자정 넘겨 여는 곳(end<start)은 or 조건으로 판정
+  const open = p.end >= p.start ? (cur >= p.start && cur <= p.end) : (cur >= p.start || cur <= p.end);
+  return { label: open ? "지금 열림" : "영업마감", cls: open ? "ok" : "warn", open };
+}
+let pharmCache = { rows: [], center: null };
+async function searchPharmacy() {
+  try {
+    const { lat, lon } = await getLocation("phStatus", "phAddr");
+    setBox("phStatus", "주변 약국 조회 중…", "loading"); showSkeletons("phResults");
+    const d = await (await fetch(`/api/pharmacy?lat=${lat}&lon=${lon}&limit=40`)).json();
+    if (d.needKey) return endEmpty("phResults", "phStatus", "⚠️ DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
+    if (!d.ok) { setBox("phStatus", d.error || "조회 실패", "warn"); return retryBox("phResults", d.error || "조회 실패", searchPharmacy); }
+    pharmCache = { rows: d.rows || [], center: { lat, lon } };
+    applyPharmacyFilter();
+  } catch (e) { setBox("phStatus", `오류: ${e.message}`, "error"); retryBox("phResults", e.message, searchPharmacy); }
+}
+function applyPharmacyFilter() {
+  const { rows, center } = pharmCache;
+  if (!rows.length) return endEmpty("phResults", "phStatus", "주변에 약국 정보가 없습니다. 주소를 입력해보세요.", "warn");
+  const onlyNow = byId("phOpen").value === "now";
+  let list = rows.map((p) => ({ p, st: phOpenState(p) }));
+  if (onlyNow) list = list.filter((x) => x.st.open);
+  list.sort((a, b) => (b.st.open - a.st.open) || (a.p.distance - b.p.distance));
+  if (!list.length) return endEmpty("phResults", "phStatus", "지금 열려 있는 약국이 주변에 없습니다. '전체'로 보면 가까운 약국은 나옵니다.", "warn");
+  const openCnt = list.filter((x) => x.st.open).length;
+  setBox("phStatus", `약국 ${list.length}곳${onlyNow ? "" : ` · 지금 열림 ${openCnt}곳`} · ${kstClock()} 기준`, "ok");
+  byId("phResults").innerHTML = list.map(({ p, st }) => {
+    const hours = st.unknown ? "영업시간 정보 없음" : `오늘 ${hhmm(p.start)}~${hhmm(p.end)}`;
+    const tel = p.tel ? `<a class="btn tel" href="tel:${E(String(p.tel).replace(/[^0-9]/g, ""))}">📞 전화</a>` : "";
+    const map = `<a class="btn map" href="https://map.kakao.com/link/map/${encodeURIComponent(p.name)},${p.lat},${p.lon}" target="_blank" rel="noopener">🗺️ 지도</a>`;
+    return `<article class="card">
+      <div class="card-top"><h3>💊 ${E(p.name)}</h3><span class="bed ${st.cls}">${st.label}</span></div>
+      <p class="meta">🕐 ${E(hours)} · 📍 ${p.distance.toLocaleString()}m</p>
+      <p class="addr">📍 ${E(p.addr)}</p>
+      <div class="card-actions">${tel}${map}</div>
+    </article>`;
+  }).join("");
+  if (window.GongMap) GongMap.set("pharmacy", list.map(({ p }) => ({ lat: p.lat, lon: p.lon, label: p.name, sub: p.tel || "" })), center);
+  byId("phResults").insertAdjacentHTML("beforeend", `<p class="hint" style="grid-column:1/-1">ℹ️ 영업시간은 변동될 수 있어요. 방문 전 전화로 확인하세요.</p>`);
+}
+byId("phBtn").addEventListener("click", searchPharmacy);
+byId("phOpen").addEventListener("change", () => { if (pharmCache.rows.length) applyPharmacyFilter(); });
+
+// ==================== 🚑 응급실 실시간 ====================
+// hvidate: YYYYMMDDHHmmss → HH:MM
+const fmtErTime = (s) => { const v = String(s || ""); return v.length >= 12 ? `${v.slice(8, 10)}:${v.slice(10, 12)}` : ""; };
+function erBedState(beds) {
+  if (beds == null) return { txt: "실시간 미제공", cls: "warn", free: false };
+  if (beds <= 0) return { txt: `포화 (${beds})`, cls: "full", free: false };       // 음수·0 = 정원 초과/만석
+  if (beds <= 2) return { txt: `가용 ${beds}`, cls: "busy", free: true };
+  return { txt: `가용 ${beds}`, cls: "ok", free: true };
+}
+let erCache = { rows: [], center: null };
+async function searchEmergency() {
+  try {
+    const { lat, lon } = await getLocation("emStatus", "emAddr");
+    setBox("emStatus", "주변 응급실 실시간 조회 중…", "loading"); showSkeletons("emResults");
+    const d = await (await fetch(`/api/emergency?lat=${lat}&lon=${lon}&limit=15`)).json();
+    if (d.needKey) return endEmpty("emResults", "emStatus", "⚠️ DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
+    if (!d.ok) { setBox("emStatus", d.error || "조회 실패", "warn"); return retryBox("emResults", d.error || "조회 실패", searchEmergency); }
+    erCache = { rows: d.rows || [], center: { lat, lon } };
+    applyEmergencyFilter();
+  } catch (e) { setBox("emStatus", `오류: ${e.message}`, "error"); retryBox("emResults", e.message, searchEmergency); }
+}
+function applyEmergencyFilter() {
+  const { rows, center } = erCache;
+  if (!rows.length) return endEmpty("emResults", "emStatus", "주변에 응급실 정보가 없습니다. 주소를 입력해보세요.", "warn");
+  const onlyFree = byId("emFilter").value === "free";
+  let list = rows.map((e) => ({ e, bs: erBedState(e.beds) }));
+  if (onlyFree) list = list.filter((x) => x.bs.free);
+  // 거리순 유지(응급 상황엔 근접이 우선). 실시간 있는 곳이 위로 오도록 살짝 가중.
+  if (!list.length) return endEmpty("emResults", "emStatus", "병상 여유가 있는 응급실이 주변에 없습니다. '전체'로 보고 전화로 확인하세요.", "warn");
+  const freeCnt = list.filter((x) => x.bs.free).length;
+  const latest = rows.map((e) => e.updatedAt).filter(Boolean).sort().slice(-1)[0];
+  setBox("emStatus", `응급실 ${list.length}곳 · 병상 여유 ${freeCnt}곳${latest ? ` · ${fmtErTime(latest)} 갱신` : ""}`, "ok");
+  byId("emResults").innerHTML = list.map(({ e, bs }) => {
+    const eq = [e.ct ? "CT" : "", e.mri ? "MRI" : "", e.venti ? "인공호흡기" : ""].filter(Boolean);
+    const tel = e.tel ? `<a class="btn tel" href="tel:${E(String(e.tel).replace(/[^0-9]/g, ""))}">📞 전화</a>` : "";
+    const map = (e.lat && e.lon) ? `<a class="btn map" href="https://map.kakao.com/link/map/${encodeURIComponent(e.name)},${e.lat},${e.lon}" target="_blank" rel="noopener">🗺️ 지도</a>` : "";
+    return `<article class="card">
+      <div class="card-top"><h3>🚑 ${E(e.name)}</h3><span class="bed ${bs.cls}">${E(bs.txt)}</span></div>
+      <p class="meta">📍 ${e.distance ? e.distance.toLocaleString() + "m" : ""}${e.updatedAt ? ` · 🔄 ${fmtErTime(e.updatedAt)} 기준` : ""}</p>
+      ${eq.length ? `<p class="meta">🩺 ${eq.map(E).join(" · ")} 가용</p>` : ""}
+      <p class="addr">📍 ${E(e.addr)}</p>
+      <div class="card-actions">${tel}${map}</div>
+    </article>`;
+  }).join("");
+  if (window.GongMap) GongMap.set("emergency", list.map(({ e }) => ({ lat: e.lat, lon: e.lon, label: e.name, sub: e.beds != null ? `병상 ${e.beds}` : "" })), center);
+  byId("emResults").insertAdjacentHTML("beforeend", `<p class="hint" style="grid-column:1/-1">⚠️ 실시간 병상은 참고용입니다. 이송 전 반드시 전화로 수용 가능 여부를 확인하세요. 위급하면 119.</p>`);
+}
+byId("emBtn").addEventListener("click", searchEmergency);
+byId("emFilter").addEventListener("change", () => { if (erCache.rows.length) applyEmergencyFilter(); });
+
 // ---------- 입력창 지우기(×) 버튼 ----------
 // 주요 텍스트 입력에 clear 버튼을 주입(모바일에서 긴 주소·역명 재입력 마찰 감소).
 (function initClearButtons() {
-  const ids = ["gasAddr", "bikeAddr", "cbAddr", "pkAddr", "nbAddr", "clAddr", "densQ", "airQ", "reApt", "lhName", "hwQ", "lottoMine"];
+  const ids = ["gasAddr", "bikeAddr", "cbAddr", "pkAddr", "nbAddr", "clAddr", "phAddr", "emAddr", "densQ", "airQ", "reApt", "lhName", "hwQ", "lottoMine"];
   ids.forEach((id) => {
     const el = byId(id);
     if (!el || el.dataset.clearable) return;

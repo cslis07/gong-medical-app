@@ -12,6 +12,8 @@
     citybus: "cbResults",
     parking: "pkResults",
     clinic:  "clResults",
+    pharmacy: "phResults",
+    emergency: "emResults",
   };
   const state = {};           // panel -> { points, center, map, layer, open }
   let leafletP = null;
