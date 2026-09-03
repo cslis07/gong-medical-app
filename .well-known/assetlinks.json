@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.gong_medical_app.twa",
+      "sha256_cert_fingerprints": [
+        "DB:49:DA:B3:86:9B:16:B0:65:41:A6:91:3E:1D:71:70:A4:5C:9B:F9:80:F0:AD:B5:EC:9E:2C:98:E9:47:C0:FE"
+      ]
+    }
+  }
+]
