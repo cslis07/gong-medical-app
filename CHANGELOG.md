@@ -12,6 +12,17 @@
 > 그 이전 이력(2026-06 공공의료 앱 → 지하철 전용 개편 → 생활서비스 확장 → data.go.kr 대량 확장
 > → 탭 정리·야간진료 추가)은 **`git log`에만** 있다. 배포는 `vercel --prod --yes` CLI 수동.
 
+## 2026-09-03 — 📱 안드로이드 APK (TWA)
+
+배포 사이트를 로드하는 **서명된 TWA APK** 제작. `app.vercel.gong_medical_app.twa`, 1.1MB.
+- **TWA 성질**: 앱은 껍데기 → **웹 콘텐츠(기능·디자인)는 배포하면 설치 앱에 자동 반영**. APK 재빌드는
+  홈 아이콘·스플래시를 바꿀 때만. 스플래시 흰색, 테마 `#2f5fe0`, launcherName "교통·생활".
+- **전체화면**: `.well-known/assetlinks.json` 신설 — 서명키 SHA256(`DB:49:DA:…:C0:FE`) 등록.
+  Vercel 이 점폴더 정상 서빙(200·application/json). 이게 있어야 주소창 없이 열린다.
+- **서명키 보존**: `Documents\키스토어\gong-medical-app-twa.jks`. 다른 키로 재빌드하면 안드로이드가
+  업데이트 설치를 거부하므로 이 키를 반드시 재사용. 재빌드 절차·함정은 메모리 참고.
+- 산출물: `Documents\gong-medical-app.apk`. 저장소엔 assetlinks.json 만 커밋(APK·키스토어는 밖).
+
 ## 2026-09-02 — 💊 문 연 약국 · 🚑 응급실 실시간 (기능 발굴)
 
 "더 좋은 기능 발굴" 요청에서 출발. 지금 가진 data.go.kr 키(추가 승인 0)로 실제 되는지 API 를
