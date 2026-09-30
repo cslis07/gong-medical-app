@@ -918,8 +918,9 @@ kbd{
             <li><strong>주소 입력</strong>: 주소로 조회하면 그 주소가 좌표 변환(지오코딩) 요청에 사용됩니다. 조회 목적 외 보관은 없습니다.</li>
             <li><strong>즐겨찾기·최근 조회</strong>: 저장한 검색 조건은 <strong>이 브라우저의 localStorage에만</strong> 남고 서버로 전송되지 않으며, 다른 기기와 동기화되지 않습니다. 언제든 칩의 ✕로 삭제할 수 있습니다.</li>
             <li><strong>외부 데이터</strong>: 모든 정보는 공공/공식 API를 서버가 대신 호출(프록시)해 보여주는 것이며, 예매·결제·개인정보 입력은 하지 않습니다.</li>
+            <li><strong>방문 통계</strong>: 서비스 개선을 위해 <strong>익명·집계</strong> 방문 통계(방문 수·페이지·대략적 유입경로)를 수집합니다(Vercel Web Analytics). <strong>쿠키를 쓰지 않고</strong> 개인을 식별하지 않습니다.</li>
           </ul>
-          <div class="tip tip-warn"><strong>⚠️ 참고용 고지</strong> — 실거래가·요금·잔여면수 등 수치는 제공 시점 기준의 참고 정보입니다. 계약·거래 등 중요한 판단은 반드시 공식 원본과 전문가 확인을 우선하세요.</div>
+          <div class="tip tip-warn"><strong>⚠️ 참고용 고지</strong> — 요금·잔여면수·진료시간 등 수치는 제공 시점 기준의 참고 정보입니다. 병원·약국 방문이나 중요한 판단은 반드시 공식 원본·전화 확인을 우선하세요.</div>
         </div>
       </div>
     </section>
@@ -1009,5 +1010,7 @@ kbd{
 
 <script src="/js/guide.js"></script>
 <script src="/js/pwa.js"></script>
+<!-- Vercel Web Analytics (방문 측정) — 같은 도메인이라 CSP 'self'로 허용, 쿠키 없음 -->
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
