@@ -192,12 +192,14 @@ function setStatus(msg, type = "") {
 
 // 오류 시 재시도 버튼 표시 (공공 API 일시 장애 대비)
 function showError(msg, retryFn) {
-  const timeout = /시간 초과|timeout|Failed to fetch|network/i.test(msg);
-  setStatus(`오류: ${msg}`, "error");
+  const timeout = /시간 ?초과|timeout|Failed to fetch|network|abort|지연/i.test(msg);
+  // 원문(영문) 대신 사람이 읽는 문구로. friendlyErr 는 services.js 전역(로드 순서상 항상 존재).
+  const friendly = (typeof friendlyErr === "function") ? friendlyErr({ message: msg }) : msg;
+  setStatus(friendly, "error");
   $("results").innerHTML =
     `<div class="retry-box">
       <div class="retry-ico">${timeout ? "⏱️" : "⚠️"}</div>
-      <p class="retry-msg">${esc(timeout ? "서버 응답이 지연되고 있습니다." : msg)}</p>
+      <p class="retry-msg">${esc(friendly)}</p>
       <p class="retry-sub">공공 API가 일시적으로 불안정할 수 있습니다.</p>
       <button class="search-btn retry-btn">🔄 다시 시도</button>
     </div>`;
@@ -290,7 +292,7 @@ async function showSubwayMap() {
     setStatus(`서울 지하철 노선도 · 역 이름을 검색하면 상세 정보`, "ok");
     initMapZoom();
   } catch (e) {
-    setStatus(`오류: ${e.message}`, "error");
+    setStatus((typeof friendlyErr === "function") ? friendlyErr(e) : `오류: ${e.message}`, "error");
     host.innerHTML = "";
   }
 }
@@ -749,7 +751,8 @@ async function openStationDetail(station, line) {
       dl.innerHTML = _mapData.stations.map((s) => `<option value="${esc(s.nm)}"></option>`).join("");
     }
   } catch (e) {
-    $("modalBody").innerHTML = `<p class="status error">오류: ${esc(e.message)}</p>`;
+    const fm = (typeof friendlyErr === "function") ? friendlyErr(e) : `오류: ${e.message}`;
+    $("modalBody").innerHTML = `<p class="status error">${esc(fm)}</p>`;
   }
 }
 

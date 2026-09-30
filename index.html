@@ -44,18 +44,18 @@
     <div class="wrap header-row">
       <h1 class="sr-only">서울 교통·생활 정보 — 지하철 · 실시간 혼잡도 · 주차장 · 주유소 · 야간진료</h1>
       <div class="header-links">
-        <button id="dustBadge" class="dust-badge" title="수도권(서울·경기·인천) 실시간 평균 미세먼지 — 클릭하면 미세먼지 탭" style="display:none"></button>
         <button id="themeToggle" class="icon-btn" type="button" aria-label="테마 변경">🌗</button>
         <a class="guide-link" href="guide.html">📖 이용가이드</a>
       </div>
     </div>
   </header>
 
-  <!-- 상단 내비 2026-08-12: 카테고리 바(홈·교통·주거·생활)와 서브탭 줄을 둘 다 없앴다(사용자 요청).
-       탭 사이 이동은 홈 허브가 전담하고, 탭 안에서는 아래 «← 홈» 하나로 돌아온다.
-       ⚠️ .subtabs 안의 .toptab 버튼은 «지우지 말 것» — 화면에서만 감춘 상태다.
-          renderHub()가 이 목록을 읽어 홈 카드를 만들고(§2), data-off 로 탭을 껐다 켜는
-          계약(§9-6)도 여기 걸려 있다. 지우면 홈 화면이 빈다. -->
+  <!-- 상단 내비 2026-08-12: 카테고리 바·서브탭 줄 제거(홈 허브가 탭 이동 전담).
+       탭 안에서는 «← 홈» 하나로 돌아온다.
+       ⚠️ .subtabs 안의 .toptab 목록은 «홈 카드의 유일한 원본»이다 — renderHub()가 이걸 읽어
+          홈 화면 카드를 만든다(§2). 버튼을 지우면 홈 카드도 사라진다.
+       2026-09-30: 꺼둔 탭 6개(시내버스·실거래가·LH청약·미세먼지·로또·분실물)를 «완전 삭제»
+          (사용자 요청). 아래는 살아 있는 10개 탭 전부다. -->
   <nav class="topnav wrap" aria-label="화면 이동">
     <button type="button" id="backHome" class="backhome" hidden>← 홈</button>
     <!-- 칩줄이 없어져 «지금 어느 화면인지»를 알려줄 게 없어졌다(딥링크로 들어오면 더더욱).
@@ -64,23 +64,17 @@
     <div class="subtabs" role="tablist" aria-label="서비스" hidden>
       <!-- 교통 -->
       <button class="toptab" data-panel="subway" data-cat="transit" role="tab" aria-selected="false">🚇 지하철</button>
-      <button class="toptab" data-panel="citybus" data-cat="transit" role="tab" aria-selected="false" data-off="1">🚏 시내버스</button>
       <button class="toptab" data-panel="bike" data-cat="transit" role="tab" aria-selected="false">🚲 따릉이</button>
       <button class="toptab" data-panel="highway" data-cat="transit" role="tab" aria-selected="false">🛣️ 고속도로</button>
       <button class="toptab" data-panel="nearby" data-cat="transit" role="tab" aria-selected="false">📍 내주변</button>
       <!-- 주거 -->
-      <button class="toptab" data-panel="realestate" data-cat="home" role="tab" aria-selected="false" hidden data-off="1">🏠 실거래가</button>
-      <button class="toptab" data-panel="lh" data-cat="home" role="tab" aria-selected="false" hidden data-off="1">🏘️ LH청약</button>
       <button class="toptab" data-panel="parking" data-cat="home" role="tab" aria-selected="false" hidden>🅿️ 주차장</button>
       <!-- 생활 -->
       <button class="toptab" data-panel="clinic" data-cat="life" role="tab" aria-selected="false" hidden>🏥 야간진료</button>
       <button class="toptab" data-panel="pharmacy" data-cat="life" role="tab" aria-selected="false" hidden>💊 문연약국</button>
       <button class="toptab" data-panel="emergency" data-cat="life" role="tab" aria-selected="false" hidden>🚑 응급실</button>
-      <button class="toptab" data-panel="air" data-cat="life" role="tab" aria-selected="false" hidden data-off="1">😷 미세먼지</button>
       <button class="toptab" data-panel="density" data-cat="life" role="tab" aria-selected="false" hidden>👥 혼잡도</button>
       <button class="toptab" data-panel="gas" data-cat="life" role="tab" aria-selected="false" hidden>⛽ 주유소</button>
-      <button class="toptab" data-panel="lotto" data-cat="life" role="tab" aria-selected="false" hidden data-off="1">🎰 로또</button>
-      <button class="toptab" data-panel="lost" data-cat="life" role="tab" aria-selected="false" hidden data-off="1">🧳 분실물</button>
     </div>
   </nav>
 
@@ -190,51 +184,6 @@
       <p class="hint">KT·SKT 통신 신호 기반 <strong>추계치</strong>이며 약 15분 전 값입니다(5분 주기 갱신). 새벽 01~05시는 미제공될 수 있어요.</p>
       <div id="densStatus" class="status"></div>
       <div id="densResults" class="results"></div>
-    </section>
-
-    <!-- ============ 🧳 지하철 분실물 ============ -->
-    <section class="panel" id="panel-lost">
-      <section class="controls">
-        <div class="field">
-          <label for="lostStn">역명/보관장소</label>
-          <input type="text" id="lostStn" placeholder="예: 강남역" />
-        </div>
-        <div class="field">
-          <label for="lostItem">물품명</label>
-          <input type="text" id="lostItem" placeholder="예: 지갑, 휴대폰, 가방" />
-        </div>
-        <div class="field">
-          <label for="lostDays">검색 기간</label>
-          <select id="lostDays">
-            <option value="7">최근 7일</option>
-            <option value="14" selected>최근 14일</option>
-            <option value="30">최근 30일</option>
-          </select>
-        </div>
-        <button id="lostBtn" class="search-btn">공식 조회 열기</button>
-      </section>
-      <p class="hint">지하철 유실물은 <strong>LOST112(경찰청 통합 유실물)</strong>·<strong>서울교통공사 유실물센터</strong> 공식 창구에서 조회합니다. 아래에서 조건을 정리해 공식 페이지로 바로 이동하세요.</p>
-      <div id="lostStatus" class="status"></div>
-      <div id="lostResults" class="results"></div>
-    </section>
-
-    <!-- ============ 🎰 로또 ============ -->
-    <section class="panel" id="panel-lotto">
-      <section class="controls">
-        <div class="field">
-          <label for="lottoRound">회차 <span class="opt">(비우면 최신)</span></label>
-          <input type="text" id="lottoRound" placeholder="예: 1231" inputmode="numeric" maxlength="5" />
-        </div>
-        <div class="field grow">
-          <label for="lottoMine">내 번호 <span class="opt">(선택 — 6개, 쉼표/공백)</span></label>
-          <input type="text" id="lottoMine" placeholder="예: 4, 13, 14, 18, 31, 38" />
-        </div>
-        <button id="lottoGen" class="search-btn" type="button" title="1~45 무작위 6개 채우기" style="background:var(--card);color:var(--accent);border:1px solid var(--accent)">🎲 자동생성</button>
-        <button id="lottoBtn" class="search-btn">당첨결과 조회</button>
-      </section>
-      <p class="hint">동행복권 공식 결과를 공개 미러(CDN)로 조회합니다. 내 번호를 넣으면 등수를 계산합니다. 구매·당첨금 수령은 공식 채널에서 확인하세요.</p>
-      <div id="lottoStatus" class="status"></div>
-      <div id="lottoResults" class="results"></div>
     </section>
 
     <!-- ============ ⛽ 주유소 ============ -->
@@ -441,163 +390,6 @@
       <p class="hint">현재 위치에서 <strong>가까운 응급실</strong>과 <strong>실시간 가용 병상</strong>을 보여줍니다. 병상 숫자가 <strong>음수면 포화(정원 초과)</strong>입니다. ⚠️ 실제 수용 여부는 <strong>전화로 확인</strong>하세요. 위급하면 119. (국립중앙의료원 응급의료정보)</p>
       <div id="emStatus" class="status"></div>
       <div id="emResults" class="results"></div>
-    </section>
-
-    <!-- ============ 🏠 아파트 실거래가 ============ -->
-    <section class="panel" id="panel-realestate">
-      <section class="controls">
-        <div class="field">
-          <label for="reType">거래유형</label>
-          <select id="reType">
-            <option value="trade">매매</option>
-            <option value="jeonse">전세</option>
-            <option value="wolse">월세</option>
-            <option value="silv">분양권전매</option>
-          </select>
-        </div>
-        <div class="field grow">
-          <label for="reRegion">지역</label>
-          <select id="reRegion"></select>
-        </div>
-        <div class="field">
-          <label for="reYm">거래연월</label>
-          <input type="month" id="reYm" />
-        </div>
-        <button id="reBtn" class="search-btn">실거래가 조회</button>
-      </section>
-      <section class="controls re-filter" style="margin-top:8px">
-        <div class="field">
-          <label for="reMin">최저가 <span class="opt" id="rePriceUnit">(억)</span></label>
-          <input type="number" id="reMin" placeholder="예: 10" step="0.1" min="0" />
-        </div>
-        <div class="field">
-          <label for="reMax">최고가 <span class="opt">(억)</span></label>
-          <input type="number" id="reMax" placeholder="예: 25" step="0.1" min="0" />
-        </div>
-        <div class="field wolse-only" style="display:none">
-          <label for="reMonMax">월세 최대 <span class="opt">(만원)</span></label>
-          <input type="number" id="reMonMax" placeholder="예: 200" step="10" min="0" />
-        </div>
-        <div class="field">
-          <label for="reApt">단지명 <span class="opt">(선택)</span></label>
-          <input type="text" id="reApt" placeholder="예: 래미안, 자이" />
-        </div>
-        <div class="field">
-          <label for="reSort">정렬</label>
-          <select id="reSort">
-            <option value="date">최신순</option>
-            <option value="high">가격 높은순</option>
-            <option value="low">가격 낮은순</option>
-          </select>
-        </div>
-        <button id="reApply" class="search-btn">필터 적용</button>
-      </section>
-      <p class="hint">국토교통부 실거래가 공개자료입니다. 가격 필터는 <strong>매매가·전세보증금·월세보증금</strong> 기준(억원)입니다. 카드의 🗺️ 지도로 위치를 확인하세요.</p>
-      <div id="reStatus" class="status"></div>
-      <div id="reInsights" class="re-insights" hidden>
-        <button type="button" id="reRankBtn" class="chip-btn">🏆 이번 달 랭킹</button>
-        <button type="button" id="reTrendBtn" class="chip-btn">📈 시세 추이(6개월)</button>
-      </div>
-      <div id="reInsightsOut" class="re-insights-out"></div>
-      <div id="reResults" class="results"></div>
-      <nav id="rePager" class="pager" aria-label="실거래가 페이지"></nav>
-    </section>
-
-    <!-- ============ 😷 미세먼지 ============ -->
-    <section class="panel" id="panel-air">
-      <section class="controls">
-        <div class="field">
-          <label for="airSido">지역(시·도)</label>
-          <select id="airSido"></select>
-        </div>
-        <div class="field grow">
-          <label for="airQ">측정소/지역 필터 <span class="opt">(선택)</span></label>
-          <input type="text" id="airQ" placeholder="예: 강남, 종로, 수원" />
-        </div>
-        <div class="field">
-          <label for="airPollutant">기준물질</label>
-          <select id="airPollutant">
-            <option value="pm10">미세(PM10)</option>
-            <option value="pm25">초미세(PM2.5)</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="airGrade">등급</label>
-          <select id="airGrade">
-            <option value="">전체</option>
-            <option value="ok">좋음</option>
-            <option value="warn">보통</option>
-            <option value="busy">나쁨</option>
-            <option value="full">매우나쁨</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="airStd">기준</label>
-          <select id="airStd">
-            <option value="env">환경부</option>
-            <option value="who">WHO(엄격)</option>
-          </select>
-        </div>
-        <button id="airBtn" class="search-btn">대기질 조회</button>
-      </section>
-      <p class="hint">에어코리아 실시간 측정정보입니다. <strong>기준물질</strong>로 등급 필터 대상을(PM10/PM2.5), <strong>기준</strong>으로 환경부↔WHO 엄격 기준을 전환할 수 있습니다.</p>
-      <div id="airStatus" class="status"></div>
-      <div id="airResults" class="results"></div>
-    </section>
-
-    <!-- ============ 🚏 시내버스 ============ -->
-    <section class="panel" id="panel-citybus">
-      <section class="controls">
-        <div class="field grow">
-          <label for="cbAddr">주소 <span class="opt">(선택 — 비우면 내 위치)</span></label>
-          <input type="text" id="cbAddr" placeholder="예: 서울 강남구 강남대로 396" />
-        </div>
-        <button id="cbBtn" class="search-btn">📍 주변 버스 정류소</button>
-      </section>
-      <p class="hint">브라우저 위치 권한이 필요합니다. 가까운 정류소를 찾고, 정류소를 누르면 <strong>실시간 버스 도착정보</strong>를 보여줍니다. (전국 TAGO)</p>
-      <div id="cbStatus" class="status"></div>
-      <div id="cbResults" class="results"></div>
-    </section>
-
-    <!-- ============ 🏘️ 청약·임대 (LH·SH) ============ -->
-    <section class="panel" id="panel-lh">
-      <section class="controls">
-        <div class="field">
-          <label for="lhMode">구분</label>
-          <select id="lhMode">
-            <option value="notice">📢 청약공고 (LH)</option>
-            <option value="rental">🏢 공공임대 단지 (LH·SH·지방)</option>
-          </select>
-        </div>
-        <div class="field grow lh-notice">
-          <label for="lhName">공고명 검색 <span class="opt">(선택)</span></label>
-          <input type="text" id="lhName" placeholder="예: 행복주택, 신혼희망, 국민임대" />
-        </div>
-        <div class="field lh-notice">
-          <label for="lhRegion">지역</label>
-          <select id="lhRegion"><option value="">전체</option></select>
-        </div>
-        <div class="field lh-notice">
-          <label for="lhStatusF">공고상태</label>
-          <select id="lhStatusF"><option value="">전체</option></select>
-        </div>
-        <div class="field lh-rental" style="display:none">
-          <label for="lhSido">지역(시·도)</label>
-          <select id="lhSido">
-            <option value="11">서울</option><option value="41">경기</option><option value="28">인천</option>
-            <option value="26">부산</option><option value="27">대구</option><option value="29">광주</option>
-            <option value="30">대전</option><option value="31">울산</option><option value="36">세종</option>
-            <option value="43">충북</option><option value="44">충남</option><option value="45">전북</option>
-            <option value="46">전남</option><option value="47">경북</option><option value="48">경남</option>
-            <option value="50">제주</option><option value="42">강원</option>
-          </select>
-        </div>
-        <button id="lhBtn" class="search-btn">조회</button>
-      </section>
-      <p class="hint">LH 분양·임대 공고, 그리고 LH·SH·지방공사 <strong>공공임대주택 단지</strong>를 조회합니다. (마이홈포털)</p>
-      <div id="lhStatus" class="status"></div>
-      <div id="lhResults" class="results"></div>
-      <nav id="lhPager" class="pager" aria-label="LH 공고 페이지"></nav>
     </section>
 
     <!-- ============ 🅿️ 주차장 ============ -->

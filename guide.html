@@ -423,8 +423,20 @@ kbd{
 
           <div class="update-card new">
             <div class="update-head">
-              <span class="update-date">2026.09.02</span>
+              <span class="update-date">2026.09.30</span>
               <span class="update-badge">NEW</span>
+            </div>
+            <div class="update-title">🧹 안 쓰던 메뉴 6개 정리</div>
+            <div class="update-body">
+              오래 꺼둔 채로 두었던 <strong>실거래가·미세먼지·시내버스·LH청약·로또·분실물</strong>을
+              완전히 정리했습니다. 지금은 실제로 쓰는 <strong>10개 서비스</strong>만 홈에 깔끔하게 남았습니다.
+              (지하철·따릉이·고속도로·내주변·주차장·야간진료·문 연 약국·응급실·혼잡도·주유소)
+            </div>
+          </div>
+
+          <div class="update-card">
+            <div class="update-head">
+              <span class="update-date">2026.09.02</span>
             </div>
             <div class="update-title">💊 문 연 약국 · 🚑 응급실 실시간 추가</div>
             <div class="update-body">
@@ -591,7 +603,7 @@ kbd{
         </div>
       </div>
       <div class="section-body">
-        <p style="margin-top:0;color:var(--text2)">앱을 열면 <strong>홈 화면</strong>이 나옵니다. 여기에 <strong>8개 서비스가 전부 카드로</strong> 놓여 있어, 원하는 걸 <strong>한 번만 누르면</strong> 바로 그 화면으로 갑니다. 위쪽 <strong>“자주 찾는 정보”</strong> 4개는 설명이 붙은 큰 카드이고, 아래 <strong>“전체 서비스”</strong>에 8개가 모두 있습니다.</p>
+        <p style="margin-top:0;color:var(--text2)">앱을 열면 <strong>홈 화면</strong>이 나옵니다. 여기에 <strong>10개 서비스가 전부 카드로</strong> 놓여 있어, 원하는 걸 <strong>한 번만 누르면</strong> 바로 그 화면으로 갑니다. 위쪽 <strong>“자주 찾는 정보”</strong> 4개는 설명이 붙은 큰 카드이고, 아래 <strong>“전체 서비스”</strong>에 전부 있습니다.</p>
         <p style="color:var(--text2)">서비스 화면에 들어가면 왼쪽 위에 <strong>“← 홈”</strong>과 지금 보고 있는 화면 이름이 뜹니다. 이 줄은 스크롤해도 따라오니 결과가 길어도 아무 때나 홈으로 돌아올 수 있습니다. 각 화면은 독립적으로 동작하고, 회원가입·로그인은 없습니다.</p>
 
         <table class="info-table">
@@ -613,7 +625,6 @@ kbd{
         </table>
 
         <div class="tip">💡 데이터 출처는 서울 열린데이터광장·서울교통공사·공공데이터포털(국토부·국립중앙의료원)·한국도로공사·Opinet입니다.</div>
-        <div class="tip">📌 이전에 있던 <strong>실거래가·미세먼지·시내버스·LH청약·로또·분실물</strong>은 현재 <strong>메뉴에서 내려둔 상태</strong>입니다. 아래 가이드 본문에 이들 설명이 남아 있다면 지금은 이용할 수 없는 기능입니다.</div>
       </div>
     </section>
 
@@ -666,7 +677,7 @@ kbd{
       </div>
     </section>
 
-    <!-- 5.5 생활서비스 (혼잡도·분실물) -->
+    <!-- 5.5 생활서비스 (야간진료·약국·응급실·혼잡도) -->
     <section class="guide-section" id="sec-life">
       <div class="section-header sh-overview">
         <span class="section-icon">🌆</span>
@@ -707,12 +718,6 @@ kbd{
           <div class="tip tip-warn">⚠️ 인구 수치는 KT·SKT 통신 신호 기반 <strong>추계치</strong>이며, 조회 시점 약 15분 전 값(5분 주기 갱신)입니다. 새벽 01~05시는 제공되지 않을 수 있습니다.</div>
         </div>
 
-        <div class="feature" id="feat-lost">
-          <h3>🧳 지하철 분실물 <span class="opt">(현재 메뉴에서 내려둠)</span></h3>
-          <div class="tip tip-warn">📌 이 기능은 <strong>지금 앱 메뉴에 없습니다.</strong> 아래 설명은 다시 켤 때를 위해 남겨 둔 것입니다. 유실물은 <a href="https://www.lost112.go.kr" target="_blank" rel="noopener">LOST112</a>에서 바로 조회하세요.</div>
-          <p>역명·물품명·기간을 입력하면 <strong>LOST112(경찰청 통합 유실물)</strong> 검색 조건을 정리하고, LOST112와 <strong>서울교통공사 유실물센터</strong> 공식 창구로 바로 이동하는 버튼을 제공합니다.</p>
-          <div class="tip">💡 역명으로 결과가 없으면 <strong>‘역’ 없이</strong> 또는 <strong>호선명</strong>으로 넓혀 검색하세요. 공개 자동조회 API가 확정되지 않아 조회는 공식 창구에서 진행하는 안내형 기능입니다.</div>
-        </div>
 
       </div>
     </section>
@@ -748,16 +753,6 @@ kbd{
         <div class="feature" id="feat-nearby">
           <h3>📍 내 주변 한눈에</h3>
           <p>홈에서 <strong>“📍 내주변”</strong>을 누르면 현재 위치(또는 주소) 기준으로 가까운 <strong>주유소·따릉이·주차장</strong>을 한 번에 봅니다. 각 항목의 “전체 보기 →”로 해당 화면에서 더 자세히 확인할 수 있고, 위치는 화면 사이에서 공유되어 매번 다시 묻지 않습니다.</p>
-        </div>
-
-        <div class="feature" id="feat-insights">
-          <h3>🏆 실거래가 랭킹·📈 시세 추이·📅 청약 캘린더 <span class="opt">(현재 메뉴에서 내려둠)</span></h3>
-          <div class="tip tip-warn">📌 실거래가·LH청약 화면이 <strong>지금 앱 메뉴에 없어</strong> 아래 기능도 이용할 수 없습니다. 다시 켤 때를 위해 설명만 남겨 둡니다.</div>
-          <ul>
-            <li><strong>이번 달 랭킹</strong>: 조회한 지역의 최고가 TOP·거래량 TOP 단지를 집계해 보여줍니다.</li>
-            <li><strong>시세 추이(6개월)</strong>: 선택 지역의 월별 평균 시세를 막대그래프로 — 흐름을 한눈에.</li>
-            <li><strong>LH 청약 마감일 저장</strong>: 공고의 “📅 마감일 저장”으로 <code>.ics</code> 파일을 내려받아 캘린더에 담고 하루 전 알림을 받을 수 있습니다.</li>
-          </ul>
         </div>
 
         <div class="feature" id="feat-servicemap">

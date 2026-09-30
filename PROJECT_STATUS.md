@@ -4,7 +4,7 @@
 > - **위치(절대경로)**: `C:\Users\GB\Documents\gong-medical-app`
 > - **GitHub**: `cslis07/gong-medical-app` · 기본 브랜치 `main`
 > - **배포**: https://gong-medical-app.vercel.app · **Vercel(cslis07 계정)**, `vercel --prod --yes` CLI 직접 배포
-> - **규모**: 순수 HTML+vanilla JS(빌드툴 없음). 첫 화면 **🏠 홈 허브** + 탭 **활성 10 / 숨김 6** · API 핸들러 `lib/*.js` 16종(단일 catch-all 함수 1개) · 프론트 `js/*.js` 7개 · 빌드 스냅샷 `data/*.js` 4개 · 빌드 스크립트 `scripts/*.mjs` 4개
+> - **규모**: 순수 HTML+vanilla JS(빌드툴 없음). 첫 화면 **🏠 홈 허브** + 탭 **10개**(2026-09-30에 안 쓰던 6개 완전 삭제) · API 핸들러 `lib/*.js` 10종(+유틸 3, 단일 catch-all 함수 1개) · 프론트 `js/*.js` 7개 · 빌드 스냅샷 `data/*.js` 4개 · 빌드 스크립트 `scripts/*.mjs` 4개
 > - ⚠️ **날짜**: 이 머신 git 시계가 실제보다 **~20일 뒤처짐**. 실제 오늘 = **2026-09-02**(Vercel 헤더·E-Gen 실시간 확인). 문서의 08월 날짜는 기계 시계 탓 — 실제는 09-02 무렵. 날짜는 외부 시계 기준으로 적을 것([[env-git-clock-behind]]).
 
 ---
@@ -15,6 +15,7 @@
 >
 > ⚠️ **이 머신의 git·파일 mtime 시계가 실제보다 며칠 뒤처진다**(2026-08-12 실측: 커밋은 08-07로 찍힘, Vercel 응답 헤더·`Get-Date`는 08-12). 문서에 날짜를 적을 땐 `git log`가 아니라 **`Get-Date`나 외부 시계**를 기준으로 할 것. 커밋 타임스탬프 자체는 되돌리지 않았다(푸시된 이력 재작성 안 함).
 
+- **직전 작업(2026-09-30)**: ①**꺼둔 탭 6개 완전 삭제**(실거래가·미세먼지·시내버스·LH청약·로또·분실물) — `data-off` 숨김이 아니라 프론트·백엔드·`lib/` 파일·문서에서 제거. 활성 **10개**만 남음. 삭제 식별자 참조 0·`node --check` 통과·스모크(탭10/삭제API 404/유지API 200). ②**오류 메시지 친화화** — 상태줄이 영문 원문(`Failed to fetch`)을 노출하던 걸 `friendlyErr()`로 한국어화(services.js 상태줄·retryBox + app.js). 백엔드는 이미 양호(타임아웃 10~14초·`errorMessage()` 정제). ③**KOBUS 검토→보류**(TAGO 고속버스 API는 미승인+정리 방향과 상충). ④GA4 방문측정은 **대기**(측정 도구·ID 결정 필요). CHANGELOG 2026-09-30 참고. ⚠️ 삭제 기능 dead CSS는 남겨둠(무해).
 - **직전 작업(2026-09-03)**: **📱 안드로이드 APK(TWA) 제작**. 배포 URL 로드형이라 웹 콘텐츠는 자동 반영, 아이콘·스플래시만 재빌드. `app.vercel.gong_medical_app.twa`. **서명키 `Documents\키스토어\gong-medical-app-twa.jks`(pass gonglife2026, SHA256 DB:49:DA:…:C0:FE) 반드시 보존**(다른 키면 업데이트 설치 거부). 전체화면용 `.well-known/assetlinks.json` 신설·배포됨. 산출 `Documents\gong-medical-app.apk`. 재빌드 절차는 메모리 [[reference_gong_medical_apk]]·[[reference_twa_apk_build]].
 - **직전 세션 작업(2026-08-12)**: **🏠 홈 허브 신설 + 상단 군더더기 제거 — 첫 화면 리뉴얼**. 이전엔 첫 화면이 곧 지하철 탭이었고 나머지는 카테고리를 눌러야 보였다(주차장 = 2클릭, 무엇이 있는지 첫 화면에 없음). 이제 홈이 기본 패널이고 **살아 있는 탭 8개 전부가 1클릭**. 약보듬(`C:\Users\GB\Documents\yakbodeum`) 홈 허브 구조를 참고했다. 이어서 사용자 요청으로 **헤더 큰 제목·소개문구 + 카테고리 바·서브탭 줄을 제거**(홈 브랜드 블록과 중복 + 모바일 첫 화면 잠식). 첫 화면 기준 헤더 161→68px, 본문 시작 245→96px. 그 직전엔 탭 6개 숨김(`data-off`), 그 앞은 야간진료 탭 신규.
 - **이어서(3차)**: 리뉴얼이 어긋나게 만든 주변 3건 정리 — ①`guide.html`이 없어진 카테고리 UI를 안내하고 있었음(화면 구성 전면 교체 + 🏥야간진료 가이드 신설 + 옛 앱 이름 정리) ②`favorites.js` `PANELS`에 `clinic`·`nearby`가 없어 홈 히어로 4개 중 2개에 ⭐·🔗가 안 떴음 ③`title`·`og`가 꺼진 기능(실거래가·미세먼지·시내버스·LH청약)을 광고하고 있었음. **탭을 다시 켜면 §SEO 문구도 같이 되돌릴 것.**
@@ -51,28 +52,22 @@
 - **헤더도 제목·소개문구 없이 버튼줄만**(`.app-header.slim`). `<h1>`은 지우지 않고 `.sr-only`로 화면에서만 감췄다 — 검색엔진·스크린리더용. 홈 브랜드 블록이 눈에 보이는 제목 역할.
 - 딥링크는 그대로다(`#gas` 등으로 들어오면 홈을 건너뛰고 해당 탭). 해시 없으면 홈.
 
-### 탭 (활성 8 · 숨김 6)
+### 탭 (활성 10)
 
-| 탭 | 상태 | 기능 | 데이터 소스 | 키 |
-|---|---|---|---|---|
-| 🚇 지하철 | 활성 | 노선도→역 검색→도착·위치·첫막차·최단경로·편의시설·승하차·공기질 종합 모달 | 서울 열린데이터 | SEOUL_API_KEY / SEOUL_REALTIME_KEY |
-| 🚲 따릉이 | 활성 | 주변 대여소 실시간 자전거·거치대(정렬: 거리/자전거많은순) | 서울 bikeList | SEOUL_API_KEY |
-| 🛣️ 고속도로 | 활성 | 휴게소 / 실시간 소통 / **실시간 돌발·문자** / **구간 실시간 소요시간** | 한국도로공사 EX | EX_API_KEY |
-| 📍 내주변 | 활성 | 현위치 기준 주유소·따릉이·주차장 상위3 통합(버스 그룹은 시내버스 숨김에 맞춰 제거) | 위 소스 병렬 | 상동 |
-| 🅿️ 주차장 | 활성 | 전국 17,768곳 가까운 순 + 서울 일부 실시간 잔여면수 · 서버 페이지네이션 | 서울 GetParkInfo/Info · 표준데이터 스냅샷 | SEOUL_API_KEY / DATA_API_KEY |
-| 🏥 야간진료 | 활성 | 반경 내 야간(오늘 종료 ≥선택시각) 병의원 · 지금진료중·거리·전화·지도 · 종류(일반의원/치과/한의원)·야간기준·반경 필터 | 국립중앙의료원 E-Gen 스냅샷 | DATA_API_KEY |
-| 💊 문연약국 | 활성 | 내 주변 약국 거리순 · 오늘 영업시간·지금 열림 우선·전화·지도(공휴일 지킴이약국 포함) | E-Gen `getParmacyLcinfoInqire`(좌표 실시간, **스냅샷 없음**) | DATA_API_KEY |
-| 🚑 응급실 | 활성 | 가까운 응급실 + **실시간 가용병상**(음수=포화)·CT·MRI·인공호흡기·갱신시각 · 여유만 필터 | E-Gen `getEgytLcinfoInqire`+`getEmrrmRltm…`(hpid 조인) | DATA_API_KEY |
-| 👥 혼잡도 | 활성 | 서울 핫스팟 120여곳 실시간 인구·혼잡도·성별/연령 | citydata_ppltn | SEOUL_API_KEY |
-| ⛽ 주유소 | 활성 | 반경 최저가(정렬: 가격/거리) + 전국 평균유가 바 + **최근 7일 유가추이 스파크라인** | Opinet | OPINET_API_KEY |
-| 🚏 시내버스 | **숨김** | 주변 정류소→실시간 도착 | 국토부 TAGO | DATA_API_KEY |
-| 🏠 실거래가 | **숨김** | 매매/전세/월세/분양권 · 단지명·가격 필터 · 시세추이 · 신고가 랭킹 · 전량수집 | 국토부 RTMS | DATA_API_KEY |
-| 🏘️ LH청약 | **숨김** | LH 공고(지역·상태 필터, .ics) / 공공임대 단지 | LH · 마이홈 | DATA_API_KEY |
-| 😷 미세먼지 | **숨김** | 측정소 PM10/PM2.5 + 오늘/내일/모레 예보 + WHO토글 + 헤더 배지 | 에어코리아 | DATA_API_KEY |
-| 🎰 로또 | **숨김** | 회차 당첨번호·등수 계산·자동생성 | smok95 CDN 미러 | 불필요 |
-| 🧳 분실물 | **숨김** | LOST112·서울교통공사 조회 조건 정리 + 공식 링크 | — | 불필요 |
+| 탭 | 기능 | 데이터 소스 | 키 |
+|---|---|---|---|
+| 🚇 지하철 | 노선도→역 검색→도착·위치·첫막차·최단경로·편의시설·승하차·공기질 종합 모달 | 서울 열린데이터 | SEOUL_API_KEY / SEOUL_REALTIME_KEY |
+| 🚲 따릉이 | 주변 대여소 실시간 자전거·거치대(정렬: 거리/자전거많은순) | 서울 bikeList | SEOUL_API_KEY |
+| 🛣️ 고속도로 | 휴게소 / 실시간 소통 / **실시간 돌발·문자** / **구간 실시간 소요시간** | 한국도로공사 EX | EX_API_KEY |
+| 📍 내주변 | 현위치 기준 주유소·따릉이·주차장 상위3 통합 | 위 소스 병렬 | 상동 |
+| 🅿️ 주차장 | 전국 17,768곳 가까운 순 + 서울 일부 실시간 잔여면수 · 서버 페이지네이션 | 서울 GetParkInfo/Info · 표준데이터 스냅샷 | SEOUL_API_KEY / DATA_API_KEY |
+| 🏥 야간진료 | 반경 내 야간(오늘 종료 ≥선택시각) 병의원 · 지금진료중·거리·전화·지도 · 종류·야간기준·반경 필터 | 국립중앙의료원 E-Gen 스냅샷 | DATA_API_KEY |
+| 💊 문연약국 | 내 주변 약국 거리순 · 오늘 영업시간·지금 열림 우선·전화·지도(공휴일 지킴이약국 포함) | E-Gen `getParmacyLcinfoInqire`(좌표 실시간, **스냅샷 없음**) | DATA_API_KEY |
+| 🚑 응급실 | 가까운 응급실 + **실시간 가용병상**(음수=포화)·CT·MRI·인공호흡기·갱신시각 · 여유만 필터 | E-Gen `getEgytLcinfoInqire`+`getEmrrmRltm…`(hpid 조인) | DATA_API_KEY |
+| 👥 혼잡도 | 서울 핫스팟 120여곳 실시간 인구·혼잡도·성별/연령 | citydata_ppltn | SEOUL_API_KEY |
+| ⛽ 주유소 | 반경 최저가(정렬: 가격/거리) + 전국 평균유가 바 + **최근 7일 유가추이 스파크라인** | Opinet | OPINET_API_KEY |
 
-> **숨김 처리**(2026-08, 사용자 요청): 위 6개 탭은 삭제가 아니라 **`data-off="1"` + CSS `.toptab[data-off]{display:none}`**. `panelNames()`/`firstTabOfCat()`가 `:not([data-off])`로 걸러 네비·해시(`#air` 등)로도 안 열림. **패널·핸들러·favorites/map/refresh 등록은 그대로 살아 있음** → `index.html`에서 해당 `<button>`의 `data-off`만 지우면 즉시 복구. 헤더 미세먼지 배지(`/api/air?op=metro`)는 탭과 별개라 계속 동작.
+> **삭제된 6개**(2026-09-30, 사용자 요청): 시내버스·실거래가·LH청약·미세먼지·로또·분실물. 이전엔 `data-off`로 숨김만 했다가 이날 **프론트·백엔드·`lib/`·문서에서 완전 제거**. 되살리려면 git 이력(이 커밋 이전)에서 복원해야 한다. 헤더 미세먼지 배지도 함께 제거됨.
 
 ### 공통 기능·UI (코드에 안 적힌 맥락 위주)
 - **디자인 토큰**: `css/style.css` 전부 CSS 변수 기반. 라이트/다크 자동(`prefers-color-scheme`) + 헤더 토글(`js/theme.js`, auto→light→dark). 배경은 **민무늬**(워터마크 제거됨, 가독성 우선).
@@ -90,7 +85,7 @@
 | 경로 | 역할 |
 |---|---|
 | `api/[service].js` | 단일 catch-all 라우터(Vercel 함수 1개) → `lib/` 동적 import 위임 + 서비스별 CDN 캐시 표 |
-| `lib/subway.js` `density.js` `lotto.js` `gas.js` `bike.js` `highway.js` `realestate.js` `air.js` `citybus.js` `parking.js` `lh.js` `myhome.js` `geocode.js` | 서비스별 API 핸들러 |
+| `lib/subway.js` `density.js` `gas.js` `bike.js` `highway.js` `parking.js` `geocode.js` `clinic.js` `pharmacy.js` `emergency.js` | 서비스별 API 핸들러 10종 (2026-09-30에 lotto·realestate·air·citybus·lh·myhome 삭제) |
 | ★ `lib/clinic.js` | 야간진료 병의원 — 스냅샷 좌표 반경 필터, HANDLERS에 `clinic` 등록 |
 | ★ `lib/pharmacy.js` | 문 연 약국 — E-Gen 좌표 API(거리순+오늘 영업시간). **스냅샷 없음** |
 | ★ `lib/emergency.js` | 응급실 실시간 — 좌표 근처(Egyt)+시도 실시간병상(Rltm) hpid 조인 |
@@ -124,13 +119,13 @@
 ## 4. 남은 작업
 
 ### 진행 대기 (외부 요인)
-- [ ] **공공임대 단지(SH 포함)** — `myhome/rentalHouseList` 구현 완료했으나 ①키 미전파(code 30) ②마이홈이 Vercel IP 차단. 현재 `{pending:true}` degrade. *왜: 키 전파+IP 이슈 미해결. LH청약 탭 숨김 상태라 우선순위 낮음.*
+- ~~**공공임대 단지(SH 포함)**~~ — LH청약 탭이 2026-09-30 삭제되며 `myhome` 핸들러도 함께 제거. 항목 종료(필요 시 git 이력에서 복원).
 
 ### 선택 (여력 될 때)
 - [ ] **`DATA_API_KEY` GitHub 시크릿 등록(선택)** — 넣으면 월 1회 스냅샷 자동 갱신 시작. 없어도 워크플로는 조용히 건너뛰므로(실패·메일 없음) 급하지 않다. 안 넣으면 스냅샷은 세션 때 손으로 `npm run build:*`. *왜 아직 안 함: 키 등록은 사용자 몫. 2026-08-12에 CLI 로 시도했으나 histobio 계정으로 403 — 웹 UI 또는 `gh auth switch --user cslis07` 후 재시도.*
 - ~~`VERCEL_TOKEN`~~ — 사용자가 안 쓰기로 결정(2026-08-12). 배포는 Claude 수동.
 - [ ] **택배 조회(CJ 무응답)·공공와이파이·관광 TourAPI·날씨(기상청)** — 활용신청 시 추가 가능. *왜: 신규 소스 우선순위 밀림.*
-- [ ] **미사용 dead CSS 정리** — 숨긴 탭 관련 스타일 등. *왜: 기능 영향 없어 후순위.*
+- [ ] **미사용 dead CSS 정리** — 2026-09-30 삭제한 6개 탭 전용 스타일(`.lotto-ball`·`.lost-table`·`.dust-*`·`.forecast`·`.fc-*`·`.re-*`·`.rank-*`·`.trend-*`·`.cb-*`·`.lh-*`)이 `css/style.css`에 남아 있다. 선택자가 남은 DOM과 안 맞아 **무해**하지만 정리 대상. *왜: 기능 영향 없어 후순위, 공용 클래스와 섞일 위험 있어 조심히.*
 
 ### 완료(기록 보존)
 - [x] 주차장 전국 확대(2026-07-10) · 광주 지역코드 복구(2026-07-16, §7) · 야간진료 탭(2026-08) · 탭 6개 숨김(2026-08) · 홈 허브 리뉴얼(2026-08-12) · **스냅샷 신선도 자동화(2026-08-12, `.github/workflows/refresh-snapshots.yml` 월 1회)**
@@ -257,12 +252,9 @@ curl -s "https://gong-medical-app.vercel.app/api/parking?lat=37.5663&lon=126.977
 | `/api/pharmacy` | `lat&lon&limit` | E-Gen getParmacyLcinfoInqire — 거리순+오늘 영업시간(start/end). '지금 열림'은 프론트 계산 |
 | `/api/emergency` | `lat&lon&limit` | Egyt(좌표 근처)+Rltm(시도 실시간병상) hpid 조인. `hvec` 음수=포화 |
 | `/api/density` | `area=강남역` | citydata_ppltn(5분 주기, 새벽 미제공) |
-| `/api/air` | `sido=서울` \| `op=metro` | 에어코리아. 예보는 어제·오늘 발표 병합, informCode 필터 |
-| `/api/realestate` | `type=trade\|rent\|silv&lawd&ym` | RTMS 전량수집(동시성20, 상한30p). 행정개편 시 LAWD 하드코딩 갱신 |
-| `/api/citybus` | `op=near\|arrival` | TAGO |
-| `/api/lh` | `name&region&status&type&from&to` | LH(전량수집 동시성4, 상한40p) |
-| `/api/myhome` | `brtc&signgu&size` | 마이홈(현재 pending, Vercel IP 차단) |
-| `/api/geocode` | `q=주소` | vworld→실패시 Nominatim |
+| `/api/geocode` | `q=주소` | vworld→실패시 Nominatim (위치 탭들의 주소→좌표) |
+
+> 2026-09-30 삭제: `/api/air` `realestate` `citybus` `lh` `myhome`(탭 6개 삭제와 함께). 이제 라우터에 없어 **404**.
 
 > **외부 의존 공통 함정**: ①대부분 일일 트래픽 1,000회 → CDN 캐시가 유일 방어선 ②위치/지역 필터 없는 API(주차장·야간진료·영업소)는 **빌드타임 스냅샷** 패턴 ③data.go.kr는 API별 활용신청 필요하나 이 계정은 위 전부 승인됨(E-Gen도 기존 키로 됨) ④EX는 키 하나로 전 OpenAPI.
 
@@ -281,10 +273,9 @@ curl -s "https://gong-medical-app.vercel.app/api/parking?lat=37.5663&lon=126.977
    - `lib/kotsa-parking.js`, `data/parking-kotsa.js` — 진단(`/api/parking?diag=1`)에 쓰인다. **켜지는 일은 없다**(§10 참고 — 백엔드는 회복했으나 데이터 규모 때문에 구조적으로 불가).
    - `data/night-clinics.js`(10MB), `data/parking-nationwide.js`(4.5MB), `data/ex-tollgates.js` — **빌드 산출 스냅샷, 재생성 수분 소요**. 커밋 대상.
    - `lib/respond.js`의 `redact()` — 정의만·미사용이나 상위 본문 인용 대비 잔존.
-   - **숨긴 탭 6개의 패널·핸들러**(citybus/realestate/lh/air/lotto/lost) — `data-off`로 숨김일 뿐. 삭제하면 복구 불가.
-7. **홈 허브 카드를 `index.html`에 손으로 박지 말 것** — `renderHub()`가 `.toptab` 목록에서 만든다. HTML에 박으면 탭을 숨겼는데 홈 카드는 남는 «유령 진입로»가 생긴다. 카드 문구·색만 `js/services.js`의 `HUB` 표에서 고칠 것. (§2 홈 허브)
-8. **`.subtabs` 안의 `.toptab` 버튼을 «안 보인다고» 지우지 말 것** — 2026-08-12부터 화면에 없지만(카테고리 바·서브탭 줄 제거) **홈 카드의 원본 목록이자 `data-off` 계약의 근거**다. 지우면 홈 화면이 통째로 빈다. 같은 이유로 `showCategory()`·`firstTabOfCat()`도 현재 미사용이지만 남겨 뒀다.
-9. **행정구역 코드(`js/services.js` `LAWD`) 임의 수정 금지** — 실조회 검증 없이 바꾸면 조회 0건. 개편 시 §7 방식(프로브)으로 검증 후 반영.
+   - ~~숨긴 탭 6개의 패널·핸들러~~ — **2026-09-30 완전 삭제됨**(§2). 이 항목은 더 이상 유효하지 않다.
+7. **홈 허브 카드를 `index.html`에 손으로 박지 말 것** — `renderHub()`가 `.toptab` 목록에서 만든다. 카드는 «화면에 없는» `.subtabs`의 `.toptab` 버튼 목록(현재 10개)이 유일한 원본 → 카드를 추가/삭제하려면 그 `.toptab` 버튼을 추가/삭제한다. HTML에 카드를 직접 박으면 «유령 진입로»가 생긴다. 문구·색만 `js/services.js` `HUB` 표에서. (§2 홈 허브)
+8. **행정구역 코드(`js/services.js` `LAWD`) 임의 수정 금지** — 실거래가 탭은 삭제됐으므로 `LAWD`도 함께 제거됐다(이 항목은 참고용 이력). 향후 지역 기반 기능을 다시 넣으면 §7 방식(프로브)으로 검증 후 반영.
 
 ---
 
@@ -292,7 +283,7 @@ curl -s "https://gong-medical-app.vercel.app/api/parking?lat=37.5663&lon=126.977
 
 - **공연 잔여석** — 인터파크 NOL 개편으로 이름검색이 SPA HTML만 반환, 유효 goodsCode 확보 불가. → 공개 API 없음.
 - **대중교통 길찾기(ODsay)** — 키 발급 + 호출 IP 화이트리스트 필요. Vercel IP 유동이라 불가.
-- **공공임대(마이홈)** — 마이홈이 Vercel 데이터센터 IP 차단(로컬만 됨). 키 전파 이슈까지 겹쳐 pending degrade.
+- ~~**공공임대(마이홈)**~~ — LH청약 탭과 함께 2026-09-30 삭제(코드 제거). 마이홈 IP 차단 이슈는 이제 무관.
 - **공단 실시간 주차면수 — 접음(2026-08-12 실측 후 결론)**. 백엔드는 **회복했다**(`/api/parking?diag=1` → `backend.alive:true`, 세 오퍼레이션 모두 응답). 문제는 다른 데 있었다.
   - `PrkSttusInfo`(시설) **totalCount 1,767,934** · `PrkRealtimeInfo` 787,235. 1페이지 1,000건 × ~0.6초 → 전량 1,400페이지 이상, **한 번 굽는 데 15분+ · 파일 수십 MB**. 커밋도 배포도 불가한 크기.
   - **서버측 필터가 없다.** `prk_plce_adres_sido`·`sigungu`·`prk_center_id` 를 붙여도 `totalCount` 가 1,767,934 로 **불변**(전부 무시됨). 지역만 뽑아 줄일 방법이 없다.

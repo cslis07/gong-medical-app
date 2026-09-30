@@ -9,16 +9,10 @@
 const HANDLERS = {
   subway: () => import("../lib/subway.js"),
   density: () => import("../lib/density.js"),
-  lotto: () => import("../lib/lotto.js"),
   gas: () => import("../lib/gas.js"),
   bike: () => import("../lib/bike.js"),
   highway: () => import("../lib/highway.js"),
-  realestate: () => import("../lib/realestate.js"),
-  air: () => import("../lib/air.js"),
-  citybus: () => import("../lib/citybus.js"),
-  lh: () => import("../lib/lh.js"),
-  geocode: () => import("../lib/geocode.js"),
-  myhome: () => import("../lib/myhome.js"),
+  geocode: () => import("../lib/geocode.js"),   // 위치 탭들의 주소→좌표 변환에 쓰임(단독 유지)
   parking: () => import("../lib/parking.js"),
   clinic: () => import("../lib/clinic.js"),
   pharmacy: () => import("../lib/pharmacy.js"),
@@ -28,26 +22,18 @@ const HANDLERS = {
 // Vercel Edge 캐시(s-maxage)는 **사용자 간에 공유**된다.
 // 이 앱은 인증이 없고 응답이 요청자에 따라 달라지지 않으므로 안전하고,
 // 상위 공공 API 일일 트래픽 한도(보통 1,000회)를 지키는 유일한 실질적 방어선이다.
-// 예: /api/realestate 요청 1건 = RTMS 최대 30회 호출 → 캐시가 없으면 33요청에 하루치 소진.
+// 위치 기반 조회는 좌표가 같으면 같은 답이라 CDN 캐시가 잘 듣는다.
 //
 // [초, s-maxage] · stale-while-revalidate는 만료 후에도 낡은 응답을 주며 뒤에서 갱신
 const CACHE = {
-  // 확정·불변에 가까운 것
-  lotto: (q) => (q.round && q.round !== "latest" ? [604800, 604800] : [600, 1800]),
-  // 원본 갱신이 느린 것
-  realestate: () => [1800, 3600],
-  lh: () => [1800, 3600],
   geocode: () => [86400, 86400],
   gas: (q) => (q.op === "recent" ? [3600, 7200] : q.op === "avg" ? [3600, 7200] : [300, 600]),
   // 휴게소·영업소목록은 불변에 가깝고, 소통·돌발·구간소요시간은 실시간이라 짧게
   highway: (q) => (q.op === "rest" || q.op === "tollgates" ? [3600, 7200] : [60, 180]),
-  air: () => [600, 1200],
-  myhome: () => [1800, 3600],
   // 위치 기반이지만 좌표가 같으면 같은 답. 실시간 잔여면(live=1)은 더 짧게.
   parking: (q) => (q.diag === "1" ? [0, 0] : q.live === "1" ? [30, 120] : [60, 300]),
   subway: (q) => (q.kind === "mapData" ? [86400, 86400] : [30, 60]),
   bike: () => [60, 120],
-  citybus: (q) => (q.op === "near" ? [600, 1200] : [20, 60]),
   // 실시간 인구 — 원본이 5분 주기
   density: () => [120, 300],
   // 야간진료: 좌표 같으면 같은 답(스냅샷). '지금 진료중'은 프론트가 계산해 stale 무관

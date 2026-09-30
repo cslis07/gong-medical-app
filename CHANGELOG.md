@@ -12,6 +12,34 @@
 > 그 이전 이력(2026-06 공공의료 앱 → 지하철 전용 개편 → 생활서비스 확장 → data.go.kr 대량 확장
 > → 탭 정리·야간진료 추가)은 **`git log`에만** 있다. 배포는 `vercel --prod --yes` CLI 수동.
 
+## 2026-09-30 — 🧹 꺼둔 탭 6개 완전 삭제 · 오류 메시지 친화화
+
+### 안 쓰던 탭 6개 삭제 (사용자 요청)
+오래 `data-off`로 꺼두었던 **실거래가·미세먼지·시내버스·LH청약·로또·분실물**을 코드에서 완전히 제거했다.
+숨김이 아니라 삭제 — 프론트·백엔드·문서 전반. 활성 탭은 **10개**(지하철·따릉이·고속도로·내주변·주차장·
+야간진료·문연약국·응급실·혼잡도·주유소).
+- `index.html`: `.toptab` 버튼 6 + `<section>` 패널 6 + 헤더 미세먼지 배지 제거.
+- `js/services.js`: 해당 검색 로직·이벤트 배선·`HUB` 항목 6·`initServices` 호출 5·내주변 addrTarget의 citybus
+  제거. 삭제 블록 안에서만 쓰이던 헬퍼(`won`·`collectWarning`·`eok`·`airGradeOf`·`SIDOS`·ics 등)도 함께.
+  공용 헬퍼(`renderPager`·`clearPager`·`scrollToResults`·`geocode`)는 남는 탭이 써서 보존.
+- `js/favorites.js`(PANELS·PANEL_LABEL), `js/map.js`(citybus 핀), `api/[service].js`(HANDLERS·CACHE에서 6종),
+  `manifest.webmanifest`(설명·바로가기), `guide.html`(분실물·실거래가 섹션·안내문·목차).
+- `lib/` 핸들러 6개 파일 삭제(lotto·realestate·air·citybus·lh·myhome). `geocode`는 위치 탭들이 써서 유지.
+- 검증: 전 JS `node --check` 통과 · 삭제 식별자 참조 0 · 로컬 스모크(탭 10 · 삭제 API 404 · 유지 API 200).
+- ⚠️ 남은 것: 삭제 기능 전용 **dead CSS**(.lotto-ball·.dust-*·.re-*·.lh-* 등)는 무해해서 두었다(후속 정리 대상).
+
+### 오류·타임아웃 사용자 메시지 친화화
+API 오류 시 상태줄이 브라우저 원문(`Failed to fetch` 등 영문)을 그대로 노출하던 것을 한국어로 바꿨다.
+- `friendlyErr()` 신설 — abort/timeout·network·JSON파싱 오류를 사람이 읽는 문구로 매핑.
+- services.js 상태줄 10곳 + `retryBox`, app.js `showError`·모달·노선도 catch까지 전부 이걸 쓰게 통일.
+- 백엔드는 이미 양호: 모든 핸들러가 **10~14초 `AbortSignal.timeout`**(60초 maxDuration 전에 끊음),
+  오류는 `errorMessage()`로 정제(키·원문 미노출). 이번엔 프론트 표시 문구만 손봤다.
+
+### KOBUS 고속버스 대안 검토 (결론: 보류)
+KOBUS 직접 스크래핑은 Vercel 데이터센터 IP 차단(구조적). 우회 후보인 **data.go.kr TAGO 고속버스 API**
+(`1613000/ExpBusInfoService`)는 IP 차단은 없지만 이 키가 **미승인**(`NO_OPENAPI_SERVICE_ERROR` 코드 12) —
+쓰려면 활용신청이 필요하다. 게다가 이번에 시내버스 탭을 지운 «정리» 방향과 어긋나 **되살리지 않기로**.
+
 ## 2026-09-03 — 📱 안드로이드 APK (TWA)
 
 배포 사이트를 로드하는 **서명된 TWA APK** 제작. `app.vercel.gong_medical_app.twa`, 1.1MB.

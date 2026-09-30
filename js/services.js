@@ -86,9 +86,7 @@ byId("backHome")?.addEventListener("click", () => switchPanel(HOME));
 
 // ---------- 🏠 홈 허브 ----------
 // 카드에 붙일 설명·대표색. key = .toptab 의 data-panel.
-// ⚠️ 무엇을 뿌릴지 정하는 건 이 표가 아니라 index.html 의 .toptab 목록이다.
-//    data-off 로 숨긴 탭은 toptabEls()에서 빠지므로 홈 카드도 같이 사라진다
-//    (탭을 되살리면 카드도 저절로 돌아온다 — 양쪽을 따로 손댈 필요 없음).
+// ⚠️ 무엇을 뿌릴지 정하는 건 이 표가 아니라 index.html 의 .toptab 목록이다(renderHub 가 읽음).
 // hero: 1 이면 위쪽 «자주 찾는 정보» 큰 카드에도 함께 노출한다.
 const HUB = {
   subway:     { hue: "#2f5fe0", hero: 1, desc: "노선도에서 역을 눌러 실시간 도착·첫차막차까지" },
@@ -101,12 +99,6 @@ const HUB = {
   bike:       { hue: "#0891b2", desc: "주변 대여소의 남은 자전거·거치대" },
   highway:    { hue: "#475569", desc: "휴게소·실시간 소통·돌발·구간 소요시간" },
   density:    { hue: "#db2777", desc: "서울 주요 장소의 실시간 인구 혼잡도" },
-  citybus:    { hue: "#0d9488", desc: "주변 정류소의 버스 실시간 도착" },
-  realestate: { hue: "#9333ea", desc: "아파트 매매·전월세 실거래가와 시세 추이" },
-  lh:         { hue: "#0369a1", desc: "LH 공고와 공공임대 단지" },
-  air:        { hue: "#65a30d", desc: "측정소 미세먼지와 오늘·내일 예보" },
-  lotto:      { hue: "#ca8a04", desc: "회차별 당첨번호·등수 확인" },
-  lost:       { hue: "#78716c", desc: "분실물 조회처 안내" },
 };
 function renderHub() {
   const hero = byId("hubHero"), all = byId("hubAll");
@@ -198,12 +190,21 @@ document.querySelectorAll(".toptab").forEach((b) => b.addEventListener("click", 
 byId("gasProd").addEventListener("change", () => { gasTrendProd = null; loadGasTrend(); });
 
 // 오류 재시도 박스 (app.js showError와 동일 톤)
+// 브라우저·네트워크 오류 원문(대개 영문)을 사람이 읽는 한국어로 바꾼다.
+// e.message("Failed to fetch"/"The operation was aborted" 등)를 사용자에게 그대로 노출하지 않기 위함.
+function friendlyErr(e) {
+  const m = String((e && e.message) || e || "");
+  if (/abort|timeout|시간 ?초과|지연/i.test(m)) return "서버 응답이 지연돼 중단했어요. 잠시 후 다시 시도해 주세요.";
+  if (/Failed to fetch|NetworkError|net::|load failed|network|연결/i.test(m)) return "네트워크 연결이 불안정해요. 연결을 확인하고 다시 시도해 주세요.";
+  if (/JSON|Unexpected token|parse/i.test(m)) return "서버 응답을 읽지 못했어요. 잠시 후 다시 시도해 주세요.";
+  return m ? `일시적인 오류가 발생했어요. (${m})` : "일시적인 오류가 발생했어요.";
+}
 function retryBox(resultsId, msg, retryFn) {
   if (window.GongMap) GongMap.clearByResults(resultsId);   // 오류 시 이전 지도 핀/토글 제거
-  const timeout = /시간 초과|timeout|Failed to fetch|network/i.test(msg);
+  const timeout = /시간 ?초과|timeout|Failed to fetch|network|abort|지연/i.test(msg);
   byId(resultsId).innerHTML =
     `<div class="retry-box"><div class="retry-ico">${timeout ? "⏱️" : "⚠️"}</div>
-      <p class="retry-msg">${E(timeout ? "서버 응답이 지연되고 있습니다." : msg)}</p>
+      <p class="retry-msg">${E(friendlyErr({ message: msg }))}</p>
       <p class="retry-sub">외부 공공/공식 서비스가 일시적으로 불안정할 수 있습니다.</p>
       <button class="search-btn retry-btn">🔄 다시 시도</button></div>`;
   const btn = byId(resultsId).querySelector(".retry-btn");
@@ -264,7 +265,7 @@ async function searchDensity() {
     if (!rows.length) return endEmpty("densResults", "densStatus", `'${area}' 실시간 데이터가 없습니다. 목록의 정확한 장소명으로 다시 시도하세요.`, "warn");
     setBox("densStatus", `${rows.length}곳 · ${kstClock()} 기준`, "ok");
     byId("densResults").innerHTML = rows.map(renderDensity).join("");
-  } catch (e) { setBox("densStatus", `오류: ${e.message}`, "error"); retryBox("densResults", e.message, searchDensity); }
+  } catch (e) { setBox("densStatus", friendlyErr(e), "error"); retryBox("densResults", e.message, searchDensity); }
 }
 function renderDensity(it) {
   const lv = DENSITY_LEVEL[it.level] || "warn";
@@ -287,109 +288,6 @@ function renderDensity(it) {
 byId("densBtn").addEventListener("click", searchDensity);
 byId("densQ").addEventListener("keydown", (e) => { if (e.key === "Enter") searchDensity(); });
 byId("densQ").addEventListener("change", searchDensity); // datalist 선택 시
-
-// ==================== 🧳 지하철 분실물 (안내형) ====================
-const LOST112 = "https://www.lost112.go.kr/find/findList.do";
-const SEOULMETRO_LOST = "https://www.seoulmetro.co.kr/kr/page.do?menuIdx=541";
-function searchLost() {
-  const stn = byId("lostStn").value.trim();
-  const item = byId("lostItem").value.trim();
-  const days = Number(byId("lostDays").value || 14);
-  const end = new Date(Date.now() + 9 * 3600e3);
-  const start = new Date(end.getTime() - days * 864e5);
-  const f = (d) => `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
-  setBox("lostStatus", "공식 조회 조건을 정리했습니다.", "ok");
-  byId("lostResults").innerHTML = `
-    <article class="card">
-      <h3>🧳 유실물 조회 조건</h3>
-      <table class="lost-table">
-        <tr><td>기관 구분</td><td>지하철·공항 등 (SITE=V)</td></tr>
-        <tr><td>보관장소/역명</td><td>${E(stn || "(미입력 — 전체)")}</td></tr>
-        <tr><td>물품명</td><td>${E(item || "(미입력 — 전체)")}</td></tr>
-        <tr><td>검색 기간</td><td>${f(start)} ~ ${f(end)} (최근 ${days}일)</td></tr>
-      </table>
-      <p class="meta">공개 자동조회 API가 확정되지 않아, 아래 공식 창구에서 위 조건으로 검색하세요. 역명으로 결과가 없으면 <strong>‘역’ 없이</strong> 또는 <strong>호선명</strong>으로 넓혀보세요.</p>
-      <div class="card-actions">
-        <a class="btn map" href="${LOST112}" target="_blank" rel="noopener">🔎 LOST112 유실물 검색</a>
-        <a class="btn tel" href="${SEOULMETRO_LOST}" target="_blank" rel="noopener">🚇 서울교통공사 유실물센터</a>
-      </div>
-    </article>
-    <article class="card">
-      <h3>📌 이용 순서</h3>
-      <ol class="lost-steps">
-        <li>LOST112에서 <strong>습득물 검색</strong> → 보관장소에 역명, 물품명 입력, 기간 지정</li>
-        <li>결과가 없으면 키워드를 넓히거나(역 제거) 호선명으로 재검색</li>
-        <li>본인 물품으로 보이면 보관 기관(역/센터)에 연락해 수령 절차 확인</li>
-        <li>지하철은 <strong>서울교통공사 유실물센터</strong>에서 호선별 보관소·연락처 확인</li>
-      </ol>
-    </article>`;
-}
-byId("lostBtn").addEventListener("click", searchLost);
-
-// ==================== 🎰 로또 ====================
-function lottoBallColor(n) {
-  if (n <= 10) return "#fbc400"; if (n <= 20) return "#69c8f2";
-  if (n <= 30) return "#ff7272"; if (n <= 40) return "#aaa"; return "#b0d840";
-}
-const lottoBall = (n, bonus = false) => `<span class="lotto-ball${bonus ? " bonus" : ""}" style="background:${lottoBallColor(n)}">${n}</span>`;
-const won = (v) => Number(v || 0).toLocaleString() + "원";
-function parseMyNumbers(s) {
-  return [...new Set((s.match(/\d+/g) || []).map(Number).filter((n) => n >= 1 && n <= 45))];
-}
-function lottoRank(matchCount, bonusHit) {
-  if (matchCount === 6) return 1;
-  if (matchCount === 5 && bonusHit) return 2;
-  if (matchCount === 5) return 3;
-  if (matchCount === 4) return 4;
-  if (matchCount === 3) return 5;
-  return 0;
-}
-async function searchLotto() {
-  const round = byId("lottoRound").value.trim();
-  const mine = parseMyNumbers(byId("lottoMine").value);
-  if (byId("lottoMine").value.trim() && mine.length !== 6)
-    return setBox("lottoStatus", "내 번호는 1~45 사이 서로 다른 6개를 입력하세요.", "warn");
-  setBox("lottoStatus", "조회 중…", "loading"); showSkeletons("lottoResults", 2);
-  try {
-    const r = await fetch(`/api/lotto?round=${encodeURIComponent(round || "latest")}`);
-    const d = await r.json();
-    if (!r.ok || !d.ok) throw new Error(d.error || `HTTP ${r.status}`);
-    setBox("lottoStatus", `${d.round}회 (${d.date})`, "ok");
-    const nums = (d.numbers || []).slice().sort((a, b) => a - b);
-    let mineBlock = "";
-    if (mine.length === 6) {
-      const set = new Set(nums);
-      const hit = mine.filter((n) => set.has(n));
-      const bonusHit = mine.includes(d.bonus);
-      const rank = lottoRank(hit.length, bonusHit);
-      mineBlock = `
-        <article class="card">
-          <div class="card-top"><h3>내 번호 결과</h3>
-            <span class="bed ${rank && rank <= 3 ? "ok" : rank ? "warn" : "full"}">${rank ? rank + "등" : "미당첨"}</span></div>
-          <div class="lotto-balls">${mine.sort((a, b) => a - b).map((n) => lottoBall(n)).join("")}</div>
-          <p class="meta">일치 ${hit.length}개${bonusHit ? " + 보너스" : ""}${hit.length ? " (" + hit.sort((a, b) => a - b).join(", ") + ")" : ""}</p>
-        </article>`;
-    }
-    const divs = (d.divisions || []).map((x) =>
-      `<li class="meta">${x.rank}등 · ${won(x.prize)} · ${Number(x.winners || 0).toLocaleString()}명</li>`).join("");
-    byId("lottoResults").innerHTML = `
-      <article class="card">
-        <div class="card-top"><h3>🎰 ${d.round}회 당첨번호</h3><span class="bed ok">${E(d.date)}</span></div>
-        <div class="lotto-balls">${nums.map((n) => lottoBall(n)).join("")}<span class="lotto-plus">+</span>${lottoBall(d.bonus, true)}</div>
-        <ul class="stats-list">${divs}</ul>
-        ${d.totalSales ? `<p class="meta">총 판매액 ${won(d.totalSales)}</p>` : ""}
-      </article>` + mineBlock;
-  } catch (e) { setBox("lottoStatus", `오류: ${e.message}`, "error"); retryBox("lottoResults", e.message, searchLotto); }
-}
-byId("lottoBtn").addEventListener("click", searchLotto);
-// 🎲 자동생성 — 1~45 무작위 6개(중복 없이)
-byId("lottoGen").addEventListener("click", () => {
-  const set = new Set();
-  while (set.size < 6) set.add(Math.floor(Math.random() * 45) + 1);
-  byId("lottoMine").value = [...set].sort((a, b) => a - b).join(", ");
-});
-byId("lottoRound").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLotto(); });
-byId("lottoMine").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLotto(); });
 
 // ==================== ⛽ 주유소 ====================
 // GPS 좌표를 탭 간에 공유한다. 주유소→따릉이→버스→주차장을 옮길 때마다 위치 권한을
@@ -434,7 +332,7 @@ async function searchGas() {
     gasCache = { rows, radius: Number(d.radius) || Number(radius), center: { lat, lon } };
     fillGasBrands(rows);
     applyGasFilter();
-  } catch (e) { setBox("gasStatus", `오류: ${e.message}`, "error"); retryBox("gasResults", e.message, searchGas); }
+  } catch (e) { setBox("gasStatus", friendlyErr(e), "error"); retryBox("gasResults", e.message, searchGas); }
 }
 // 반경 내에 실제로 존재하는 브랜드만 필터 옵션으로 채운다.
 function fillGasBrands(rows) {
@@ -487,7 +385,7 @@ async function searchBike() {
     if (!rows.length) return endEmpty("bikeResults", "bikeStatus", d.message || "주변 대여소가 없습니다.", "warn");
     bikeCache = { rows, center: { lat, lon } };
     applyBikeSort();
-  } catch (e) { setBox("bikeStatus", `오류: ${e.message}`, "error"); retryBox("bikeResults", e.message, searchBike); }
+  } catch (e) { setBox("bikeStatus", friendlyErr(e), "error"); retryBox("bikeResults", e.message, searchBike); }
 }
 function applyBikeSort() {
   const { rows, center } = bikeCache;
@@ -548,7 +446,7 @@ async function searchTravelTime() {
       <p class="meta">평균 <b>${d.timeAvg}분</b> · 최소 ${d.timeMin}분 · 최대 ${d.timeMax}분 <span class="opt">(승용차 기준)</span></p>
       <p class="meta">🔄 ${E(d.stdDate)} ${E(d.stdTime)} 기준 · 수분 단위 갱신</p>
     </article>`;
-  } catch (e) { setBox("hwStatus", `오류: ${e.message}`, "error"); retryBox("hwResults", e.message, searchTravelTime); }
+  } catch (e) { setBox("hwStatus", friendlyErr(e), "error"); retryBox("hwResults", e.message, searchTravelTime); }
 }
 async function searchHighway() {
   const mode = byId("hwMode").value;
@@ -576,7 +474,7 @@ async function searchHighway() {
       setBox("hwStatus", `휴게소 ${rows.length}곳`, "ok");
       byId("hwResults").innerHTML = rows.map(renderRestArea).join("");
     }
-  } catch (e) { setBox("hwStatus", `오류: ${e.message}`, "error"); retryBox("hwResults", e.message, searchHighway); }
+  } catch (e) { setBox("hwStatus", friendlyErr(e), "error"); retryBox("hwResults", e.message, searchHighway); }
 }
 function renderHwSms(r) {
   const acc = /사고|재난|낙하/.test(r.type), work = /공사|통제/.test(r.type), jam = /정체|서행/.test(r.type);
@@ -621,499 +519,6 @@ byId("hwQ").addEventListener("keydown", (e) => { if (e.key === "Enter") searchHi
   byId(id).addEventListener("change", () => { if (byId("ttStart").value.trim() && byId("ttEnd").value.trim()) searchTravelTime(); });
 });
 
-// ==================== 🏠 아파트 실거래가 ====================
-// 시군구 법정동코드(LAWD_CD, 5자리) — 서울 25구 + 주요 광역/경기
-//
-// ⚠️ 행정구역 개편으로 코드가 바뀐다. RTMS는 과거 거래까지 새 코드로 재색인하므로
-//    옛 코드를 쓰면 resultCode=000 / totalCount=0 (오류가 아니라 "거래 없음"처럼 보인다).
-//    아래 코드는 전부 RTMS에 직접 조회해 응답 건수를 확인한 값이다.
-//      · 부천시 41190 → 원미/소사/오정구 (구 부활)
-//      · 화성시 41590 → 만세/효행/병점/동탄구 (2026-02-01 4개 구 신설)
-//      · 인천 서구 28260 → 서해구 28275 · 검단구 28290 (2026-07-01 분구)
-//      · 전남광주통합특별시(2026-07-01): 시도 프리픽스가 29(광주)·46(전남) → "12"로 통합.
-//        시·구·군 순 재배열 — 목포 12110 / 여수 12130 / 순천 12150 / 나주 12170 / 광양 12190,
-//        광주 동구 12210 / 서구 12240 / 남구 12270 / 북구 12300 / 광산구 12330.
-//        (2026-07-16 RTMS 실조회로 동 이름까지 대조 확인. 옛 46110 목포도 0건 = 46 전체 폐기)
-const LAWD = {
-  "서울": { "종로구": "11110", "중구": "11140", "용산구": "11170", "성동구": "11200", "광진구": "11215", "동대문구": "11230", "중랑구": "11260", "성북구": "11290", "강북구": "11305", "도봉구": "11320", "노원구": "11350", "은평구": "11380", "서대문구": "11410", "마포구": "11440", "양천구": "11470", "강서구": "11500", "구로구": "11530", "금천구": "11545", "영등포구": "11560", "동작구": "11590", "관악구": "11620", "서초구": "11650", "강남구": "11680", "송파구": "11710", "강동구": "11740" },
-  "경기": { "수원 영통구": "41117", "수원 팔달구": "41115", "성남 분당구": "41135", "성남 수정구": "41131", "용인 수지구": "41465", "용인 기흥구": "41463", "고양 일산동구": "41285", "부천 원미구": "41192", "부천 소사구": "41194", "부천 오정구": "41196", "안양 동안구": "41173", "화성 만세구": "41591", "화성 효행구": "41593", "화성 병점구": "41595", "화성 동탄구": "41597", "김포시": "41570", "하남시": "41450", "남양주시": "41360", "광명시": "41210", "의정부시": "41150" },
-  "인천": { "연수구": "28185", "남동구": "28200", "서해구": "28275", "검단구": "28290", "계양구": "28245", "부평구": "28237" },
-  "부산": { "해운대구": "26350", "수영구": "26500", "동래구": "26260", "부산진구": "26230" },
-  "대구": { "수성구": "27260", "달서구": "27290" }, "대전": { "유성구": "30200", "서구": "30170" },
-  "광주": { "동구": "12210", "서구": "12240", "남구": "12270", "북구": "12300", "광산구": "12330" },
-  "전남": { "목포시": "12110", "여수시": "12130", "순천시": "12150", "나주시": "12170", "광양시": "12190" },
-};
-function initRealEstate() {
-  const sel = byId("reRegion");
-  sel.innerHTML = Object.entries(LAWD).map(([sido, gus]) =>
-    `<optgroup label="${sido}">${Object.entries(gus).map(([nm, cd]) => `<option value="${cd}">${sido} ${E(nm)}</option>`).join("")}</optgroup>`).join("");
-  sel.value = "11680"; // 강남구 기본
-  const d = new Date(Date.now() + 9 * 3600e3); d.setUTCMonth(d.getUTCMonth() - 1); // 지난달
-  byId("reYm").value = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-// UI 유형(매매/전세/월세/분양권) → API 유형(trade/rent/silv) + 임대 종류
-const RE_UI = { trade: { api: "trade" }, jeonse: { api: "rent", kind: "전세" }, wolse: { api: "rent", kind: "월세" }, silv: { api: "silv" } };
-const RE_LABEL = { trade: "매매", jeonse: "전세", wolse: "월세", silv: "분양권" };
-let reCache = { rows: [], uiType: "trade", regionName: "" };
-// 서버가 전량(전 페이지)을 주므로 필터·정렬·페이지네이션은 전체 집합 위에서 클라이언트가 처리한다.
-const RE_PAGE_SIZE = 20;
-let rePage = 1;
-
-function syncReType() {
-  const t = byId("reType").value;
-  byId("panel-realestate").querySelector(".wolse-only").style.display = t === "wolse" ? "" : "none";
-  byId("rePriceUnit").textContent = t === "trade" || t === "silv" ? "(억·매매가)" : "(억·보증금)";
-}
-byId("reType").addEventListener("change", syncReType);
-
-async function searchRealEstate() {
-  const uiType = byId("reType").value, lawd = byId("reRegion").value, ym = (byId("reYm").value || "").replace("-", "");
-  if (!/^\d{6}$/.test(ym)) return setBox("reStatus", "거래연월을 선택하세요.", "warn");
-  setBox("reStatus", "조회 중…", "loading"); showSkeletons("reResults"); clearPager("rePager");
-  // 새 검색이면 랭킹·추이 도구를 초기화(이전 지역 결과 잔존 방지)
-  byId("reInsights").hidden = true; byId("reInsightsOut").innerHTML = ""; reRankOpen = false; reTrendOpen = false;
-  byId("reRankBtn").classList.remove("on"); byId("reTrendBtn").classList.remove("on");
-  try {
-    const d = await (await fetch(`/api/realestate?type=${RE_UI[uiType].api}&lawd=${lawd}&ym=${ym}`)).json();
-    if (d.needKey) return endEmpty("reResults", "reStatus", "⚠️ 실거래가 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
-    if (!d.ok) return endEmpty("reResults", "reStatus", d.error || "조회 실패", "warn");
-    const sel = byId("reRegion");
-    reCache = { rows: d.rows || [], uiType, regionName: sel.options[sel.selectedIndex]?.text || "", truncated: d.truncated, failedPages: d.failedPages };
-    if (!reCache.rows.length) return endEmpty("reResults", "reStatus", "해당 지역·연월에 신고된 거래가 없습니다.", "warn");
-    rePage = 1;
-    applyReFilter();
-  } catch (e) { setBox("reStatus", `오류: ${e.message}`, "error"); retryBox("reResults", e.message, searchRealEstate); }
-}
-// 수집 누락·절단을 조용히 넘기지 않는다.
-function collectWarning(d) {
-  const parts = [];
-  if (d.truncated) parts.push("상한 초과로 일부만 수집");
-  if (d.failedPages?.length) parts.push(`페이지 ${d.failedPages.join(",")} 수집 실패`);
-  return parts.length ? ` ⚠️ ${parts.join(" · ")}` : "";
-}
-
-// 카드 정렬·필터용 대표 금액(만원): 매매/분양권=거래액, 전세/월세=보증금
-const rePrice = (uiType, r) => (uiType === "trade" || uiType === "silv" ? r.amount : r.deposit) || 0;
-
-function applyReFilter() {
-  const { rows, uiType } = reCache;
-  if (!rows.length) return;
-  const kind = RE_UI[uiType].kind;
-  const min = parseFloat(byId("reMin").value), max = parseFloat(byId("reMax").value);
-  const monMax = parseFloat(byId("reMonMax").value);
-  const sort = byId("reSort").value;
-
-  let out = rows.slice();
-  if (kind) out = out.filter((r) => r.kind === kind);                        // 전세 / 월세 분리
-  const aptQ = byId("reApt").value.trim().replace(/\s+/g, "");
-  if (aptQ) out = out.filter((r) => String(r.apt || "").replace(/\s+/g, "").includes(aptQ));   // 단지명 부분일치
-  if (Number.isFinite(min)) out = out.filter((r) => rePrice(uiType, r) >= min * 10000);
-  if (Number.isFinite(max)) out = out.filter((r) => rePrice(uiType, r) <= max * 10000);
-  if (uiType === "wolse" && Number.isFinite(monMax)) out = out.filter((r) => (r.monthly || 0) <= monMax);
-
-  if (sort === "high") out.sort((a, b) => rePrice(uiType, b) - rePrice(uiType, a));
-  else if (sort === "low") out.sort((a, b) => rePrice(uiType, a) - rePrice(uiType, b));
-  else out.sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0));
-
-  if (!out.length) { clearPager("rePager"); return endEmpty("reResults", "reStatus", `조건에 맞는 거래가 없습니다. (전체 ${rows.length}건)`, "warn"); }
-
-  const totalPages = Math.max(Math.ceil(out.length / RE_PAGE_SIZE), 1);
-  if (rePage > totalPages) rePage = totalPages;   // 필터가 좁아져 현재 페이지가 사라진 경우
-  const slice = out.slice((rePage - 1) * RE_PAGE_SIZE, rePage * RE_PAGE_SIZE);
-
-  setBox("reStatus", `${out.length.toLocaleString()}건 중 ${slice.length}건 표시 · 전체 ${rows.length.toLocaleString()}건${collectWarning(reCache)}`, "ok");
-  byId("reResults").innerHTML = slice.map((r) => renderRealEstate(uiType, r)).join("");
-  renderPager("rePager", rePage, totalPages, (p) => { rePage = p; applyReFilter(); scrollToResults("reResults"); }, out.length);
-  byId("reInsights").hidden = false;   // 검색 성공 → 랭킹·추이 도구 노출
-}
-
-// ---- 🏆 이번 달 랭킹 (현재 로드된 데이터 집계, 신규 API 불필요) ----
-let reRankOpen = false;
-function renderReRanking() {
-  const out = byId("reInsightsOut");
-  reRankOpen = !reRankOpen;
-  byId("reTrendBtn").classList.remove("on");
-  if (!reRankOpen) { out.innerHTML = ""; return; }
-  byId("reRankBtn").classList.add("on");
-  const { rows, uiType } = reCache;
-  const kind = RE_UI[uiType].kind;
-  const base = (kind ? rows.filter((r) => r.kind === kind) : rows).filter((r) => rePrice(uiType, r) > 0);
-  if (!base.length) { out.innerHTML = `<div class="empty-state"><p>집계할 거래가 없습니다.</p></div>`; return; }
-  const topPrice = base.slice().sort((a, b) => rePrice(uiType, b) - rePrice(uiType, a)).slice(0, 8);
-  const cnt = {};
-  base.forEach((r) => { const k = r.apt || "-"; cnt[k] = (cnt[k] || 0) + 1; });
-  const topCnt = Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 8);
-  out.innerHTML = `<div class="rank-wrap">
-    <div class="rank-col"><h4>💰 최고가 TOP</h4><ol class="rank-list">${topPrice.map((r) => `<li><span>${E(r.apt)} <span class="opt">${E(r.dong || "")}</span></span><b>${E(eok(rePrice(uiType, r)))}${uiType === "trade" || uiType === "silv" ? "원" : ""}</b></li>`).join("")}</ol></div>
-    <div class="rank-col"><h4>🔥 거래량 TOP</h4><ol class="rank-list">${topCnt.map(([nm, c]) => `<li><span>${E(nm)}</span><b>${c}건</b></li>`).join("")}</ol></div>
-  </div><p class="hint">${E(reCache.regionName)} · ${RE_LABEL[uiType] || uiType} · ${byId("reYm").value} 신고분 ${base.length.toLocaleString()}건 기준</p>`;
-}
-
-// ---- 📈 시세 추이 (최근 6개월 반복 조회 → 월별 평균·건수 SVG) ----
-let reTrendOpen = false;
-async function loadReTrend() {
-  const out = byId("reInsightsOut");
-  reTrendOpen = !reTrendOpen;
-  byId("reRankBtn").classList.remove("on");
-  if (!reTrendOpen) { out.innerHTML = ""; return; }
-  byId("reTrendBtn").classList.add("on");
-  const uiType = reCache.uiType, lawd = byId("reRegion").value;
-  const apiType = RE_UI[uiType].api, kind = RE_UI[uiType].kind;
-  const baseYm = (byId("reYm").value || "").replace("-", "");
-  if (!/^\d{6}$/.test(baseYm)) { out.innerHTML = ""; return; }
-  // 기준월 포함 최근 6개월
-  const months = [];
-  let y = +baseYm.slice(0, 4), m = +baseYm.slice(4, 6);
-  for (let i = 0; i < 6; i++) { months.unshift(`${y}${String(m).padStart(2, "0")}`); m--; if (m === 0) { m = 12; y--; } }
-  out.innerHTML = `<p class="status loading">📈 최근 6개월 시세를 불러오는 중…</p>`;
-  try {
-    const results = await Promise.all(months.map(async (ym) => {
-      try {
-        const d = await (await fetch(`/api/realestate?type=${apiType}&lawd=${lawd}&ym=${ym}`)).json();
-        let rows = d.ok ? (d.rows || []) : [];
-        if (kind) rows = rows.filter((r) => r.kind === kind);
-        const prices = rows.map((r) => rePrice(uiType, r)).filter((v) => v > 0);
-        const avg = prices.length ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
-        return { ym, avg, count: prices.length };
-      } catch { return { ym, avg: 0, count: 0 }; }
-    }));
-    out.innerHTML = renderTrendChart(results, uiType);
-  } catch (e) { out.innerHTML = `<p class="status warn">추이 조회 실패: ${E(e.message)}</p>`; }
-}
-function renderTrendChart(data, uiType) {
-  const max = Math.max(...data.map((d) => d.avg), 1);
-  const unit = uiType === "wolse" || uiType === "jeonse" ? "보증금" : "거래가";
-  const W = 300, H = 120, pad = 4, bw = (W - pad * 2) / data.length;
-  const bars = data.map((d, i) => {
-    const h = d.avg ? Math.max(4, (d.avg / max) * (H - 28)) : 0;
-    const x = pad + i * bw, y = H - 20 - h;
-    return `<g>
-      <rect x="${(x + bw * 0.15).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="var(--accent)"></rect>
-      <text x="${(x + bw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="9" fill="var(--muted)">${d.ym.slice(4)}월</text>
-      ${d.avg ? `<text x="${(x + bw / 2).toFixed(1)}" y="${(y - 3).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--text)">${(d.avg / 10000).toFixed(1)}</text>` : `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 24}" text-anchor="middle" font-size="9" fill="var(--muted)">·</text>`}
-    </g>`;
-  }).join("");
-  const rows = data.map((d) => `${d.ym.slice(0, 4)}.${d.ym.slice(4)} 평균 ${d.avg ? eok(d.avg) : "-"} · ${d.count}건`).join(" / ");
-  return `<div class="trend-wrap">
-    <h4>📈 ${E(reCache.regionName)} ${unit} 월별 평균 <span class="opt">(억원, 최근 6개월)</span></h4>
-    <svg viewBox="0 0 ${W} ${H}" class="trend-svg" role="img" aria-label="월별 평균 시세 막대그래프">${bars}</svg>
-    <p class="hint">${E(rows)}</p>
-  </div>`;
-}
-byId("reRankBtn").addEventListener("click", renderReRanking);
-byId("reTrendBtn").addEventListener("click", loadReTrend);
-// 필터·정렬을 바꾸면 1페이지로 되돌린다.
-const applyReFilterReset = () => { rePage = 1; applyReFilter(); };
-byId("reApply").addEventListener("click", applyReFilterReset);
-["reMin", "reMax", "reMonMax", "reApt"].forEach((id) => byId(id).addEventListener("keydown", (e) => { if (e.key === "Enter") applyReFilterReset(); }));
-byId("reSort").addEventListener("change", applyReFilterReset);
-byId("reApt").addEventListener("input", () => { if (reCache.rows.length) applyReFilterReset(); });   // 단지명 실시간 필터
-
-const eok = (manwon) => manwon >= 10000 ? `${(manwon / 10000).toFixed(manwon % 10000 ? 1 : 0)}억` + (manwon % 10000 ? ` ${(manwon % 10000).toLocaleString()}만` : "") : `${manwon.toLocaleString()}만`;
-function renderRealEstate(uiType, r) {
-  let price;
-  if (uiType === "wolse") price = `보증 ${eok(r.deposit)} / 월 ${(r.monthly || 0).toLocaleString()}만`;
-  else if (uiType === "jeonse") price = `전세 ${eok(r.deposit)}`;
-  else price = eok(r.amount) + "원";
-  // RTMS는 좌표를 주지 않아 '시군구 + 법정동 + 아파트명'으로 카카오맵 검색 링크 생성
-  const sido = (reCache.regionName || "").split(" ")[0] || "";
-  const q = [sido, r.dong, r.apt].filter(Boolean).join(" ");
-  const map = `<a class="btn map" href="https://map.kakao.com/link/search/${encodeURIComponent(q)}" target="_blank" rel="noopener">🗺️ 지도</a>`;
-  return `<article class="card">
-    <div class="card-top"><h3>${E(r.apt)}</h3><span class="bed ok">${E(price)}</span></div>
-    <p class="meta">${E(r.dong)}${r.area ? ` · ${r.area}㎡(${(r.area / 3.3058).toFixed(0)}평)` : ""}${r.floor ? ` · ${E(r.floor)}층` : ""}${r.buildYear ? ` · ${E(r.buildYear)}년준공` : ""}</p>
-    <p class="meta">📅 ${E(r.date)} 신고${r.kind ? ` · ${E(r.kind)}` : ""}</p>
-    <div class="card-actions">${map}</div>
-  </article>`;
-}
-byId("reBtn").addEventListener("click", searchRealEstate);
-
-// ==================== 😷 미세먼지 ====================
-const SIDOS = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
-function initAir() { byId("airSido").innerHTML = SIDOS.map((s) => `<option value="${s}">${s}</option>`).join(""); }
-let airCache = null; // {sido, summary, forecast, stations}
-async function searchAir() {
-  const sido = byId("airSido").value;
-  setBox("airStatus", "조회 중…", "loading"); showSkeletons("airResults");
-  try {
-    const d = await (await fetch(`/api/air?sido=${encodeURIComponent(sido)}`)).json();
-    if (d.needKey) return endEmpty("airResults", "airStatus", "⚠️ 미세먼지 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
-    if (!d.ok) return endEmpty("airResults", "airStatus", d.error || "조회 실패", "warn");
-    if (!(d.stations || []).length) return endEmpty("airResults", "airStatus", "측정 데이터가 없습니다.", "warn");
-    airCache = d;
-    applyAirFilter();
-  } catch (e) { setBox("airStatus", `오류: ${e.message}`, "error"); retryBox("airResults", e.message, searchAir); }
-}
-const GRADE_EMOJI = { ok: "😀", warn: "🙂", busy: "😷", full: "🤢", "": "❓" };
-// 예보 등급 텍스트(좋음/보통/나쁨/매우나쁨) → 색상 클래스
-const KGRADE_CLASS = { "좋음": "ok", "보통": "warn", "나쁨": "busy", "매우나쁨": "full" };
-// 오늘·내일·모레 예보 (PM10·PM2.5) — 서버가 준 forecast10/25 배열을 칩으로
-function airForecastHtml(sido, d) {
-  const line = (title, days) => {
-    if (!days || !days.length) return "";
-    const chips = days.map((f) => `<span class="fc-chip ${KGRADE_CLASS[f.sidoGrade] || ""}"><b>${E(f.label)}</b> ${E(f.sidoGrade || "-")}</span>`).join("");
-    const overall = days[0] && days[0].overall ? `<div class="fc-overall">📢 ${E(days[0].overall)}</div>` : "";
-    return `<div class="fc-line"><span class="fc-key">${title}</span><span class="fc-chips">${chips}</span></div>${overall}`;
-  };
-  const p10 = line("PM10", d.forecast10 || (d.forecast ? [{ label: "오늘", sidoGrade: d.forecast.sidoGrade, overall: d.forecast.overall }] : []));
-  const p25 = line("PM2.5", d.forecast25 || (d.forecastPm25 ? [{ label: "오늘", sidoGrade: d.forecastPm25.sidoGrade, overall: d.forecastPm25.overall }] : []));
-  return p10 || p25 ? `<div class="forecast">${p10}${p25}</div>` : "";
-}
-function applyAirFilter() {
-  if (!airCache) return;
-  const d = airCache, sido = d.sido;
-  const q = byId("airQ").value.trim(), g = byId("airGrade").value;
-  const std = byId("airStd").value, pol = byId("airPollutant").value;   // 기준(환경부/WHO) · 기준물질
-  // 등급을 클라이언트에서 선택 기준으로 재계산 (WHO 토글이 카드·요약·필터에 모두 반영되게)
-  const grade = (s) => ({ pm10: airGradeOf(s.pm10, "pm10", std), pm25: airGradeOf(s.pm25, "pm25", std) });
-  let st = (d.stations || []).map((s) => ({ ...s, g: grade(s) }));
-  if (q) st = st.filter((s) => String(s.station || "").includes(q));
-  if (g) st = st.filter((s) => s.g[pol].c === g);   // 선택한 기준물질(PM10/PM2.5) 등급으로 필터
-
-  const g10 = airGradeOf(d.summary.pm10, "pm10", std), g25 = airGradeOf(d.summary.pm25, "pm25", std);
-  const worst = [g10, g25].sort((a, b) => "ok warn busy full".indexOf(b.c) - "ok warn busy full".indexOf(a.c))[0];
-  const stdLabel = std === "who" ? "WHO 기준" : "환경부 기준";
-  const head = `<article class="card">
-    <div class="card-top"><h3>${GRADE_EMOJI[worst.c] || ""} ${E(sido)} 평균 <span class="opt">(${stdLabel})</span></h3></div>
-    <div class="dust-summary">
-      <div class="dust-box ${g10.c}"><span>미세먼지 PM10</span><b>${d.summary.pm10 ?? "-"}</b><em>${g10.t}</em></div>
-      <div class="dust-box ${g25.c}"><span>초미세 PM2.5</span><b>${d.summary.pm25 ?? "-"}</b><em>${g25.t}</em></div>
-    </div>
-    ${airForecastHtml(sido, d)}
-  </article>`;
-
-  if (!st.length) {
-    setBox("airStatus", `조건에 맞는 측정소가 없습니다. (전체 ${d.stations.length}곳)`, "warn");
-    byId("airResults").innerHTML = head; return;
-  }
-  const polLabel = pol === "pm25" ? "PM2.5" : "PM10";
-  setBox("airStatus", `${sido} · 측정소 ${st.length}곳${st.length !== d.stations.length ? ` / 전체 ${d.stations.length}` : ""} · ${polLabel} ${stdLabel}`, "ok");
-  byId("airResults").innerHTML = head + st.map((s) => `
-    <article class="card">
-      <div class="card-top"><h3>${E(s.station)}</h3><span class="bed ${s.g.pm10.c}">PM10 ${s.pm10 ?? "-"} · ${E(s.g.pm10.t)}</span></div>
-      <p class="meta">초미세(PM2.5) ${s.pm25 ?? "-"} · ${E(s.g.pm25.t)}${s.o3 != null ? ` · 오존 ${s.o3}` : ""}${s.time ? ` · ${E(s.time)}` : ""}</p>
-    </article>`).join("");
-}
-byId("airQ").addEventListener("input", () => { if (airCache) applyAirFilter(); });
-byId("airGrade").addEventListener("change", () => { if (airCache) applyAirFilter(); });
-byId("airPollutant").addEventListener("change", () => { if (airCache) applyAirFilter(); });
-byId("airStd").addEventListener("change", () => { if (airCache) applyAirFilter(); });
-
-// 헤더: 수도권 평균 미세먼지 배지
-async function loadDustBadge() {
-  try {
-    const d = await (await fetch("/api/air?op=metro")).json();
-    if (!d.ok || d.pm10 == null) return;
-    const g = airGradeOf(d.pm10, "pm10");
-    const el = byId("dustBadge");
-    el.className = `dust-badge ${g.c}`;
-    el.innerHTML = `😷 <b>${d.pm10}</b> <span>${g.t}</span>`;
-    // 미세먼지 탭이 data-off로 꺼져 있으면 눌러도 갈 곳이 없다 — 클릭을 달지 않고
-    // 안내 문구에서도 «클릭하면 탭» 약속을 뺀다(눌러도 아무 일 없는 배지 방지).
-    const airOn = panelNames().includes("air");
-    el.title = `수도권 평균 · 미세먼지 ${d.pm10}㎍/㎥ (${g.t}) · 초미세 ${d.pm25 ?? "-"} · 측정소 ${d.stations}곳`;
-    el.style.display = "";
-    el.style.cursor = airOn ? "" : "default";
-    if (airOn) el.addEventListener("click", () => switchPanel("air"));
-  } catch { /* 배지는 실패해도 무시 */ }
-}
-// PM 수치 → 등급(환경부 기준)
-// 등급 임계값 — 환경부 4단계 + WHO(엄격) 4단계(WHO 24h 가이드라인 기반으로 더 촘촘히)
-const AIR_TH = {
-  env: { pm10: [30, 80, 150], pm25: [15, 35, 75] },
-  who: { pm10: [20, 45, 100], pm25: [10, 25, 50] },
-};
-function airGradeOf(v, kind, std = "env") {
-  if (v == null) return { t: "-", c: "" };
-  const th = (AIR_TH[std] || AIR_TH.env)[kind];
-  const c = v <= th[0] ? "ok" : v <= th[1] ? "warn" : v <= th[2] ? "busy" : "full";
-  const t = v <= th[0] ? "좋음" : v <= th[1] ? "보통" : v <= th[2] ? "나쁨" : "매우나쁨";
-  return { t, c };
-}
-byId("airBtn").addEventListener("click", searchAir);
-
-// ==================== 🚏 시내버스 ====================
-async function searchCitybus() {
-  try {
-    const { lat, lon } = await getLocation("cbStatus", "cbAddr");
-    setBox("cbStatus", "정류소 조회 중…", "loading"); showSkeletons("cbResults");
-    const d = await (await fetch(`/api/citybus?op=near&lat=${lat}&lon=${lon}`)).json();
-    if (d.needKey) return endEmpty("cbResults", "cbStatus", "⚠️ 시내버스 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
-    const stops = d.stops || [];
-    if (!stops.length) return endEmpty("cbResults", "cbStatus", "주변 정류소가 없습니다.", "warn");
-    setBox("cbStatus", `가까운 정류소 ${stops.length}곳 · 정류소를 누르면 도착정보`, "ok");
-    byId("cbResults").innerHTML = stops.map((s) => `
-      <article class="card cb-stop" data-city="${E(s.city)}" data-node="${E(s.node)}" data-name="${E(s.name)}" style="cursor:pointer">
-        <div class="card-top"><h3>🚏 ${E(s.name)}${s.arsno ? ` <span class="opt">${E(s.arsno)}</span>` : ""}</h3>
-          ${s.distance != null ? `<span class="bed ok">${s.distance.toLocaleString()}m</span>` : ""}</div>
-        <p class="meta">누르면 실시간 도착정보 표시 <span class="opt">▾</span></p>
-        <div class="cb-arrivals"></div>
-      </article>`).join("");
-    if (window.GongMap) GongMap.set("citybus", stops.map((s) => ({ lat: s.lat, lon: s.lon, label: s.name, sub: s.arsno ? `정류소번호 ${s.arsno}` : "" })), { lat, lon });
-  } catch (e) { setBox("cbStatus", `오류: ${e.message}`, "error"); retryBox("cbResults", e.message, searchCitybus); }
-}
-// 도착정보는 매번 새로 불러온다(실시간). 열려 있으면 접고, 열 때마다 재조회한다.
-// (이전엔 dataset.loaded로 캐시해 두 번째 클릭부터 옛 값만 토글돼 "실시간"이 깨졌다.)
-async function loadArrivals(cardEl) {
-  const box = cardEl.querySelector(".cb-arrivals");
-  if (cardEl.dataset.open === "1") { box.style.display = "none"; cardEl.dataset.open = "0"; return; }
-  cardEl.dataset.open = "1"; box.style.display = "";
-  box.innerHTML = `<p class="meta">도착정보 조회 중…</p>`;
-  try {
-    const d = await (await fetch(`/api/citybus?op=arrival&city=${encodeURIComponent(cardEl.dataset.city)}&node=${encodeURIComponent(cardEl.dataset.node)}`)).json();
-    const buses = d.buses || [];
-    const stamp = `<p class="meta opt" style="margin-top:6px">🔄 ${kstClock()} 기준 · 다시 누르면 최신</p>`;
-    box.innerHTML = (buses.length
-      ? `<ul class="time-stats">${buses.slice(0, 12).map((b) => `<li class="meta"><b>${E(b.route)}</b>${b.type ? `<span class="chip" style="margin-left:6px">${E(b.type)}</span>` : ""} — ${b.min <= 1 ? "곧 도착" : b.min + "분 후"} · ${b.prevCnt}정류장 전</li>`).join("")}</ul>`
-      : `<p class="meta">현재 도착 예정 버스가 없습니다.</p>`) + stamp;
-  } catch (e) { box.innerHTML = `<p class="status warn">도착정보 오류: ${E(e.message)}</p>`; cardEl.dataset.open = "0"; }
-}
-byId("cbBtn").addEventListener("click", searchCitybus);
-byId("cbResults").addEventListener("click", (e) => {
-  const card = e.target.closest(".cb-stop");
-  if (card) loadArrivals(card);
-});
-
-// ==================== 🏘️ LH 청약 ====================
-let lhCache = [];
-let lhMeta = {};            // truncated / failedPages
-const LH_PAGE_SIZE = 20;
-let lhPage = 1;
-// 상태 우선순위(열린 공고 먼저) + 배지색
-const LH_OPEN = ["공고중", "접수중", "상담요청"];
-function lhBadge(status) {
-  const s = String(status || "");
-  if (s.includes("접수중")) return "ok";
-  if (s.includes("공고중")) return "ok";
-  if (s.includes("상담요청")) return "warn";
-  if (s.includes("마감") || s.includes("종료")) return "full";
-  return "warn";
-}
-function fillLhFilters(rows) {
-  const fill = (id, vals, label) => {
-    const sel = byId(id), cur = sel.value;
-    sel.innerHTML = `<option value="">${label}</option>` + vals.map((v) => `<option value="${E(v)}">${E(v)}</option>`).join("");
-    if (vals.includes(cur)) sel.value = cur;
-  };
-  fill("lhRegion", [...new Set(rows.map((r) => r.region).filter(Boolean))].sort(), "전체 지역");
-  const statuses = [...new Set(rows.map((r) => r.status).filter(Boolean))];
-  // 요청 순서(공고중·상담요청·접수중·마감) 우선 정렬
-  const order = ["공고중", "접수중", "상담요청"];
-  statuses.sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99) || a.localeCompare(b, "ko"));
-  fill("lhStatusF", statuses, "전체 상태");
-}
-async function searchLH() {
-  setBox("lhStatus", "공고 조회 중…", "loading"); showSkeletons("lhResults"); clearPager("lhPager");
-  try {
-    // 서버가 전 페이지를 모아 주므로(API 기본창 = 최근 2개월) 필터·페이지네이션은 클라이언트에서 처리한다.
-    const d = await (await fetch(`/api/lh`)).json();
-    if (d.needKey) return endEmpty("lhResults", "lhStatus", "⚠️ LH 기능은 DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
-    if (!d.ok) return endEmpty("lhResults", "lhStatus", d.message || "조회 실패", "warn");
-    lhCache = d.rows || [];
-    lhMeta = { truncated: d.truncated, failedPages: d.failedPages };
-    if (!lhCache.length) return endEmpty("lhResults", "lhStatus", "공고가 없습니다.", "warn");
-    lhPage = 1;
-    fillLhFilters(lhCache);
-    applyLhFilter();
-  } catch (e) { setBox("lhStatus", `오류: ${e.message}`, "error"); retryBox("lhResults", e.message, searchLH); }
-}
-function applyLhFilter() {
-  if (!lhCache.length) return;
-  const name = byId("lhName").value.trim();
-  const region = byId("lhRegion").value, status = byId("lhStatusF").value;
-  let rows = lhCache;
-  if (name) rows = rows.filter((r) => r.name.includes(name));
-  if (region) rows = rows.filter((r) => r.region === region);
-  if (status) rows = rows.filter((r) => r.status === status);
-  // 열린 공고 먼저
-  rows = rows.slice().sort((a, b) => (LH_OPEN.some((s) => b.status.includes(s)) ? 1 : 0) - (LH_OPEN.some((s) => a.status.includes(s)) ? 1 : 0));
-
-  if (!rows.length) { clearPager("lhPager"); return endEmpty("lhResults", "lhStatus", `조건에 맞는 공고가 없습니다. (전체 ${lhCache.length}건)`, "warn"); }
-
-  const totalPages = Math.max(Math.ceil(rows.length / LH_PAGE_SIZE), 1);
-  if (lhPage > totalPages) lhPage = totalPages;
-  const slice = rows.slice((lhPage - 1) * LH_PAGE_SIZE, lhPage * LH_PAGE_SIZE);
-
-  setBox("lhStatus", `공고 ${rows.length.toLocaleString()}건${rows.length !== lhCache.length ? ` / 전체 ${lhCache.length.toLocaleString()}` : ""}${collectWarning(lhMeta)}`, "ok");
-  byId("lhResults").innerHTML = slice.map((r) => {
-    const url = safeUrl(r.url);   // LH가 준 DTL_URL — http(s)가 아니면 링크로 만들지 않는다
-    const actions = [
-      url ? `<a class="btn map" href="${E(url)}" target="_blank" rel="noopener noreferrer">상세공고 ↗</a>` : "",
-      icsDateParts(r.closeDate) ? `<button type="button" class="btn ics-btn" data-name="${E(r.name)}" data-close="${E(r.closeDate)}">📅 마감일 저장</button>` : "",
-    ].filter(Boolean).join("");
-    return `<article class="card">
-      <div class="card-top"><h3>${E(r.name)}</h3><span class="bed ${lhBadge(r.status)}">${E(r.status || "-")}</span></div>
-      <p class="meta">${[r.type, r.region].filter(Boolean).map(E).join(" · ")}</p>
-      <p class="meta">📅 게시 ${E(r.postDate || "-")}${r.closeDate ? ` · 마감 ${E(r.closeDate)}` : ""}</p>
-      ${actions ? `<div class="card-actions">${actions}</div>` : ""}
-    </article>`;
-  }).join("");
-  renderPager("lhPager", lhPage, totalPages, (p) => { lhPage = p; applyLhFilter(); scrollToResults("lhResults"); }, rows.length);
-}
-// ---- LH 마감일 → 캘린더(.ics) ----
-// 무로그인이라 서버 알림은 불가하지만, 마감일을 캘린더에 담아 사용자 기기가 리마인드하게 한다.
-function icsDateParts(s) { const m = String(s || "").match(/(\d{4})\D?(\d{1,2})\D?(\d{1,2})/); return m ? [m[1], m[2].padStart(2, "0"), m[3].padStart(2, "0")] : null; }
-const icsEsc = (s) => String(s || "").replace(/([\\;,])/g, "\\$1").replace(/\r?\n/g, "\\n");
-function downloadIcs(name, closeDate) {
-  const p = icsDateParts(closeDate);
-  if (!p) return alert("마감일 형식을 인식할 수 없어 캘린더에 담을 수 없습니다.");
-  const [y, mo, da] = p;
-  const start = `${y}${mo}${da}`;
-  const end = new Date(Date.UTC(+y, +mo - 1, +da + 1));   // 종일 이벤트 DTEND는 다음 날
-  const endStr = `${end.getUTCFullYear()}${String(end.getUTCMonth() + 1).padStart(2, "0")}${String(end.getUTCDate()).padStart(2, "0")}`;
-  const now = new Date();
-  const stamp = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, "0")}${String(now.getUTCDate()).padStart(2, "0")}T${String(now.getUTCHours()).padStart(2, "0")}${String(now.getUTCMinutes()).padStart(2, "0")}${String(now.getUTCSeconds()).padStart(2, "0")}Z`;
-  const uid = `lh-${start}-${Math.abs([...String(name)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7))}@gong-medical`;
-  const ics = [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//gong-medical-app//LH//KO", "CALSCALE:GREGORIAN",
-    "BEGIN:VEVENT", `UID:${uid}`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${start}`, `DTEND;VALUE=DATE:${endStr}`,
-    `SUMMARY:[LH청약 마감] ${icsEsc(name)}`, `DESCRIPTION:${icsEsc(name)} 청약 접수 마감일`,
-    "BEGIN:VALARM", "TRIGGER:-P1D", "ACTION:DISPLAY", "DESCRIPTION:LH청약 마감 하루 전", "END:VALARM",
-    "END:VEVENT", "END:VCALENDAR",
-  ].join("\r\n");
-  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = `LH마감-${start}.ics`;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-byId("lhResults").addEventListener("click", (e) => {
-  const b = e.target.closest(".ics-btn");
-  if (b) downloadIcs(b.dataset.name, b.dataset.close);
-});
-// 필터를 바꾸면 1페이지로 되돌린다.
-const applyLhFilterReset = () => { lhPage = 1; applyLhFilter(); };
-byId("lhRegion").addEventListener("change", () => { if (lhCache.length) applyLhFilterReset(); });
-byId("lhStatusF").addEventListener("change", () => { if (lhCache.length) applyLhFilterReset(); });
-byId("lhName").addEventListener("input", () => { if (lhCache.length) applyLhFilterReset(); });
-// 공공임대 단지 (마이홈, LH·SH·지방)
-async function searchRental() {
-  const brtc = byId("lhSido").value;
-  setBox("lhStatus", "공공임대 단지 조회 중…", "loading"); showSkeletons("lhResults");
-  try {
-    const d = await (await fetch(`/api/myhome?brtc=${brtc}&size=60`)).json();
-    if (d.needKey) return endEmpty("lhResults", "lhStatus", "⚠️ DATA_API_KEY 설정 후 이용 가능합니다.", "warn");
-    if (d.pending) return endEmpty("lhResults", "lhStatus", "ℹ️ " + d.message, "warn");
-    if (!d.ok) return endEmpty("lhResults", "lhStatus", d.message || "조회 실패", "warn");
-    const rows = d.rows || [];
-    if (!rows.length) return endEmpty("lhResults", "lhStatus", "단지 정보가 없습니다.", "warn");
-    setBox("lhStatus", `공공임대 단지 ${rows.length}곳`, "ok");
-    byId("lhResults").innerHTML = rows.map((r) => `
-      <article class="card">
-        <div class="card-top"><h3>🏢 ${E(r.name)}</h3>${r.supply ? `<span class="bed ok">${E(r.supply)}</span>` : ""}</div>
-        ${r.addr ? `<p class="addr">📍 ${E(r.addr)}</p>` : ""}
-        <p class="meta">${[r.households ? `${r.households.toLocaleString()}세대` : "", r.area ? `${r.area}` : "", r.built ? `준공 ${r.built}` : ""].filter(Boolean).map(E).join(" · ")}</p>
-      </article>`).join("");
-  } catch (e) { setBox("lhStatus", `오류: ${e.message}`, "error"); retryBox("lhResults", e.message, searchRental); }
-}
-function syncLhMode() {
-  const rental = byId("lhMode").value === "rental";
-  byId("panel-lh").querySelector(".lh-notice").style.display = rental ? "none" : "";
-  byId("panel-lh").querySelector(".lh-rental").style.display = rental ? "" : "none";
-}
-byId("lhMode").addEventListener("change", syncLhMode);
-byId("lhBtn").addEventListener("click", () => byId("lhMode").value === "rental" ? searchRental() : searchLH());
-byId("lhName").addEventListener("keydown", (e) => { if (e.key === "Enter") searchLH(); });
 
 // ==================== 🅿️ 주차장 ====================
 // 전국 17,000여곳이 대상이라 서버가 페이지를 잘라 준다(거리순 정렬·필터 적용 후).
@@ -1141,7 +546,7 @@ async function searchParking(page = 1) {
     byId("pkResults").innerHTML = rows.map(renderParking).join("");
     if (window.GongMap) GongMap.set("parking", rows.map((p) => ({ lat: p.lat, lon: p.lon, label: p.name, sub: p.addr })), pkCoords);
     renderPager("pkPager", d.page, d.totalPages, (p) => { searchParking(p).then(() => scrollToResults("pkResults")); }, d.matched);
-  } catch (e) { setBox("pkStatus", `오류: ${e.message}`, "error"); retryBox("pkResults", e.message, () => searchParking(1)); }
+  } catch (e) { setBox("pkStatus", friendlyErr(e), "error"); retryBox("pkResults", e.message, () => searchParking(1)); }
 }
 function renderParking(p) {
   // 잔여 비율로 혼잡 표시
@@ -1205,7 +610,7 @@ async function searchNearby() {
       nbGroup("⛽", "주유소(휘발유 최저가)", "gas", gasItems) +
       nbGroup("🚲", "따릉이 대여소", "bike", bikeItems) +
       nbGroup("🅿️", "주차장", "parking", pkItems);
-  } catch (e) { setBox("nbStatus", `오류: ${e.message}`, "error"); retryBox("nbResults", e.message, searchNearby); }
+  } catch (e) { setBox("nbStatus", friendlyErr(e), "error"); retryBox("nbResults", e.message, searchNearby); }
 }
 byId("nbBtn").addEventListener("click", searchNearby);
 byId("nbResults").addEventListener("click", (e) => {
@@ -1213,7 +618,7 @@ byId("nbResults").addEventListener("click", (e) => {
   if (!b) return;
   // 내 주변에서 주소를 썼다면 해당 탭 주소칸에 넘겨준다(GPS면 캐시 공유로 그대로 조회)
   const addr = byId("nbAddr").value.trim();
-  const addrTarget = { gas: "gasAddr", bike: "bikeAddr", citybus: "cbAddr", parking: "pkAddr" }[b.dataset.panel];
+  const addrTarget = { gas: "gasAddr", bike: "bikeAddr", parking: "pkAddr" }[b.dataset.panel];
   if (addr && addrTarget && byId(addrTarget)) byId(addrTarget).value = addr;
   switchPanel(b.dataset.panel);
 });
@@ -1247,7 +652,7 @@ async function searchClinic() {
     if (!d.ok) { setBox("clStatus", d.error || "조회 실패", "warn"); return retryBox("clResults", d.error || "조회 실패", searchClinic); }
     clinicCache = { rows: d.rows || [], center: { lat, lon }, generatedAt: d.generatedAt, widened: d.widened };
     applyClinicFilter();
-  } catch (e) { setBox("clStatus", `오류: ${e.message}`, "error"); retryBox("clResults", e.message, searchClinic); }
+  } catch (e) { setBox("clStatus", friendlyErr(e), "error"); retryBox("clResults", e.message, searchClinic); }
 }
 function applyClinicFilter() {
   const { rows, center, generatedAt, widened } = clinicCache;
@@ -1311,7 +716,7 @@ async function searchPharmacy() {
     if (!d.ok) { setBox("phStatus", d.error || "조회 실패", "warn"); return retryBox("phResults", d.error || "조회 실패", searchPharmacy); }
     pharmCache = { rows: d.rows || [], center: { lat, lon } };
     applyPharmacyFilter();
-  } catch (e) { setBox("phStatus", `오류: ${e.message}`, "error"); retryBox("phResults", e.message, searchPharmacy); }
+  } catch (e) { setBox("phStatus", friendlyErr(e), "error"); retryBox("phResults", e.message, searchPharmacy); }
 }
 function applyPharmacyFilter() {
   const { rows, center } = pharmCache;
@@ -1359,7 +764,7 @@ async function searchEmergency() {
     if (!d.ok) { setBox("emStatus", d.error || "조회 실패", "warn"); return retryBox("emResults", d.error || "조회 실패", searchEmergency); }
     erCache = { rows: d.rows || [], center: { lat, lon } };
     applyEmergencyFilter();
-  } catch (e) { setBox("emStatus", `오류: ${e.message}`, "error"); retryBox("emResults", e.message, searchEmergency); }
+  } catch (e) { setBox("emStatus", friendlyErr(e), "error"); retryBox("emResults", e.message, searchEmergency); }
 }
 function applyEmergencyFilter() {
   const { rows, center } = erCache;
@@ -1417,9 +822,7 @@ byId("emFilter").addEventListener("change", () => { if (erCache.rows.length) app
   const RT = [
     { resultsId: "densResults", btnId: "densBtn", run: () => searchDensity() },
     { resultsId: "bikeResults", btnId: "bikeBtn", run: () => searchBike() },
-    { resultsId: "cbResults",   btnId: "cbBtn",   run: () => searchCitybus() },
     { resultsId: "pkResults",   btnId: "pkBtn",   run: () => searchParking(1) },
-    { resultsId: "airResults",  btnId: "airBtn",  run: () => searchAir() },
     { resultsId: "hwResults",   btnId: "hwBtn",   run: () => searchHighway() },
   ];
   RT.forEach(({ resultsId, btnId, run }) => {
@@ -1438,11 +841,6 @@ byId("emFilter").addEventListener("change", () => { if (erCache.rows.length) app
 // ---------- 초기값 ----------
 (function initServices() {
   syncHwMode();
-  syncLhMode();
-  initRealEstate();
-  syncReType();
-  initAir();
-  loadDustBadge();
   renderHub();        // 홈 허브 카드(살아 있는 탭 전부)를 먼저 만들고
   applyHashPanel();   // #parking 등으로 들어온 경우 해당 탭을 연다(없으면 홈 유지)
 })();

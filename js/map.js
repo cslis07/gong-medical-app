@@ -1,5 +1,5 @@
 // ===== 지도 뷰 (Leaflet, 로컬 벤더링) =====
-// 위치 기반 결과(주유소·따릉이·시내버스·주차장)를 실제 지도에 핀으로 찍는다.
+// 위치 기반 결과(주유소·따릉이·주차장·야간진료·약국·응급실)를 실제 지도에 핀으로 찍는다.
 // CSP가 default-src 'self'라 Leaflet은 /vendor/leaflet/에 벤더링해 self로 로드하고,
 // OSM 타일 도메인만 vercel.json img-src에 예외로 열었다. 타일은 사용자 브라우저가
 // 직접 받으므로 Vercel 데이터센터 IP 차단과 무관하다.
@@ -9,7 +9,6 @@
   const PANELS = {
     gas:     "gasResults",
     bike:    "bikeResults",
-    citybus: "cbResults",
     parking: "pkResults",
     clinic:  "clResults",
     pharmacy: "phResults",
