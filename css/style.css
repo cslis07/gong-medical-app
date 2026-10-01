@@ -527,14 +527,6 @@ input, button, select, textarea { font-family: inherit; }
 .app-footer { padding: 22px 16px 40px; color: var(--muted); font-size: 12.5px; }
 .app-footer .disclaimer { margin-top: 6px; }
 
-/* ===== 로또 ===== */
-.lotto-balls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
-.lotto-ball { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; color: #fff; font-weight: 800; font-size: 16px; box-shadow: inset -2px -3px 4px rgba(0,0,0,.18); }
-.lotto-ball.bonus { outline: 2px dashed var(--warn); }
-.lotto-plus { font-size: 20px; font-weight: 700; color: var(--muted); margin: 0 2px; }
-.stats-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; }
-.stats-list .meta { padding: 4px 0; border-bottom: 1px solid var(--border); }
-
 /* ===== 주유소 ===== */
 #panel-gas .chips { margin-top: 6px; }
 .gas-avg { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 6px 2px 0; font-size: 13px; color: var(--muted); }
@@ -549,32 +541,6 @@ input, button, select, textarea { font-family: inherit; }
 .card.busrow { padding: 12px 16px; }
 .card.busrow h3 { font-size: 16px; }
 
-/* ===== 미세먼지 ===== */
-.dust-summary { display: flex; gap: 12px; margin: 8px 0; }
-.dust-box { flex: 1; border-radius: var(--r-sm); padding: 12px; text-align: center; border: 1px solid var(--border); }
-.dust-box span { display: block; font-size: 12px; color: var(--muted); }
-.dust-box b { display: block; font-size: 28px; font-weight: 800; margin: 2px 0; }
-.dust-box em { font-style: normal; font-weight: 700; font-size: 13px; }
-.dust-box.ok   { background: var(--ok-bg); }   .dust-box.ok em   { color: var(--ok); }
-.dust-box.warn { background: var(--warn-bg); } .dust-box.warn em { color: var(--warn); }
-.dust-box.busy { background: var(--busy-bg); } .dust-box.busy em { color: var(--busy); }
-.dust-box.full { background: var(--full-bg); } .dust-box.full em { color: var(--full); }
-
-/* 미세먼지 예보 카드 */
-.forecast { display: grid; gap: 6px; margin: 6px 0 2px; }
-.forecast .fc-row { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
-.forecast .fc-day { min-width: 46px; font-weight: 700; color: var(--muted); }
-/* 오늘·내일·모레 예보 칩 */
-.fc-line { display: flex; align-items: center; gap: 8px; font-size: 13px; flex-wrap: wrap; }
-.fc-key { min-width: 46px; font-weight: 700; color: var(--muted); }
-.fc-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.fc-chip { padding: 3px 9px; border-radius: 999px; font-size: 12px; background: var(--surface-2); color: var(--muted); }
-.fc-chip b { margin-right: 4px; font-weight: 700; }
-.fc-chip.ok { background: var(--ok-bg); color: var(--ok); }
-.fc-chip.warn { background: var(--warn-bg); color: var(--warn); }
-.fc-chip.busy { background: var(--busy-bg); color: var(--busy); }
-.fc-chip.full { background: var(--full-bg); color: var(--full); }
-.fc-overall { font-size: 12.5px; color: var(--muted); margin: 2px 0 4px; }
 /* 유가 추이 스파크라인 */
 .gas-trend:not(:empty) { margin: 4px 2px 0; }
 .gas-trend-in { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
@@ -587,34 +553,6 @@ input, button, select, textarea { font-family: inherit; }
 .ppl { font-size: 15px; margin: 4px 0; }
 .ppl b { color: var(--accent); }
 
-/* ===== 시내버스 / LH ===== */
-.cb-arrivals { margin-top: 4px; }
-a.card.lh-card { display: block; text-decoration: none; color: inherit; }
-a.card.lh-card:hover { border-color: var(--accent); }
-
-/* ===== 분실물 ===== */
-.lost-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 14px; }
-.lost-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
-.lost-table td:first-child { color: var(--muted); font-weight: 600; width: 130px; white-space: nowrap; }
-.lost-steps { margin: 6px 0 0; padding-left: 20px; color: var(--text); font-size: 14px; line-height: 1.7; }
-
-/* ===== 헤더 미세먼지 배지 ===== */
-.dust-badge {
-  display: inline-flex; align-items: center; gap: 5px; padding: 7px 12px; border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.16); color: #fff;
-  font-size: 13px; font-weight: 600; cursor: pointer; transition: .15s; white-space: nowrap;
-}
-.dust-badge:hover { background: rgba(255,255,255,.28); }
-.dust-badge b { font-size: 15px; font-weight: 800; }
-.dust-badge span { opacity: .9; font-size: 12px; }
-.dust-badge.ok   { background: rgba(24,121,78,.85);  border-color: rgba(255,255,255,.4); }
-.dust-badge.warn { background: rgba(180,83,9,.85);   border-color: rgba(255,255,255,.4); }
-.dust-badge.busy { background: rgba(200,80,20,.9);   border-color: rgba(255,255,255,.4); }
-.dust-badge.full { background: rgba(192,57,43,.92);  border-color: rgba(255,255,255,.4); }
-
-/* 실거래가 필터 바 */
-.re-filter { background: var(--card); }
-.re-filter input[type="number"] { height: 40px; }
 .field.grow { flex: 1 1 180px; min-width: 150px; }
 .field input[list], .field input[type="date"] { height: 40px; }
 
@@ -712,8 +650,6 @@ a.card.lh-card:hover { border-color: var(--accent); }
   .chip { font-size: 11.5px; padding: 4px 8px; }
   .arr-card .track { margin: 8px 0 4px; }
 
-  .dust-badge { padding: 6px 10px; font-size: 12px; }
-
   .pager button { min-width: 34px; height: 34px; font-size: 13px; }
   .pager .pager-info { flex-basis: 100%; text-align: center; margin: 6px 0 0; }
 }
@@ -749,19 +685,6 @@ a.card.lh-card:hover { border-color: var(--accent); }
 .linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
 .linkbtn:hover { color: var(--accent-strong); }
 .fav-backup { margin-top: 4px; }
-/* 실거래가 인사이트 (랭킹·시세추이) */
-.re-insights { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 2px; }
-.chip-btn { padding: 8px 14px; border: 1px solid var(--border); background: var(--card); color: var(--muted); border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; transition: .15s; }
-.chip-btn:hover { border-color: var(--accent); color: var(--accent); }
-.chip-btn.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-.re-insights-out:not(:empty) { margin: 6px 0 4px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
-.rank-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.rank-col h4, .trend-wrap h4 { margin: 0 0 8px; font-size: 14px; }
-.rank-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 5px; }
-.rank-list li { font-size: 13px; display: flex; justify-content: space-between; gap: 10px; }
-.rank-list li b { white-space: nowrap; color: var(--accent-strong); }
-.trend-svg { width: 100%; max-width: 420px; height: auto; display: block; margin: 4px 0; }
-@media (max-width: 480px) { .rank-wrap { grid-template-columns: 1fr; gap: 12px; } }
 /* 📍 내 주변 통합 */
 .results-nearby { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; padding-bottom: 24px; }
 .nb-card { border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 14px; box-shadow: var(--shadow-sm); }
