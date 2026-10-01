@@ -54,7 +54,7 @@ GA4 대신 **Vercel Web Analytics**를 붙였다(사용자 선택). 이 앱엔 �
 - 스크립트·비콘이 **같은 도메인**(`/_vercel/insights/…`) → **CSP 변경 불필요**(`script-src/connect-src 'self'`로 이미 허용).
 - **쿠키 없음·익명 집계** → 개인정보 동의 배너 불필요(한국 개인정보보호법 리스크 낮음). GA4는 쿠키+외부 전송이라 CSP 완화+동의배너가 필요해 이 앱엔 과함.
 - `index.html`·`guide.html`에 `<script defer src="/_vercel/insights/script.js">` 추가. guide 개인정보 섹션에 익명 방문통계 수집 고지 1줄.
-- ⚠️ **수집 시작하려면 Vercel 대시보드 → 프로젝트 → Analytics 탭에서 «Enable»** 필요(사용자 액션). 그전엔 스크립트가 조용히 404(무해).
+- **2026-10-01 활성화 완료**: 대시보드에서 Web Analytics Enable + 재배포로 `/_vercel/insights/script.js` **200 확인**(엣지가 insights 경로를 붙이는 데 재배포 1회 필요했다). 방문 수집 시작.
 - 겸사겸사 삭제 기능이 남긴 문구 정리(푸터 출처에서 에어코리아·LH·LOST112 제거, 참고 고지에서 실거래가 제거).
 
 ## 2026-09-03 — 📱 안드로이드 APK (TWA)
