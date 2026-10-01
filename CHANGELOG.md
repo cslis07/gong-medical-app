@@ -12,6 +12,15 @@
 > 그 이전 이력(2026-06 공공의료 앱 → 지하철 전용 개편 → 생활서비스 확장 → data.go.kr 대량 확장
 > → 탭 정리·야간진료 추가)은 **`git log`에만** 있다. 배포는 `vercel --prod --yes` CLI 수동.
 
+## 2026-10-01 — 🧹 dead CSS 정리 + 브라우저 육안검증
+
+전날 삭제한 6개 탭 전용 **dead CSS 약 77줄** 제거(`css/style.css` 764→695줄). 삭제 대상:
+`.lotto-*·.stats-list·.dust-summary/box·.forecast·.fc-*·.cb-arrivals·.lh-card·.lost-table/steps·
+.dust-badge·.re-filter·.re-insights·.chip-btn·.rank-*·.trend-*`. 남은 코드에서 참조 0을 교차확인했고,
+**공용 클래스는 보존**: `.busrow`(고속도로 소통)·`.field.grow`(위치탭 입력)·`.time-stats`(휴게소 메뉴).
+중괄호 균형 399/399. Chrome 확장이 복구돼 **육안검증도 완료** — 홈 10칸·탭 전환·`← 홈` 복귀·
+sticky 내비·`friendlyErr` 동작·딥링크·콘솔 에러 0 전부 정상.
+
 ## 2026-09-30 — 🧹 꺼둔 탭 6개 완전 삭제 · 오류 메시지 친화화
 
 ### 안 쓰던 탭 6개 삭제 (사용자 요청)
